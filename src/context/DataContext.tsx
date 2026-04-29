@@ -186,12 +186,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const docRef = await addDoc(collection(db, 'purchases'), purchase);
             
             // Sync inventory
-            purchase.items.forEach(async (item) => {
+            for (const item of purchase.items) {
                 const p = products.find(prod => prod.id === item.productId);
                 if (p) {
                     await updateProduct(p.id, { stock: p.stock + item.quantity });
                 }
-            });
+            }
 
             // Sync cash
             if (purchase.paymentMethod !== 'credit') {
@@ -214,12 +214,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const docRef = await addDoc(collection(db, 'sales'), sale);
             
             // Sync inventory
-            sale.items.forEach(async (item) => {
+            for (const item of sale.items) {
                 const p = products.find(prod => prod.id === item.productId);
                 if (p) {
                     await updateProduct(p.id, { stock: p.stock - item.quantity });
                 }
-            });
+            }
 
             // Sync cash
             if (sale.paidAmount > 0) {

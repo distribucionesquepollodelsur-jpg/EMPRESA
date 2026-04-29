@@ -16,29 +16,33 @@ const Sales: React.FC = () => {
     const [customerName, setCustomerName] = useState('');
     const [paidAmount, setPaidAmount] = useState<number>(0);
 
-    const addToCart = (product: Product, quantity: number) => {
+    const addToCart = (product: Product, quantity: number, price: number) => {
         if (quantity <= 0) return;
-        if (quantity > product.stock) {
-            alert(`No hay suficiente stock. Disponible: ${product.stock}`);
-            return;
-        }
-
+        
         setCart(prev => {
-            const existing = prev.find(item => item.productId === product.id);
+            const existing = prev.find(item => item.productId === product.id && item.price === price);
             if (existing) {
                 return prev.map(item => 
-                    item.productId === product.id 
+                    (item.productId === product.id && item.price === price)
                     ? { ...item, quantity: item.quantity + quantity }
                     : item
                 );
             }
-            return [...prev, { productId: product.id, quantity, price: product.price }];
+            return [...prev, { productId: product.id, quantity, price: price }];
         });
         setSearchTerm('');
     };
 
-    const removeFromCart = (productId: string) => {
-        setCart(prev => prev.filter(item => item.productId !== productId));
+    const updateCartItem = (index: number, quantity: number, price: number) => {
+        setCart(prev => {
+            const copy = [...prev];
+            copy[index] = { ...copy[index], quantity, price };
+            return copy;
+        });
+    };
+
+    const removeFromCart = (index: number) => {
+        setCart(prev => prev.filter((_, i) => i !== index));
     };
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -199,22 +203,46 @@ const Sales: React.FC = () => {
                                 </div>
                                 
                                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                                    {filteredProducts.map(p => (
-                                        <div key={p.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-500/30 hover:bg-orange-50/20 transition-all group">
-                                            <div>
-                                                <h4 className="font-bold text-slate-900 capitalize">{p.name}</h4>
-                                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{formatCurrency(p.price)} · Stock: {p.stock} {p.unit}</p>
+                                    {filteredProducts.map(p => {
+                                        const [tempPrice, setTempPrice] = useState<number>(p.price);
+                                        const [tempQty, setTempQty] = useState<number>(1);
+
+                                        return (
+                                            <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-500/30 hover:bg-orange-50/20 transition-all group gap-4">
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-slate-900 capitalize">{p.name}</h4>
+                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sugerido: {formatCurrency(p.price)} · Stock: {p.stock} {p.unit}</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex flex-col">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Vender a:</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={tempPrice}
+                                                            onChange={e => setTempPrice(parseFloat(e.target.value))}
+                                                            className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant:</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={tempQty}
+                                                            onChange={e => setTempQty(parseFloat(e.target.value))}
+                                                            className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                                                        />
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => addToCart(p, tempQty, tempPrice)}
+                                                        className="mt-3 sm:mt-0 p-3 bg-white text-orange-500 rounded-xl shadow-sm border border-slate-200 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
+                                                    >
+                                                        <Plus size={20} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <button 
-                                                    onClick={() => addToCart(p, 1)}
-                                                    className="p-3 bg-white text-orange-500 rounded-xl shadow-sm border border-slate-200 group-hover:bg-orange-500 group-hover:text-white transition-all active:scale-90"
-                                                >
-                                                    <Plus size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -251,22 +279,42 @@ const Sales: React.FC = () => {
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto space-y-3">
-                                    {cart.map(item => {
+                                    {cart.map((item, idx) => {
                                         const p = products.find(prod => prod.id === item.productId);
                                         return (
-                                            <div key={item.productId} className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between group">
-                                                <div className="flex flex-col">
+                                            <div key={`${item.productId}-${idx}`} className="bg-white p-4 rounded-xl border border-slate-100 space-y-3 group">
+                                                <div className="flex items-center justify-between">
                                                     <span className="font-bold text-sm text-slate-900">{p?.name}</span>
-                                                    <span className="text-xs text-slate-400">{item.quantity} x {formatCurrency(item.price)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-bold text-sm text-slate-900">{formatCurrency(item.quantity * item.price)}</span>
                                                     <button 
-                                                        onClick={() => removeFromCart(item.productId)}
+                                                        onClick={() => removeFromCart(idx)}
                                                         className="text-slate-300 hover:text-red-500 transition-colors"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant.</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={item.quantity}
+                                                            onChange={e => updateCartItem(idx, parseFloat(e.target.value), item.price)}
+                                                            className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={item.price}
+                                                            onChange={e => updateCartItem(idx, item.quantity, parseFloat(e.target.value))}
+                                                            className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
+                                                        />
+                                                    </div>
+                                                    <div className="text-right min-w-[80px]">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Subtotal</label>
+                                                        <p className="font-bold text-sm text-slate-900">{formatCurrency(item.quantity * item.price)}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );

@@ -19,6 +19,7 @@ const Inventory: React.FC = () => {
     const [unit, setUnit] = useState<Unit>('kg');
     const [price, setPrice] = useState(0);
     const [cost, setCost] = useState(0);
+    const [stock, setStock] = useState(0);
     const [initialStock, setInitialStock] = useState(0);
 
     const filteredProducts = products.filter(p => 
@@ -28,7 +29,7 @@ const Inventory: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProduct) {
-            updateProduct(editingProduct.id, { name, unit, price, cost });
+            updateProduct(editingProduct.id, { name, unit, price, cost, stock });
         } else {
             addProduct({ name, unit, price, cost, stock: initialStock, initialStock });
         }
@@ -40,6 +41,7 @@ const Inventory: React.FC = () => {
         setUnit('kg');
         setPrice(0);
         setCost(0);
+        setStock(0);
         setInitialStock(0);
         setEditingProduct(null);
         setIsModalOpen(false);
@@ -51,6 +53,7 @@ const Inventory: React.FC = () => {
         setUnit(p.unit);
         setPrice(p.price);
         setCost(p.cost);
+        setStock(p.stock);
         setIsModalOpen(true);
     };
 
@@ -229,27 +232,27 @@ const Inventory: React.FC = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label>
                                     <select 
-                                        value={unit} 
-                                        onChange={e => setUnit(e.target.value as Unit)}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none h-[42px]"
-                                    >
-                                        <option value="kg">Kilogramos (kg)</option>
-                                        <option value="und">Unidades (und)</option>
-                                    </select>
-                                </div>
-                                {!editingProduct && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Stock Inicial</label>
-                                        <input 
-                                            type="number" 
-                                            step="0.01"
-                                            value={initialStock} 
-                                            onChange={e => setInitialStock(parseFloat(e.target.value))}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                        />
-                                    </div>
-                                )}
+                                    value={unit} 
+                                    onChange={e => setUnit(e.target.value as Unit)}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none h-[42px]"
+                                >
+                                    <option value="kg">Kilogramos (kg)</option>
+                                    <option value="und">Unidades (und)</option>
+                                </select>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    {editingProduct ? 'Ajustar Stock Actual' : 'Stock Inicial'}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={editingProduct ? stock : initialStock} 
+                                    onChange={e => editingProduct ? setStock(parseFloat(e.target.value)) : setInitialStock(parseFloat(e.target.value))}
+                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none font-bold text-orange-600"
+                                />
+                            </div>
+                        </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Costo</label>
