@@ -62,6 +62,7 @@ interface DataContextType extends AppState {
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
     addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => Promise<void>;
+    deletePurchase: (id: string) => Promise<void>;
     addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>;
     updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
     updatePurchase: (id: string, updates: Partial<Purchase>) => Promise<void>;
