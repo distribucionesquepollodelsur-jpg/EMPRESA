@@ -302,6 +302,11 @@ const Purchases: React.FC = () => {
                                             className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
                                             title="Ver Factura"
                                         >
+                                        <button 
+                                            onClick={() => eliminatePurchaseInvoice(p)}
+                                            className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
+                                            title="Eliminar Factura"
+                                        >
                                             <FileText size={18} />
                                         </button>
                                     </td>
