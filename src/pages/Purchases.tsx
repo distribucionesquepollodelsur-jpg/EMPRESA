@@ -140,7 +140,7 @@ const Purchases: React.FC = () => {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
             y += 4;
         }
-        doc.text(`Tels: ${config.phone1}${config.phone2 ? ` / ${config.phone2}` : ''}`, 40, y, { align: 'center' });
+        doc.text(`Tel: ${config.phone1}${config.phone2 ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
         y += 4;
         doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
         y += 4;

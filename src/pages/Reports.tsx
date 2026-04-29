@@ -72,21 +72,26 @@ const Reports: React.FC = () => {
     }, [employees, advances, attendance, reprimands, currentPeriod]);
 
     const stats = useMemo(() => {
-        const ingresos = sales.reduce((sum, s) => sum + s.total, 0) + 
-                         cashFlow.filter(m => m.type === 'entry' && !m.reason.includes('Venta')).reduce((sum, m) => sum + m.amount, 0);
+        const totalVentas = sales.reduce((sum, s) => sum + s.total, 0);
+        const ventasCredito = sales.reduce((sum, s) => sum + (s.total - s.paidAmount), 0);
         
-        const egresos = purchases.reduce((sum, p) => sum + p.total, 0) + 
-                        cashFlow.filter(m => m.type === 'exit' && !m.reason.includes('Compra')).reduce((sum, m) => sum + m.amount, 0);
+        // Real cash entries come from cashFlow which includes sale payments and cash sales
+        const ingresosCaja = cashFlow.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
+        
+        const totalEgresos = purchases.reduce((sum, p) => sum + p.total, 0) + 
+                             cashFlow.filter(m => m.type === 'exit' && !m.reason.includes('Compra')).reduce((sum, m) => sum + m.amount, 0);
         
         return {
-            ingresos,
-            egresos,
-            utilidad: ingresos - egresos
+            totalVentas,
+            ventasCredito,
+            ingresosCaja,
+            egresos: totalEgresos,
+            balance: ingresosCaja - totalEgresos
         };
     }, [sales, purchases, cashFlow]);
 
     const pieData = [
-        { name: 'Ingresos', value: stats.ingresos, color: '#22c55e' },
+        { name: 'Efectivo en Caja', value: stats.ingresosCaja, color: '#22c55e' },
         { name: 'Egresos', value: stats.egresos, color: '#ef4444' }
     ];
 
@@ -111,14 +116,16 @@ const Reports: React.FC = () => {
 
         y += 20;
         doc.setFontSize(14);
-        doc.text('Resumen General', 14, y);
+        doc.text('Resumen de Ventas y Cartera', 14, y);
         
         autoTable(doc, {
             head: [['Concepto', 'Total']],
             body: [
-                ['Total Ingresos (Ventas + Otros)', formatCurrency(stats.ingresos)],
-                ['Total Egresos (Compras + Otros)', formatCurrency(stats.egresos)],
-                ['Utilidad Neta', formatCurrency(stats.utilidad)]
+                ['Ventas Totales (Facturado)', formatCurrency(stats.totalVentas)],
+                ['Cartera Pendiente (Crédito)', formatCurrency(stats.ventasCredito)],
+                ['Ingresos Reales a Caja', formatCurrency(stats.ingresosCaja)],
+                ['Total Egresos', formatCurrency(stats.egresos)],
+                ['Balance (Ingresos Reales - Egresos)', formatCurrency(stats.balance)]
             ],
             startY: y + 5,
             theme: 'striped',
@@ -255,21 +262,30 @@ const Reports: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Ingresos Totales</p>
-                    <h3 className="text-3xl font-black text-green-600 tracking-tighter">{formatCurrency(stats.ingresos)}</h3>
-                    <TrendingUp className="text-green-100 mt-4" size={48} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas Totales</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.totalVentas)}</h3>
+                    <TrendingUp className="text-slate-50 absolute -right-2 -bottom-2" size={64} />
                 </div>
-                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Egresos Totales</p>
-                    <h3 className="text-3xl font-black text-red-600 tracking-tighter">{formatCurrency(stats.egresos)}</h3>
-                    <TrendingDown className="text-red-100 mt-4" size={48} />
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cartera (Pendiente)</p>
+                    <h3 className="text-xl font-black text-blue-600 tracking-tighter">{formatCurrency(stats.ventasCredito)}</h3>
+                    <div className="mt-2 p-1 bg-blue-50 text-blue-600 text-[8px] font-black rounded uppercase tracking-widest inline-block">
+                        No en caja
+                    </div>
                 </div>
-                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Margen de Ganancia</p>
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.utilidad)}</h3>
-                    <DollarSign className="text-slate-100 mt-4" size={48} />
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ingresos Efectivos</p>
+                    <h3 className="text-xl font-black text-green-600 tracking-tighter">{formatCurrency(stats.ingresosCaja)}</h3>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Egresos Totales</p>
+                    <h3 className="text-xl font-black text-red-600 tracking-tighter">{formatCurrency(stats.egresos)}</h3>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden bg-slate-50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Real Caja</p>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.balance)}</h3>
                 </div>
             </div>
 
