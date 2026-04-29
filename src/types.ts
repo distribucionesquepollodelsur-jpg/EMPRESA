@@ -1,0 +1,118 @@
+export type Unit = 'kg' | 'und';
+
+export interface Product {
+    id: string;
+    name: string;
+    unit: Unit;
+    price: number;
+    cost: number;
+    stock: number;
+    initialStock: number;
+    category?: string;
+}
+
+export interface PurchaseItem {
+    productId: string;
+    quantity: number;
+    cost: number;
+}
+
+export interface Purchase {
+    id: string;
+    date: string;
+    supplierName: string;
+    supplierPhone: string;
+    items: PurchaseItem[];
+    total: number;
+    paidAmount: number;
+    paymentMethod: 'cash' | 'transfer' | 'credit';
+    payments?: { date: string, amount: number, method: string }[];
+}
+
+export interface SaleItem {
+    productId: string;
+    quantity: number;
+    price: number;
+}
+
+export interface Sale {
+    id: string;
+    date: string;
+    customerName?: string;
+    items: SaleItem[];
+    total: number;
+    paidAmount: number;
+    payments?: { date: string, amount: number, method: string }[];
+}
+
+export interface CashMovement {
+    id: string;
+    date: string;
+    type: 'entry' | 'exit';
+    amount: number;
+    reason: string;
+}
+
+export interface Employee {
+    id: string;
+    name: string;
+    email?: string;
+    password?: string;
+    role: 'admin' | 'employee';
+    salary: number;
+    active: boolean;
+}
+
+export interface Attendance {
+    id: string;
+    employeeId: string;
+    date: string;
+    status: 'present' | 'absent' | 'late';
+}
+
+export interface Advance {
+    id: string;
+    employeeId: string;
+    date: string;
+    amount: number;
+}
+
+export interface AppConfig {
+    logo: string | null;
+    companyName: string;
+    nit: string;
+}
+
+export interface Supplier {
+    id: string;
+    name: string;
+    phone: string;
+    initialDebt?: number;
+    initialDebtDate?: string;
+}
+
+export interface Shift {
+    id: string;
+    employeeId: string;
+    date: string; // ISO Date YYYY-MM-DD
+    clockIn?: string; // ISO Timestamp
+    clockOut?: string; // ISO Timestamp
+    breakfastStart?: string;
+    breakfastEnd?: string;
+    lunchStart?: string;
+    lunchEnd?: string;
+    justification?: string;
+}
+
+export interface AppState {
+    products: Product[];
+    purchases: Purchase[];
+    sales: Sale[];
+    cashFlow: CashMovement[];
+    employees: Employee[];
+    attendance: Attendance[];
+    advances: Advance[];
+    suppliers: Supplier[];
+    shifts: Shift[];
+    config: AppConfig;
+}

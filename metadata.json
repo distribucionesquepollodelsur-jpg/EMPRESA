@@ -1,0 +1,6 @@
+{
+  "name": "Que Pollo - Sistema de Gestión",
+  "description": "Sistema integral de contabilidad, inventario, ventas, compras, caja y empleados para Distribuciones Que Pollo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Inventory Management", "Financial Reporting", "Employee Tracking", "Invoice Generation"]
+}
