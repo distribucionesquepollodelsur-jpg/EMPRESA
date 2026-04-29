@@ -31,7 +31,12 @@ const Suppliers: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingSupplier) {
-            updateSupplier(editingSupplier.id, { name, phone });
+            updateSupplier(editingSupplier.id, { 
+                name, 
+                phone,
+                initialDebt: isAdmin ? initialDebt : editingSupplier.initialDebt,
+                initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate
+            });
         } else {
             addSupplier({ 
                 name, 
@@ -79,6 +84,8 @@ const Suppliers: React.FC = () => {
         setEditingSupplier(s);
         setName(s.name);
         setPhone(s.phone);
+        setInitialDebt(s.initialDebt || 0);
+        setInitialDebtDate(s.initialDebtDate ? s.initialDebtDate.split('T')[0] : new Date().toISOString().split('T')[0]);
         setIsModalOpen(true);
     };
 
@@ -90,7 +97,10 @@ const Suppliers: React.FC = () => {
     };
 
     const getSupplierBalance = (supplierId: string, supplierName: string) => {
-        const supplierPurchases = purchases.filter(p => p.supplierId === supplierId || (!p.supplierId && p.supplierName === supplierName));
+        const supplierPurchases = purchases.filter(p => 
+            p.supplierId === supplierId || 
+            (p.supplierName.toLowerCase() === supplierName.toLowerCase())
+        );
         return supplierPurchases.reduce((sum, p) => sum + (p.total - p.paidAmount), 0);
     };
 
@@ -100,7 +110,10 @@ const Suppliers: React.FC = () => {
 
     const getSupplierPurchases = (s: Supplier) => {
         return purchases
-            .filter(p => p.supplierId === s.id || (!p.supplierId && p.supplierName === s.name))
+            .filter(p => 
+                p.supplierId === s.id || 
+                (p.supplierName.toLowerCase() === s.name.toLowerCase())
+            )
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
 
@@ -252,7 +265,7 @@ const Suppliers: React.FC = () => {
                                                     </div>
                                                     <div className="text-right flex flex-col items-end gap-1">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Facturado</p>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
                                                             <p className="font-black text-slate-900">{formatCurrency(purchase.total)}</p>
                                                             {isAdmin && (
                                                                 <button 
@@ -261,10 +274,10 @@ const Suppliers: React.FC = () => {
                                                                         setNewTotal(purchase.total);
                                                                         setIsEditTotalModalOpen(true);
                                                                     }}
-                                                                    className="p-1 text-slate-300 hover:text-blue-600 transition-colors"
+                                                                    className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all"
                                                                     title="Corregir Total"
                                                                 >
-                                                                    <Edit2 size={12} />
+                                                                    <Edit2 size={14} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -461,10 +474,10 @@ const Suppliers: React.FC = () => {
                                 </div>
                             </div>
 
-                            {!editingSupplier && (
+                            {(isAdmin || !editingSupplier) && (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     <div className="space-y-1">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Antiguo</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Antiguo {editingSupplier ? '(C)' : ''}</label>
                                         <input 
                                             type="number" 
                                             value={initialDebt || ''}

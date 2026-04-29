@@ -11,16 +11,19 @@ import {
     Plus,
     History,
     CreditCard,
+    Edit2,
     Lock
 } from 'lucide-react';
 
 const Credits: React.FC = () => {
-    const { purchases, sales, addPurchasePayment, addSalePayment } = useData();
+    const { purchases, sales, addPurchasePayment, addSalePayment, updatePurchase, updateSale } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
     const [activeTab, setActiveTab] = useState<'toPay' | 'toCollect'>('toPay');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
+    const [isEditTotalModalOpen, setIsEditTotalModalOpen] = useState(false);
+    const [newTotal, setNewTotal] = useState<number>(0);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('Efectivo');
 
@@ -48,6 +51,21 @@ const Credits: React.FC = () => {
 
         setSelectedItem(null);
         setPaymentAmount(0);
+    };
+
+    const handleEditTotal = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedItem) return;
+
+        if (activeTab === 'toPay') {
+            updatePurchase(selectedItem.id, { total: newTotal });
+        } else {
+            updateSale(selectedItem.id, { total: newTotal });
+        }
+
+        setSelectedItem(null);
+        setIsEditTotalModalOpen(false);
+        setNewTotal(0);
     };
 
     return (
@@ -114,7 +132,22 @@ const Credits: React.FC = () => {
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
                                 <div className="text-center md:text-left">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
-                                    <p className="font-bold text-slate-600">{formatCurrency(item.total)}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-bold text-slate-600">{formatCurrency(item.total)}</p>
+                                        {isAdmin && (
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedItem(item);
+                                                    setNewTotal(item.total);
+                                                    setIsEditTotalModalOpen(true);
+                                                }}
+                                                className="p-1 text-blue-500 hover:text-blue-700 bg-blue-50 rounded-md transition-all"
+                                                title="Corregir Total"
+                                            >
+                                                <Edit2 size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="text-center md:text-left">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pagado</p>
@@ -150,8 +183,49 @@ const Credits: React.FC = () => {
                 )}
             </div>
 
+            {/* Modal para Corregir Total */}
+            {isEditTotalModalOpen && selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl p-10 space-y-8 text-center border border-blue-100">
+                        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 scale-110">
+                            <Edit2 size={32} />
+                        </div>
+                        <header className="space-y-1">
+                            <h2 className="text-xl font-black text-slate-950 uppercase tracking-tighter">Corregir Saldo</h2>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                {activeTab === 'toPay' ? 'Proveedor' : 'Cliente'}: {activeTab === 'toPay' ? selectedItem.supplierName : (selectedItem.customerName || 'Mostrador')}
+                            </p>
+                        </header>
+
+                        <form onSubmit={handleEditTotal} className="space-y-6 text-left">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block text-center">Nuevo Valor Total del Documento</label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    autoFocus
+                                    value={newTotal || ''}
+                                    onChange={e => setNewTotal(parseFloat(e.target.value))}
+                                    className="w-full px-4 py-6 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-black text-3xl text-slate-900 text-center tracking-tighter"
+                                />
+                                <p className="text-[8px] text-blue-500 font-bold italic text-center uppercase tracking-widest">Este cambio ajustará el balance sin afectar los abonos registrados.</p>
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => { setSelectedItem(null); setIsEditTotalModalOpen(false); }} className="flex-1 py-4 text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black active:scale-95 transition-all text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20">
+                                    Actualizar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Modal de Abono */}
-            {selectedItem && (
+            {selectedItem && !isEditTotalModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
                     <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl p-10 space-y-8">
                         <header className="text-center space-y-2">

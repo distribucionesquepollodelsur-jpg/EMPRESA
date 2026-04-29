@@ -52,7 +52,7 @@ const Customers: React.FC = () => {
             name,
             phone,
             address,
-            initialDebt: editingCustomer ? editingCustomer.initialDebt : initialDebt,
+            initialDebt: isAdmin ? initialDebt : (editingCustomer ? editingCustomer.initialDebt : initialDebt),
             initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString()
         };
 
@@ -91,6 +91,7 @@ const Customers: React.FC = () => {
             setName(customer.name);
             setPhone(customer.phone);
             setAddress(customer.address || '');
+            setInitialDebt(customer.initialDebt || 0);
         } else {
             setEditingCustomer(null);
             setName('');
@@ -308,7 +309,7 @@ const Customers: React.FC = () => {
                                                     </div>
                                                     <div className="text-right flex flex-col items-end gap-1">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Facturado</p>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
                                                             <p className="font-black text-slate-900">{formatCurrency(sale.total)}</p>
                                                             {isAdmin && (
                                                                 <button 
@@ -317,10 +318,10 @@ const Customers: React.FC = () => {
                                                                         setNewTotal(sale.total);
                                                                         setIsEditTotalModalOpen(true);
                                                                     }}
-                                                                    className="p-1 text-slate-300 hover:text-blue-600 transition-colors"
+                                                                    className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all"
                                                                     title="Corregir Total"
                                                                 >
-                                                                    <Edit2 size={12} />
+                                                                    <Edit2 size={14} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -533,11 +534,11 @@ const Customers: React.FC = () => {
                                 </div>
                             </div>
 
-                            {!editingCustomer && (
+                            {(isAdmin || !editingCustomer) && (
                                 <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
                                     <div className="flex items-center gap-2 text-slate-900">
                                         <Wallet size={18} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Saldo Inicial (Deuda Antigua)</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Saldo Inicial {editingCustomer ? '(Corrección)' : '(Deuda Antigua)'}</span>
                                     </div>
                                     <div className="space-y-2">
                                         <input 
@@ -547,7 +548,9 @@ const Customers: React.FC = () => {
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-black text-lg text-red-600"
                                             placeholder="0.00"
                                         />
-                                        <p className="text-[8px] text-slate-400 font-bold uppercase">Se registrará como un saldo pendiente al crear el cliente.</p>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase">
+                                            {editingCustomer ? 'Solo modifique este valor si digitó mal la deuda inicial al crear el cliente.' : 'Se registrará como un saldo pendiente al crear el cliente.'}
+                                        </p>
                                     </div>
                                 </div>
                             )}
