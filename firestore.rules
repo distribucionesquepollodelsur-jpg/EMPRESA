@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      // For now, check if the email is in the hardcoded list or if the stored role is admin
+      return isSignedIn() && (
+        request.auth.token.email in [
+          'alex.b19h@gmail.com',
+          'distribucionesquepollodelsur@gmail.com',
+          'alex@quepollo.com',
+          'admin@quepollo.com',
+          'quepollo@admin.com',
+          'alex.quepollo@gmail.com'
+        ] || (exists(/databases/$(database)/documents/employees/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Purchases
+    match /purchases/{purchaseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Sales
+    match /sales/{saleId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Sales are usually registered by employees too
+    }
+
+    // CashFlow
+    match /cashFlow/{movementId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Employees
+    match /employees/{employeeId} {
+      allow read: if true; // Permite validación de login en cualquier dispositivo
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == employeeId);
+    }
+
+    // Attendance
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Suppliers
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Config
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Shifts
+    match /shifts/{shiftId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    
+    // Advances
+    match /advances/{advanceId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

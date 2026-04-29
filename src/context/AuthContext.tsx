@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 interface AuthUser {
     email: string;
@@ -40,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Auto check if base exists today for this user
             const today = new Date().toISOString().split('T')[0];
             const baseExists = user.role === 'admin' || cashFlow.some(m => 
-                m.date.startsWith(today) && 
+                m.date && m.date.startsWith(today) && 
                 m.reason.includes('Base Inicial') && 
                 m.reason.includes(user.name)
             );
@@ -57,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const employeesList = (employees || []);
         console.log(`Intentando login para: ${cleanEmail}`);
-        console.log(`Buscando en ${employeesList.length} registros...`);
         
         // 1. HARDCODED ADMIN CHECK FIRST
         const hardcodedAdmins = [
@@ -72,7 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const hardcodedPass = ['060224Jc!', 'quepollo2024', 'admin123'];
 
         if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
-            console.log(`Login exitoso como Administrador (Sistema): ${cleanEmail}`);
             setUser({
                 email: cleanEmail,
                 name: 'Administrador Principal',
@@ -90,7 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const storedPass = (emp.password || '').toString().trim();
             if (storedPass === cleanPass) {
                 if (emp.active === false) {
-                    console.warn(`Cuenta desactivada: ${cleanEmail}`);
                     return false;
                 }
                 
@@ -101,13 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     employeeId: emp.id,
                     photo: emp.photo
                 });
-                console.log(`Login exitoso como: ${emp.name} (${emp.role})`);
                 return true;
             }
-            console.warn(`Contraseña incorrecta para usuario registrado: ${cleanEmail}`);
         }
 
-        console.warn(`Login fallido: ${cleanEmail}. No coincide con Administradores ni con registros.`);
         return false;
     };
 

@@ -23,9 +23,24 @@ import Credits from './pages/Credits';
 import Reports from './pages/Reports';
 import Config from './pages/Config';
 
+import { useData } from './context/DataContext';
+import { Loader2 } from 'lucide-react';
+
 const MainContent: React.FC = () => {
   const { isAuthenticated, user, hasEnteredBase } = useAuth();
+  const { loading } = useData();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+          <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Cargando Sistema...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login />;
