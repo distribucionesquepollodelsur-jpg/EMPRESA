@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
-    const { products, purchases, addPurchase, deletePurchase, suppliers, config } = useData();
+    const { products, purchases, addPurchase, suppliers, config } = useData();
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
@@ -46,33 +46,8 @@ const Purchases: React.FC = () => {
 
     const total = items.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
 
-// ✅ FUNCIÓN PARA GUARDAR COMPRA
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (items.length === 0) return;
-
-    try {
-        await addPurchase({
-            supplierId: supplierId || undefined,
-            supplierName,
-            supplierPhone,
-            buyerName,
-            buyerPhone,
-            paymentMethod,
-            items,
-            total,
-            paidAmount
-        });
-
-        alert("Compra guardada");
-        resetForm();
-    } catch (error) {
-        console.error("Error saving purchase:", error);
-        alert("Error al guardar");
-    }
-};
-      e.preventDefault();
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         if (items.length === 0) return;
         
         let finalSupplierName = supplierName;
@@ -109,6 +84,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         if (paymentMethod === 'credit') {
             finalPaid = paidAmount;
         }
+
         const today = format(new Date(), 'yyyy-MM-dd');
         let nextPurchaseNumber = (config.purchaseCounter || 0) + 1;
         if (config.lastSequenceDate !== today) {
@@ -261,18 +237,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     };
 
     const resetForm = () => {
-        const handleDelete = async (id: string) => {
-    const confirmar = window.confirm("¿Seguro que quieres eliminar esta compra?");
-    if (!confirmar) return;
-
-    try {
-        await deletePurchase(id);
-        alert("Compra eliminada");
-    } catch (error) {
-        alert("Error al eliminar");
-        console.error(error);
-    }
-};
         setSupplierId('');
         setIsNewSupplier(false);
         setSupplierName('');
@@ -333,20 +297,10 @@ const handleSubmit = async (e: React.FormEvent) => {
                                         </span>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                        {user?.role === 'admin' && (
-    <button 
-        onClick={() => handleDelete(p.id)}
-        className="text-slate-400 hover:text-red-600 p-2 transition-colors"
-        title="Eliminar Compra"
-    >
-        <Trash2 size={18} />
-    </button>
-)}
                                         <button 
                                             onClick={() => generatePurchaseInvoice(p)}
                                             className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
                                             title="Ver Factura"
-                                            
                                         >
                                             <FileText size={18} />
                                         </button>
