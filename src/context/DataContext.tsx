@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -66,7 +66,7 @@ interface DataContextType extends AppState {
     updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
     updatePurchase: (id: string, updates: Partial<Purchase>) => Promise<void>;
     deleteSale: (id: string) => Promise<void>;
-    processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => Promise<void>;
+    addProcessing: (processing: Omit<Processing, 'id' | 'date'>) => Promise<void>;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
     updateCashMovement: (id: string, movement: Partial<CashMovement>) => Promise<void>;
     deleteCashMovement: (id: string) => Promise<void>;
@@ -125,6 +125,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [reprimands, setReprimands] = useState<Reprimand[]>([]);
+    const [processings, setProcessings] = useState<Processing[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -183,6 +184,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands'));
 
+        const unsubProcessings = onSnapshot(collection(db, 'processings'), (s) => {
+            setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'processings'));
+
         return () => {
             unsubEmployees();
             unsubConfig();
@@ -196,6 +201,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unsubCustomers();
             unsubShifts();
             unsubReprimands();
+            unsubProcessings();
         };
     }, []);
 
@@ -337,22 +343,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `sales/${id}`); }
     };
 
-    const processDespresaje = async (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => {
+    const addProcessing = async (processingData: Omit<Processing, 'id' | 'date'>) => {
         try {
-            // Rest bulk
-            const whole = products.find(p => p.id === wholeChickenId);
+            const processing = {
+                ...processingData,
+                date: new Date().toISOString()
+            };
+
+            await addDoc(collection(db, 'processings'), clean(processing));
+
+            // Rest bulk from inventory
+            const whole = products.find(p => p.id === processing.inputProductId);
             if (whole) {
-                await updateProduct(whole.id, { stock: whole.stock - bulkQuantity });
+                await updateProduct(whole.id, { stock: whole.stock - processing.inputQuantity });
             }
 
-            // Add derivations
-            for (const d of derivations) {
+            // Add derivations to inventory
+            for (const d of processing.outputItems) {
                 const prod = products.find(p => p.id === d.productId);
                 if (prod) {
                     await updateProduct(prod.id, { stock: prod.stock + d.quantity });
                 }
             }
-        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'products'); }
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'processings'); }
     };
 
     const addCashMovement = async (movementData: Omit<CashMovement, 'id' | 'date'>) => {
@@ -643,7 +656,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, config,
             loading,
             addProduct,
             updateProduct,
@@ -653,7 +666,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addSale,
             updateSale,
             deleteSale,
-            processDespresaje,
+            addProcessing,
             addCashMovement,
             updateCashMovement,
             deleteCashMovement,

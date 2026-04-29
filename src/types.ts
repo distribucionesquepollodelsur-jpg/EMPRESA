@@ -148,6 +148,21 @@ export interface Shift {
     justification?: string;
 }
 
+export interface ProcessingItem {
+    productId: string;
+    quantity: number;
+}
+
+export interface Processing {
+    id: string;
+    date: string;
+    purchaseId: string;
+    inputProductId: string;
+    inputQuantity: number;
+    outputItems: ProcessingItem[];
+    totalOutputWeight: number;
+}
+
 export interface AppState {
     products: Product[];
     purchases: Purchase[];
@@ -160,5 +175,6 @@ export interface AppState {
     customers: Customer[];
     shifts: Shift[];
     reprimands: Reprimand[];
+    processings: Processing[];
     config: AppConfig;
 }

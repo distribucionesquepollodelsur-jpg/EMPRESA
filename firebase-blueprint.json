@@ -158,6 +158,21 @@
       },
       "required": ["name", "phone"]
     },
+    "Processing": {
+      "title": "Processing",
+      "description": "Deboning/Cutting processes (Despresaje)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "purchaseId": { "type": "string" },
+        "inputProductId": { "type": "string" },
+        "inputQuantity": { "type": "number" },
+        "outputItems": { "type": "array" },
+        "totalOutputWeight": { "type": "number" }
+      },
+      "required": ["date", "purchaseId", "inputProductId", "inputQuantity", "outputItems"]
+    },
     "Shift": {
       "title": "Shift",
       "description": "Employee work shifts",
@@ -208,6 +223,7 @@
     "reprimands": { "schema": "Reprimand", "description": "Employee reprimands" },
     "suppliers": { "schema": "Supplier", "description": "Supplier directory" },
     "customers": { "schema": "Customer", "description": "Customer directory" },
+    "processings": { "schema": "Processing", "description": "Despresaje records" },
     "shifts": { "schema": "Shift", "description": "Work shifts" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
