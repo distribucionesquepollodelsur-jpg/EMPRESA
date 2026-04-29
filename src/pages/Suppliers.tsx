@@ -6,7 +6,7 @@ import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 
 const Suppliers: React.FC = () => {
-    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment } = useData();
+    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, updatePurchase } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,6 +14,8 @@ const Suppliers: React.FC = () => {
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
     const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+    const [isEditTotalModalOpen, setIsEditTotalModalOpen] = useState(false);
+    const [newTotal, setNewTotal] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Form state
@@ -50,6 +52,16 @@ const Suppliers: React.FC = () => {
         setPaymentAmount(0);
         
         // Update selected purchase in the detail view if needed (it will auto-update via context)
+        setSelectedPurchase(null);
+    };
+
+    const handleEditTotalSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedPurchase) return;
+        
+        updatePurchase(selectedPurchase.id, { total: newTotal });
+        setIsEditTotalModalOpen(false);
+        setNewTotal(0);
         setSelectedPurchase(null);
     };
 
@@ -238,9 +250,24 @@ const Suppliers: React.FC = () => {
                                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Factura: C-{(purchase.purchaseNumber || 0).toString().padStart(6, '0')}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
+                                                    <div className="text-right flex flex-col items-end gap-1">
                                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Facturado</p>
-                                                        <p className="font-black text-slate-900">{formatCurrency(purchase.total)}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-black text-slate-900">{formatCurrency(purchase.total)}</p>
+                                                            {isAdmin && (
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setSelectedPurchase(purchase);
+                                                                        setNewTotal(purchase.total);
+                                                                        setIsEditTotalModalOpen(true);
+                                                                    }}
+                                                                    className="p-1 text-slate-300 hover:text-blue-600 transition-colors"
+                                                                    title="Corregir Total"
+                                                                >
+                                                                    <Edit2 size={12} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -300,6 +327,47 @@ const Suppliers: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para Corregir Total */}
+            {isEditTotalModalOpen && selectedPurchase && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 space-y-6 text-center">
+                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <Edit2 size={32} />
+                        </div>
+                        <header className="space-y-1">
+                            <h3 className="text-xl font-black tracking-tighter uppercase text-slate-900">Corregir Saldo</h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+                                Factura C-{(selectedPurchase.purchaseNumber || 0).toString().padStart(6, '0')}
+                            </p>
+                        </header>
+
+                        <form onSubmit={handleEditTotalSubmit} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nuevo Valor Total</label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    autoFocus
+                                    value={newTotal || ''}
+                                    onChange={e => setNewTotal(parseFloat(e.target.value))}
+                                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none text-2xl font-black text-slate-900 text-center tracking-tighter"
+                                />
+                                <p className="text-[10px] text-blue-500 font-bold italic">Esto cambiará el balance sin registrar un pago.</p>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setIsEditTotalModalOpen(false)} className="flex-1 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all">
+                                    Actualizar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

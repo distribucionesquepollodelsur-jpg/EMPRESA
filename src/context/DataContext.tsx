@@ -47,6 +47,7 @@ interface DataContextType extends AppState {
     addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => void;
     addSale: (sale: Omit<Sale, 'id' | 'date'>) => void;
     updateSale: (id: string, updates: Partial<Sale>) => void;
+    updatePurchase: (id: string, updates: Partial<Purchase>) => void;
     deleteSale: (id: string) => void;
     processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => void;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
@@ -288,6 +289,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             await updateDoc(doc(db, 'sales', id), updates);
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${id}`); }
+    };
+
+    const updatePurchase = async (id: string, updates: Partial<Purchase>) => {
+        try {
+            await updateDoc(doc(db, 'purchases', id), updates);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${id}`); }
     };
 
     const deleteSale = async (id: string) => {
@@ -606,6 +613,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateProduct,
             deleteProduct,
             addPurchase,
+            updatePurchase,
             addSale,
             updateSale,
             deleteSale,
