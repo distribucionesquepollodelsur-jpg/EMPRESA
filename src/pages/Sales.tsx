@@ -64,15 +64,28 @@ const Sales: React.FC = () => {
     const generateInvoice = (items: SaleItem[], saleTotal: number) => {
         const doc = new jsPDF({ format: [80, 150] }); // Thermal printer style
         const margin = 5;
+        let y = 10;
+        
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 30, y, 20, 20);
+                y += 25;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
         
         doc.setFontSize(10);
-        doc.text(config.companyName, 40, 10, { align: 'center' });
+        doc.text(config.companyName, 40, y, { align: 'center' });
+        y += 5;
         doc.setFontSize(8);
-        doc.text(`NIT: ${config.nit}`, 40, 15, { align: 'center' });
-        doc.text(`Fecha: ${formatDate(new Date())}`, 40, 20, { align: 'center' });
-        doc.text('------------------------------------------', 40, 25, { align: 'center' });
+        doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
+        y += 5;
+        doc.text(`Fecha: ${formatDate(new Date())}`, 40, y, { align: 'center' });
+        y += 5;
+        doc.text('------------------------------------------', 40, y, { align: 'center' });
 
-        let y = 30;
+        y += 5;
         doc.text('Producto', margin, y);
         doc.text('Cant.', 45, y);
         doc.text('Subtotal', 65, y);

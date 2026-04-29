@@ -30,14 +30,26 @@ const Reports: React.FC = () => {
 
     const generateFinancialReport = () => {
         const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text(config.companyName || 'Reporte Financiero', 14, 20);
-        doc.setFontSize(10);
-        doc.text(`NIT: ${config.nit}`, 14, 28);
-        doc.text(`Fecha de emisión: ${new Date().toLocaleString()}`, 14, 34);
+        let y = 20;
 
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 30, 30);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+
+        doc.setFontSize(18);
+        doc.text(config.companyName || 'Reporte Financiero', config.logo ? 50 : 14, y - 5);
+        doc.setFontSize(10);
+        doc.text(`NIT: ${config.nit}`, config.logo ? 50 : 14, y + 2);
+        doc.text(`Fecha de emisión: ${new Date().toLocaleString()}`, config.logo ? 50 : 14, y + 8);
+
+        y += 20;
         doc.setFontSize(14);
-        doc.text('Resumen General', 14, 45);
+        doc.text('Resumen General', 14, y);
         
         autoTable(doc, {
             head: [['Concepto', 'Total']],
@@ -46,7 +58,7 @@ const Reports: React.FC = () => {
                 ['Total Egresos (Compras + Otros)', formatCurrency(stats.egresos)],
                 ['Utilidad Neta', formatCurrency(stats.utilidad)]
             ],
-            startY: 50,
+            startY: y + 5,
             theme: 'striped',
             headStyles: { fillColor: [15, 23, 42] }
         });

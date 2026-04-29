@@ -51,10 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user, cashFlow]);
 
     const login = (email: string, pass: string) => {
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanPass = pass.trim();
+
         // Admin check
-        if (email === 'alex.b19h@gmail.com' && pass === '060224Jc!') {
+        if (cleanEmail === 'alex.b19h@gmail.com' && cleanPass === '060224Jc!') {
             setUser({
-                email,
+                email: cleanEmail,
                 name: 'Alex (Admin)',
                 role: 'admin'
             });
@@ -62,7 +65,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Employee check
-        const emp = employees.find(e => e.email?.toLowerCase() === email.toLowerCase() && e.password === pass && e.active);
+        const emp = employees.find(e => 
+            e.email?.toLowerCase().trim() === cleanEmail && 
+            e.password?.trim() === cleanPass && 
+            e.active
+        );
+        
         if (emp) {
             setUser({
                 email: emp.email || '',

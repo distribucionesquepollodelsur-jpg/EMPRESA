@@ -57,7 +57,13 @@ const Employees: React.FC = () => {
 
     const handleAddEmployee = (e: React.FormEvent) => {
         e.preventDefault();
-        addEmployee({ name, email, password, role, salary });
+        addEmployee({ 
+            name: name.trim(), 
+            email: email.trim().toLowerCase(), 
+            password: password.trim(), 
+            role, 
+            salary 
+        });
         setName('');
         setEmail('');
         setPassword('');

@@ -34,11 +34,25 @@ const CashFlow: React.FC = () => {
 
     const generateCashReport = () => {
         const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text('Reporte de Caja Diaria', 14, 20);
-        doc.setFontSize(10);
-        doc.text(`Generado: ${formatDate(new Date())}`, 14, 30);
+        let y = 20;
 
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 30, 30);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+
+        doc.setFontSize(18);
+        doc.text('Reporte de Caja Diaria', config.logo ? 50 : 14, y - 5);
+        doc.setFontSize(10);
+        doc.text(`Empresa: ${config.companyName}`, config.logo ? 50 : 14, y + 2);
+        doc.text(`NIT: ${config.nit}`, config.logo ? 50 : 14, y + 8);
+        doc.text(`Generado: ${formatDate(new Date())}`, config.logo ? 50 : 14, y + 14);
+
+        y += 25;
         autoTable(doc, {
             head: [['Detalle', 'Ingreso', 'Egreso']],
             body: [
@@ -50,7 +64,9 @@ const CashFlow: React.FC = () => {
                 ['TOTALES', formatCurrency(salesTotal + manualEntries), formatCurrency(purchasesTotal + advancesTotal + manualExits)],
                 ['BALANCE FINAL', { content: formatCurrency(netBalance), colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }]
             ] as any,
-            startY: 40,
+            startY: y,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 23, 42] }
         });
 
         doc.save(`caja-${new Date().toISOString().slice(0,10)}.pdf`);

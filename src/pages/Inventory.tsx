@@ -54,9 +54,25 @@ const Inventory: React.FC = () => {
 
     const generateInventoryReport = () => {
         const doc = new jsPDF();
-        doc.text('Reporte de Inventario - Que Pollo', 14, 20);
-        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 30);
+        let y = 20;
 
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 30, 30);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+
+        doc.setFontSize(18);
+        doc.text('Reporte de Inventario', config.logo ? 50 : 14, y - 5);
+        doc.setFontSize(10);
+        doc.text(`Empresa: ${config.companyName}`, config.logo ? 50 : 14, y + 2);
+        doc.text(`NIT: ${config.nit}`, config.logo ? 50 : 14, y + 8);
+        doc.text(`Fecha: ${new Date().toLocaleDateString()}`, config.logo ? 50 : 14, y + 14);
+
+        y += 25;
         autoTable(doc, {
             head: [['Producto', 'Unidad', 'Stock', 'Costo', 'Venta', 'Valor Total']],
             body: products.map(p => [
@@ -67,7 +83,9 @@ const Inventory: React.FC = () => {
                 formatCurrency(p.price),
                 formatCurrency(p.stock * p.cost)
             ]),
-            startY: 40,
+            startY: y,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 23, 42] }
         });
 
         doc.save(`inventario-${new Date().toISOString().split('T')[0]}.pdf`);
