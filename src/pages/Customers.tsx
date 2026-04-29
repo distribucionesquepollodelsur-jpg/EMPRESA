@@ -46,8 +46,12 @@ const Customers: React.FC = () => {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         const customerData = {
             name,
             phone,
@@ -56,13 +60,20 @@ const Customers: React.FC = () => {
             initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString()
         };
 
-        if (editingCustomer) {
-            updateCustomer(editingCustomer.id, customerData);
-        } else {
-            addCustomer(customerData);
+        try {
+            setIsSubmitting(true);
+            if (editingCustomer) {
+                await updateCustomer(editingCustomer.id, customerData);
+            } else {
+                await addCustomer(customerData);
+            }
+            closeModal();
+        } catch (error) {
+            console.error('Error in handleSubmit:', error);
+            alert('Hubo un error al guardar el cliente. Por favor intente de nuevo.');
+        } finally {
+            setIsSubmitting(false);
         }
-
-        closeModal();
     };
 
     const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -565,9 +576,10 @@ const Customers: React.FC = () => {
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="flex-1 px-6 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-950/20 active:scale-95"
+                                    disabled={isSubmitting}
+                                    className="flex-1 px-6 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-950/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {editingCustomer ? 'GUARDAR' : 'CREAR'}
+                                    {isSubmitting ? 'GUARDANDO...' : (editingCustomer ? 'GUARDAR' : 'CREAR')}
                                 </button>
                             </div>
                         </form>

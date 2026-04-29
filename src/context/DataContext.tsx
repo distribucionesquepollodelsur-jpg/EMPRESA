@@ -466,7 +466,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
             
             if (supplierData.initialDebt && supplierData.initialDebt > 0) {
+                const today = format(new Date(), 'yyyy-MM-dd');
+                let nextNumber = (config.purchaseCounter || 0) + 1;
+                
+                if (config.lastSequenceDate !== today) {
+                    nextNumber = 1;
+                }
+
                 await addDoc(collection(db, 'purchases'), {
+                    purchaseNumber: nextNumber,
                     date: supplierData.initialDebtDate || new Date().toISOString(),
                     supplierName: supplierData.name,
                     supplierId: docRef.id,
@@ -476,6 +484,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     paidAmount: 0,
                     paymentMethod: 'credit',
                     payments: []
+                });
+
+                await updateConfig({ 
+                    purchaseCounter: nextNumber,
+                    lastSequenceDate: today
                 });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'suppliers'); }

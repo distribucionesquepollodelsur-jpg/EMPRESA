@@ -28,24 +28,36 @@ const Suppliers: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('cash');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingSupplier) {
-            updateSupplier(editingSupplier.id, { 
-                name, 
-                phone,
-                initialDebt: isAdmin ? initialDebt : editingSupplier.initialDebt,
-                initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate
-            });
-        } else {
-            addSupplier({ 
-                name, 
-                phone, 
-                initialDebt: initialDebt > 0 ? initialDebt : undefined,
-                initialDebtDate: initialDebt > 0 ? initialDebtDate : undefined
-            });
+        if (isSubmitting) return;
+        
+        try {
+            setIsSubmitting(true);
+            if (editingSupplier) {
+                await updateSupplier(editingSupplier.id, { 
+                    name, 
+                    phone,
+                    initialDebt: isAdmin ? initialDebt : editingSupplier.initialDebt,
+                    initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate
+                });
+            } else {
+                await addSupplier({ 
+                    name, 
+                    phone, 
+                    initialDebt: initialDebt > 0 ? initialDebt : undefined,
+                    initialDebtDate: initialDebt > 0 ? initialDebtDate : undefined
+                });
+            }
+            resetForm();
+        } catch (error) {
+            console.error('Error in handleSubmit:', error);
+            alert('Hubo un error al guardar el proveedor. Por favor intente de nuevo.');
+        } finally {
+            setIsSubmitting(false);
         }
-        resetForm();
     };
 
     const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -99,7 +111,7 @@ const Suppliers: React.FC = () => {
     const getSupplierBalance = (supplierId: string, supplierName: string) => {
         const supplierPurchases = purchases.filter(p => 
             p.supplierId === supplierId || 
-            (p.supplierName.toLowerCase() === supplierName.toLowerCase())
+            (p.supplierName && supplierName && p.supplierName.toLowerCase() === supplierName.toLowerCase())
         );
         return supplierPurchases.reduce((sum, p) => sum + (p.total - p.paidAmount), 0);
     };
@@ -112,7 +124,7 @@ const Suppliers: React.FC = () => {
         return purchases
             .filter(p => 
                 p.supplierId === s.id || 
-                (p.supplierName.toLowerCase() === s.name.toLowerCase())
+                (p.supplierName && s.name && p.supplierName.toLowerCase() === s.name.toLowerCase())
             )
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     };
@@ -502,8 +514,12 @@ const Suppliers: React.FC = () => {
                                 <button type="button" onClick={resetForm} className="flex-1 py-3 text-slate-400 font-bold uppercase text-xs tracking-widest">
                                     Cancelar
                                 </button>
-                                <button type="submit" className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-950/20 active:scale-95 transition-all">
-                                    {editingSupplier ? 'Guardar' : 'Registrar'}
+                                <button 
+                                    type="submit" 
+                                    disabled={isSubmitting}
+                                    className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-950/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Guardando...' : (editingSupplier ? 'Guardar' : 'Registrar')}
                                 </button>
                             </div>
                         </form>
