@@ -65,15 +65,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Employee check
-        const emp = employees.find(e => 
-            e.email?.toLowerCase().trim() === cleanEmail && 
-            e.password?.trim() === cleanPass && 
-            e.active
-        );
+        const emp = (employees || []).find(e => {
+            if (!e || !e.email || !e.password) return false;
+            
+            const employeeEmail = e.email.trim().toLowerCase();
+            const employeePassword = e.password.toString().trim();
+            
+            return employeeEmail === cleanEmail && 
+                   employeePassword === cleanPass && 
+                   e.active !== false;
+        });
         
         if (emp) {
             setUser({
-                email: emp.email || '',
+                email: emp.email || cleanEmail,
                 name: emp.name,
                 role: emp.role || 'employee',
                 employeeId: emp.id

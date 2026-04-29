@@ -57,13 +57,15 @@ const Employees: React.FC = () => {
 
     const handleAddEmployee = (e: React.FormEvent) => {
         e.preventDefault();
-        addEmployee({ 
+        const employeeData = { 
             name: name.trim(), 
             email: email.trim().toLowerCase(), 
             password: password.trim(), 
             role, 
             salary 
-        });
+        };
+        addEmployee(employeeData);
+        alert(`Empleado ${employeeData.name} registrado con éxito. Ya puede ingresar al sistema con su correo y contraseña.`);
         setName('');
         setEmail('');
         setPassword('');
@@ -408,7 +410,7 @@ const Employees: React.FC = () => {
                                         type="email" 
                                         required 
                                         value={email}
-                                        onChange={e => setEmail(e.target.value)}
+                                        onChange={e => setEmail(e.target.value.trim())}
                                         className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
                                         placeholder="juan@quepollo.com"
                                     />
@@ -419,7 +421,7 @@ const Employees: React.FC = () => {
                                         type="password" 
                                         required 
                                         value={password}
-                                        onChange={e => setPassword(e.target.value)}
+                                        onChange={e => setPassword(e.target.value.trim())}
                                         className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
                                         placeholder="••••••"
                                     />

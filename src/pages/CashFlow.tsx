@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const CashFlow: React.FC = () => {
-    const { cashFlow, sales, purchases, advances, addCashMovement } = useData();
+    const { cashFlow, sales, purchases, advances, addCashMovement, config } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
