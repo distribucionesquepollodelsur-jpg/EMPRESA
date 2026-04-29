@@ -7,14 +7,14 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "category": { "type": "string" },
+        "unit": { "type": "string", "enum": ["kg", "und"] },
         "price": { "type": "number" },
         "cost": { "type": "number" },
         "stock": { "type": "number" },
-        "minStock": { "type": "number" },
-        "unit": { "type": "string" }
+        "initialStock": { "type": "number" },
+        "category": { "type": "string" }
       },
-      "required": ["id", "name", "category", "price", "stock", "unit"]
+      "required": ["name", "unit", "price", "cost", "stock"]
     },
     "Purchase": {
       "title": "Purchase",
@@ -22,16 +22,20 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "purchaseNumber": { "type": "number" },
         "date": { "type": "string", "format": "date-time" },
         "supplierId": { "type": "string" },
         "supplierName": { "type": "string" },
+        "supplierPhone": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerPhone": { "type": "string" },
         "items": { "type": "array" },
         "total": { "type": "number" },
         "paidAmount": { "type": "number" },
-        "paymentMethod": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "transfer", "credit"] },
         "payments": { "type": "array" }
       },
-      "required": ["id", "date", "total", "paidAmount"]
+      "required": ["purchaseNumber", "date", "supplierName", "items", "total", "paidAmount", "paymentMethod"]
     },
     "Sale": {
       "title": "Sale",
@@ -39,15 +43,20 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "saleNumber": { "type": "number" },
         "date": { "type": "string", "format": "date-time" },
+        "customerId": { "type": "string" },
         "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "sellerPhone": { "type": "string" },
         "items": { "type": "array" },
         "total": { "type": "number" },
         "paidAmount": { "type": "number" },
-        "status": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "credit"] },
         "payments": { "type": "array" }
       },
-      "required": ["id", "date", "total", "paidAmount"]
+      "required": ["saleNumber", "date", "items", "total", "paidAmount", "paymentMethod"]
     },
     "CashMovement": {
       "title": "CashMovement",
@@ -60,7 +69,7 @@
         "amount": { "type": "number" },
         "reason": { "type": "string" }
       },
-      "required": ["id", "date", "type", "amount", "reason"]
+      "required": ["date", "type", "amount", "reason"]
     },
     "Employee": {
       "title": "Employee",
@@ -69,15 +78,15 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "role": { "type": "string", "enum": ["vendedor", "despresador", "auxiliar", "admin"] },
-        "phone": { "type": "string" },
         "email": { "type": "string" },
         "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "employee"] },
         "salary": { "type": "number" },
         "active": { "type": "boolean" },
-        "photo": { "type": "string" }
+        "photo": { "type": "string" },
+        "restDay": { "type": "number" }
       },
-      "required": ["id", "name", "role", "email", "password", "active"]
+      "required": ["name", "role", "salary", "active"]
     },
     "Attendance": {
       "title": "Attendance",
@@ -87,9 +96,36 @@
         "id": { "type": "string" },
         "employeeId": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["presente", "falta", "tarde", "permiso"] }
+        "status": { "type": "string", "enum": ["present", "absent", "late"] }
       },
-      "required": ["id", "employeeId", "date", "status"]
+      "required": ["employeeId", "date", "status"]
+    },
+    "Advance": {
+      "title": "Advance",
+      "description": "Salary advances for employees",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number" }
+      },
+      "required": ["employeeId", "date", "amount"]
+    },
+    "Reprimand": {
+      "title": "Reprimand",
+      "description": "Employee warnings or deductions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" },
+        "type": { "type": "string", "enum": ["time", "salary_day"] },
+        "hours": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "resolved"] }
+      },
+      "required": ["employeeId", "date", "reason", "type", "status"]
     },
     "Supplier": {
       "title": "Supplier",
@@ -100,9 +136,65 @@
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "address": { "type": "string" },
-        "category": { "type": "string" }
+        "nit": { "type": "string" },
+        "category": { "type": "string" },
+        "initialDebt": { "type": "number" },
+        "initialDebtDate": { "type": "string" }
       },
-      "required": ["id", "name"]
+      "required": ["name", "phone"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Business clients",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "nit": { "type": "string" },
+        "initialDebt": { "type": "number" },
+        "initialDebtDate": { "type": "string" }
+      },
+      "required": ["name", "phone"]
+    },
+    "Shift": {
+      "title": "Shift",
+      "description": "Employee work shifts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string" },
+        "clockIn": { "type": "string" },
+        "clockOut": { "type": "string" },
+        "breakfastStart": { "type": "string" },
+        "breakfastEnd": { "type": "string" },
+        "lunchStart": { "type": "string" },
+        "lunchEnd": { "type": "string" },
+        "justification": { "type": "string" }
+      },
+      "required": ["employeeId", "date"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Global application configuration",
+      "type": "object",
+      "properties": {
+        "logo": { "type": ["string", "null"] },
+        "companyName": { "type": "string" },
+        "nit": { "type": "string" },
+        "phone1": { "type": "string" },
+        "phone2": { "type": "string" },
+        "address": { "type": "string" },
+        "warehouseAddress": { "type": "string" },
+        "email": { "type": "string" },
+        "manager": { "type": "string" },
+        "saleCounter": { "type": "number" },
+        "purchaseCounter": { "type": "number" },
+        "lastSequenceDate": { "type": "string" }
+      },
+      "required": ["companyName", "nit"]
     }
   },
   "firestore": {
@@ -112,7 +204,11 @@
     "cashFlow": { "schema": "CashMovement", "description": "Daily cash flow" },
     "employees": { "schema": "Employee", "description": "Staff roster" },
     "attendance": { "schema": "Attendance", "description": "Daily attendance" },
+    "advances": { "schema": "Advance", "description": "Salary advances" },
+    "reprimands": { "schema": "Reprimand", "description": "Employee reprimands" },
     "suppliers": { "schema": "Supplier", "description": "Supplier directory" },
-    "config": { "schema": "object", "description": "App configuration singleton" }
+    "customers": { "schema": "Customer", "description": "Customer directory" },
+    "shifts": { "schema": "Shift", "description": "Work shifts" },
+    "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
