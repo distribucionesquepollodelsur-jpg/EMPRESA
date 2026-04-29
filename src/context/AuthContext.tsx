@@ -55,12 +55,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cleanEmail = (email || '').trim().toLowerCase();
         const cleanPass = (pass || '').trim();
 
-        console.log(`Intentando login para: ${cleanEmail}`);
-        
         const employeesList = (employees || []);
+        console.log(`Intentando login para: ${cleanEmail}`);
         console.log(`Buscando en ${employeesList.length} registros...`);
         
-        // 1. Check registered users first
+        // 1. HARDCODED ADMIN CHECK FIRST
+        const hardcodedAdmins = [
+            'alex.b19h@gmail.com',
+            'distribucionesquepollodelsur@gmail.com',
+            'alex@quepollo.com',
+            'admin@quepollo.com',
+            'quepollo@admin.com',
+            'alex.quepollo@gmail.com'
+        ];
+
+        const hardcodedPass = ['060224Jc!', 'quepollo2024', 'admin123'];
+
+        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
+            console.log(`Login exitoso como Administrador (Sistema): ${cleanEmail}`);
+            setUser({
+                email: cleanEmail,
+                name: 'Administrador Principal',
+                role: 'admin'
+            });
+            return true;
+        }
+
+        // 2. REGISTERED USERS CHECK (Employees)
         const emp = employeesList.find(e => 
             e && e.email && e.email.toString().trim().toLowerCase() === cleanEmail
         );
@@ -69,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const storedPass = (emp.password || '').toString().trim();
             if (storedPass === cleanPass) {
                 if (emp.active === false) {
-                    console.warn(`Intento de login para cuenta desactivada: ${cleanEmail}`);
+                    console.warn(`Cuenta desactivada: ${cleanEmail}`);
                     return false;
                 }
                 
@@ -80,34 +101,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     employeeId: emp.id,
                     photo: emp.photo
                 });
-                console.log(`Login exitoso como empleado: ${emp.name}`);
+                console.log(`Login exitoso como: ${emp.name} (${emp.role})`);
                 return true;
             }
-            console.warn(`Password incorrecto para usuario registrado: ${cleanEmail}`);
+            console.warn(`Contraseña incorrecta para usuario registrado: ${cleanEmail}`);
         }
 
-        // 2. Hardcoded Admin check (Fallback)
-        const hardcodedAdmins = [
-            'alex.b19h@gmail.com',
-            'distribucionesquepollodelsur@gmail.com',
-            'alex@quepollo.com',
-            'admin@quepollo.com',
-            'quepollo@admin.com'
-        ];
-
-        const hardcodedPass = ['060224Jc!', 'quepollo2024', 'admin123'];
-
-        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
-            setUser({
-                email: cleanEmail,
-                name: 'Administrador Principal',
-                role: 'admin'
-            });
-            console.log(`Login exitoso como admin (fallback): ${cleanEmail}`);
-            return true;
-        }
-
-        console.warn(`Login fallido para ${cleanEmail}: No coincide con registro ni fallback.`);
+        console.warn(`Login fallido: ${cleanEmail}. No coincide con Administradores ni con registros.`);
         return false;
     };
 

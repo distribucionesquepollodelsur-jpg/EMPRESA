@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Scissors, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Scissors, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle2, Plus, Lock } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 
 const Despresaje: React.FC = () => {
     const { products, processDespresaje } = useData();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     
     const [wholeChickenId, setWholeChickenId] = useState('');
     const [bulkQuantity, setBulkQuantity] = useState(0);
@@ -113,13 +116,15 @@ const Despresaje: React.FC = () => {
                                 </div>
                                 <h3 className="font-bold uppercase text-sm tracking-widest">Productos Resultantes</h3>
                             </div>
-                            <button 
-                                type="button"
-                                onClick={addDerivation}
-                                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-all uppercase tracking-widest"
-                            >
-                                <Plus size={16} /> Añadir Resultado
-                            </button>
+                            {isAdmin && (
+                                <button 
+                                    type="button"
+                                    onClick={addDerivation}
+                                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-all uppercase tracking-widest"
+                                >
+                                    <Plus size={16} /> Añadir Resultado
+                                </button>
+                            )}
                         </div>
 
                         <div className="space-y-4 flex-1">
@@ -168,18 +173,26 @@ const Despresaje: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="mt-8 pt-8 border-t border-slate-800 flex justify-end gap-4 items-center">
-                            <div className="text-right">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Rendimiento</p>
-                                <p className="text-xl font-black text-white">{derivations.reduce((sum, d) => sum + (d.quantity || 0), 0).toFixed(2)} Kg/Und</p>
+                        <div className="mt-8 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between gap-6 items-center">
+                            {!isAdmin && (
+                                <div className="flex items-center gap-3 px-6 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                                    <Lock size={18} className="text-red-400" />
+                                    <span className="text-[10px] text-red-400 font-black uppercase tracking-widest">Modo de Solo Lectura - Contacte al Administrador</span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-4 ml-auto">
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Rendimiento</p>
+                                    <p className="text-xl font-black text-white">{derivations.reduce((sum, d) => sum + (d.quantity || 0), 0).toFixed(2)} Kg/Und</p>
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={!wholeChickenId || bulkQuantity <= 0 || derivations.length === 0 || !isAdmin}
+                                    className="px-10 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-orange-600 disabled:opacity-30 transition-all active:scale-95 shadow-xl shadow-orange-500/10"
+                                >
+                                    <CheckCircle2 size={24} /> Procesar Transformación
+                                </button>
                             </div>
-                            <button 
-                                type="submit"
-                                disabled={!wholeChickenId || bulkQuantity <= 0 || derivations.length === 0}
-                                className="px-10 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-orange-600 disabled:opacity-50 transition-all active:scale-95 shadow-xl shadow-orange-500/10"
-                            >
-                                <CheckCircle2 size={24} /> Procesar Transformación
-                            </button>
                         </div>
                     </div>
                 </div>

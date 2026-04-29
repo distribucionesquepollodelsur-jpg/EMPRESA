@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Truck, Plus, Phone, Edit2, Trash2, Search, User } from 'lucide-react';
 import { Supplier } from '../types';
 
 const Suppliers: React.FC = () => {
     const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useData();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -57,12 +60,14 @@ const Suppliers: React.FC = () => {
                     <h1 className="text-2xl font-bold text-slate-900">Directorio de Proveedores</h1>
                     <p className="text-slate-500 text-sm">Gestiona tus contactos de abastecimiento</p>
                 </header>
-                <button 
-                    onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 font-bold"
-                >
-                    <Plus size={20} /> Nuevo Proveedor
-                </button>
+                {isAdmin && (
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 font-bold"
+                    >
+                        <Plus size={20} /> Nuevo Proveedor
+                    </button>
+                )}
             </div>
 
             <div className="relative max-w-md">
@@ -83,14 +88,16 @@ const Suppliers: React.FC = () => {
                             <div className="p-3 bg-slate-50 text-slate-400 rounded-xl">
                                 <Truck size={24} />
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleEdit(s)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
-                                    <Edit2 size={16} />
-                                </button>
-                                <button onClick={() => { if(window.confirm('¿Eliminar proveedor?')) deleteSupplier(s.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
+                            {isAdmin && (
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleEdit(s)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <button onClick={() => { if(window.confirm('¿Eliminar proveedor?')) deleteSupplier(s.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-1">{s.name}</h3>
                         <div className="flex items-center gap-2 text-slate-500 text-sm">

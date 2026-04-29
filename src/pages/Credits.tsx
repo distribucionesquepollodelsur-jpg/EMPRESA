@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { 
     Wallet, 
@@ -9,11 +10,14 @@ import {
     ChevronRight, 
     Plus,
     History,
-    CreditCard
+    CreditCard,
+    Lock
 } from 'lucide-react';
 
 const Credits: React.FC = () => {
     const { purchases, sales, addPurchasePayment, addSalePayment } = useData();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [activeTab, setActiveTab] = useState<'toPay' | 'toCollect'>('toPay');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
@@ -122,12 +126,18 @@ const Credits: React.FC = () => {
                                 </div>
                             </div>
 
-                            <button 
-                                onClick={() => setSelectedItem(item)}
-                                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
-                            >
-                                Registrar Abono <Plus size={16} />
-                            </button>
+                            {isAdmin ? (
+                                <button 
+                                    onClick={() => setSelectedItem(item)}
+                                    className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
+                                >
+                                    Registrar Abono <Plus size={16} />
+                                </button>
+                            ) : (
+                                <div className="px-6 py-3 bg-slate-50 text-slate-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-100 italic text-xs">
+                                    <Lock size={14} /> Solo Lectura
+                                </div>
+                            )}
                         </div>
                     );
                 })}

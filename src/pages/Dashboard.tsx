@@ -24,8 +24,10 @@ const Dashboard: React.FC = () => {
     // Filter quick actions based on role
     const quickActions = [
         { label: 'Registrar Venta', action: 'sales', color: 'bg-green-500' },
-        { label: 'Nueva Compra', action: 'purchases', color: 'bg-blue-500' },
-        { label: 'Cierre de Caja', action: 'cash', color: 'bg-orange-500' },
+        ...(user?.role === 'admin' ? [
+            { label: 'Nueva Compra', action: 'purchases', color: 'bg-blue-500' },
+            { label: 'Cierre de Caja', action: 'cash', color: 'bg-orange-500' },
+        ] : []),
     ];
 
     const chartData = useMemo(() => {
