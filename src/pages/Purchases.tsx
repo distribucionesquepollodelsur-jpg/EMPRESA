@@ -88,7 +88,7 @@ const handleDelete = async (id: string) => {
         console.error("Error REAL:", error);
         alert("Error al eliminar");
     }
-}; 
+};      e.preventDefault();
         if (items.length === 0) return;
         
         let finalSupplierName = supplierName;
