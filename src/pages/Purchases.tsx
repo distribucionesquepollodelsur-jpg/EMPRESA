@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
-    const { products, purchases, addPurchase, suppliers, config, deletePurchase } = useData();
+    const { products, purchases, addPurchase, deletePurchase, suppliers, config } = useData();
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
@@ -46,8 +46,49 @@ const Purchases: React.FC = () => {
 
     const total = items.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+// ✅ FUNCIÓN PARA GUARDAR COMPRA
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (items.length === 0) return;
+
+    try {
+        await addPurchase({
+            supplierId: supplierId || undefined,
+            supplierName,
+            supplierPhone,
+            buyerName,
+            buyerPhone,
+            paymentMethod,
+            items,
+            total,
+            paidAmount
+        });
+
+        alert("Compra guardada");
+        resetForm();
+    } catch (error) {
+        console.error("Error saving purchase:", error);
+        alert("Error al guardar");
+    }
+};
+
+// ✅ FUNCIÓN PARA ELIMINAR
+const handleDelete = async (id: string) => {
+    console.log("Intentando eliminar:", id);
+
+    const confirmar = window.confirm("¿Seguro que quieres eliminar esta compra?");
+    if (!confirmar) return;
+
+    try {
+        await deletePurchase(id);
+        console.log("Eliminado correctamente");
+        alert("Compra eliminada");
+    } catch (error) {
+        console.error("Error REAL:", error);
+        alert("Error al eliminar");
+    }
+};       e.preventDefault();
         if (items.length === 0) return;
         
         let finalSupplierName = supplierName;
