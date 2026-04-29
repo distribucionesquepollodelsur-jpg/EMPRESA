@@ -72,6 +72,13 @@ const CashFlow: React.FC = () => {
         doc.save(`caja-${new Date().toISOString().slice(0,10)}.pdf`);
     };
 
+    const handleBaseInicial = () => {
+        setType('entry');
+        setAmount(0);
+        setReason('Base Inicial de Caja');
+        setIsModalOpen(true);
+    };
+
     return (
         <div className="space-y-8">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -80,6 +87,12 @@ const CashFlow: React.FC = () => {
                     <p className="text-slate-500 font-medium italic">Gestión de flujo, cierres y movimientos diarios.</p>
                 </div>
                 <div className="flex gap-3">
+                    <button 
+                        onClick={handleBaseInicial}
+                        className="flex items-center gap-2 px-5 py-3 bg-white border border-orange-200 text-orange-600 rounded-2xl font-bold hover:bg-orange-50 transition-all shadow-sm active:scale-95"
+                    >
+                        <Wallet size={18} /> Base Inicial
+                    </button>
                     <button 
                         onClick={generateCashReport}
                         className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95"
