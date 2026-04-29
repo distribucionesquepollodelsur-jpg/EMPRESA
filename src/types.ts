@@ -19,6 +19,7 @@ export interface PurchaseItem {
 
 export interface Purchase {
     id: string;
+    purchaseNumber: number;
     date: string;
     supplierName: string;
     supplierPhone: string;
@@ -37,6 +38,7 @@ export interface SaleItem {
 
 export interface Sale {
     id: string;
+    saleNumber: number;
     date: string;
     customerName?: string;
     items: SaleItem[];
@@ -94,6 +96,14 @@ export interface AppConfig {
     logo: string | null;
     companyName: string;
     nit: string;
+    phone1: string;
+    phone2: string;
+    address: string;
+    warehouseAddress: string;
+    email: string;
+    manager: string;
+    saleCounter: number;
+    purchaseCounter: number;
 }
 
 export interface Supplier {

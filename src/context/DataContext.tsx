@@ -74,7 +74,15 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const initialConfig: AppConfig = {
     logo: null,
     companyName: 'Distribuciones Que Pollo del Sur',
-    nit: '900.123.456-7'
+    nit: '',
+    phone1: '317 331 5203',
+    phone2: 'Pendiente',
+    address: 'No asignada',
+    warehouseAddress: 'Calle 9 CR 11-33 El Carmen',
+    email: 'distribucionesdelsurquepollo@gmail.com',
+    manager: 'Jorge Luis Lasprilla',
+    saleCounter: 1,
+    purchaseCounter: 1
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -186,14 +194,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return now;
     };
 
-    const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date'>) => {
+    const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date' | 'purchaseNumber'>) => {
+        const nextNumber = (config.purchaseCounter || 0) + 1;
         const purchase = {
             ...purchaseData,
+            purchaseNumber: nextNumber,
             date: new Date().toISOString()
         };
 
         try {
             const docRef = await addDoc(collection(db, 'purchases'), purchase);
+            await updateConfig({ purchaseCounter: nextNumber });
             
             // Sync inventory
             for (const item of purchase.items) {
@@ -214,14 +225,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'purchases'); }
     };
 
-    const addSale = async (saleData: Omit<Sale, 'id' | 'date'>) => {
+    const addSale = async (saleData: Omit<Sale, 'id' | 'date' | 'saleNumber'>) => {
+        const nextNumber = (config.saleCounter || 0) + 1;
         const sale = {
             ...saleData,
+            saleNumber: nextNumber,
             date: new Date().toISOString()
         };
 
         try {
             const docRef = await addDoc(collection(db, 'sales'), sale);
+            await updateConfig({ saleCounter: nextNumber });
             
             // Sync inventory
             for (const item of sale.items) {

@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, ShoppingCart, Search, FileText, CheckCircle2, Edit2, DollarSign, CreditCard, User } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
+import { format } from 'date-fns';
 import { Product, SaleItem, Sale } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -104,6 +105,8 @@ const Sales: React.FC = () => {
 
     const handleConfirmSale = () => {
         if (cart.length === 0) return;
+        const nextSaleNumber = (config.saleCounter || 0) + 1;
+        
         addSale({ 
             items: cart, 
             total, 
@@ -113,7 +116,7 @@ const Sales: React.FC = () => {
         });
         
         // Generate PDF
-        generateInvoice(cart, total);
+        generateInvoice(cart, total, nextSaleNumber);
         
         setCart([]);
         setCustomerName('');
@@ -142,8 +145,8 @@ const Sales: React.FC = () => {
         setSelectedSale(null);
     };
 
-    const generateInvoice = (items: SaleItem[], saleTotal: number) => {
-        const doc = new jsPDF({ format: [80, 150] }); // Thermal printer style
+    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number) => {
+        const doc = new jsPDF({ format: [80, 200] });
         const margin = 5;
         let y = 10;
         
@@ -157,40 +160,86 @@ const Sales: React.FC = () => {
         }
         
         doc.setFontSize(10);
-        doc.text(config.companyName, 40, y, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
         y += 5;
-        doc.setFontSize(8);
-        doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
+        if (config.nit) {
+            doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
+            y += 4;
+        }
+        doc.text(`Tels: ${config.phone1}${config.phone2 ? ` / ${config.phone2}` : ''}`, 40, y, { align: 'center' });
+        y += 4;
+        doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
+        y += 4;
+        doc.text(config.email, 40, y, { align: 'center' });
+        
+        y += 6;
+        doc.setLineWidth(0.1);
+        doc.line(margin, y, 80 - margin, y);
+        
+        y += 6;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('FACTURA DE VENTA', 40, y, { align: 'center' });
+        y += 4;
+        doc.text(`No. V-${(saleNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
+        
+        y += 8;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const now = new Date();
+        doc.text(`Fecha: ${format(now, 'dd/MM/yyyy')}`, margin, y);
+        doc.text(`Hora: ${format(now, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        y += 4;
+        doc.text(`Cliente: ${customerName || 'Venta Mostrador'}`, margin, y);
+        
+        y += 6;
+        doc.line(margin, y, 80 - margin, y);
         y += 5;
-        doc.text(`Fecha: ${formatDate(new Date())}`, 40, y, { align: 'center' });
-        y += 5;
-        doc.text('------------------------------------------', 40, y, { align: 'center' });
-
-        y += 5;
-        doc.text('Producto', margin, y);
-        doc.text('Cant.', 45, y);
-        doc.text('Subtotal', 65, y);
-        y += 5;
-
+        
+        // Table Header
+        doc.setFont('helvetica', 'bold');
+        doc.text('Cant.', margin, y);
+        doc.text('Producto', margin + 10, y);
+        doc.text('Total', 80 - margin, y, { align: 'right' });
+        y += 3;
+        
+        // Items
+        doc.setFont('helvetica', 'normal');
         items.forEach(item => {
-            const product = products.find(p => p.id === item.productId);
-            doc.text(`${product?.name.substring(0, 15)}`, margin, y);
-            doc.text(`${item.quantity}`, 45, y);
-            doc.text(`${(item.quantity * item.price).toLocaleString()}`, 65, y);
+            const p = products.find(prod => prod.id === item.productId);
             y += 5;
+            doc.text(`${item.quantity}`, margin, y);
+            
+            const name = p?.name || 'Producto';
+            const splitName = doc.splitTextToSize(name, 40);
+            doc.text(splitName, margin + 10, y);
+            
+            doc.text(`${formatCurrency(item.quantity * item.price)}`, 80 - margin, y, { align: 'right' });
+            
+            if (splitName.length > 1) y += (splitName.length - 1) * 3;
         });
-
-        y += 5;
-        doc.text('------------------------------------------', 40, y, { align: 'center' });
-        y += 5;
-        doc.setFontSize(10);
-        doc.text(`TOTAL: ${formatCurrency(saleTotal)}`, margin, y);
+        
+        y += 8;
+        doc.line(margin, y, 80 - margin, y);
+        y += 6;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL:', margin, y);
+        doc.text(formatCurrency(saleTotal), 80 - margin, y, { align: 'right' });
         
         y += 10;
-        doc.setFontSize(8);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
         doc.text('¡Gracias por su compra!', 40, y, { align: 'center' });
-
-        doc.save(`venta-${Date.now()}.pdf`);
+        y += 4;
+        doc.text('Este documento es un comprobante de venta.', 40, y, { align: 'center' });
+        
+        doc.save(`Venta_${saleNumber || Date.now()}.pdf`);
     };
 
     const filteredProducts = products.filter(p => 

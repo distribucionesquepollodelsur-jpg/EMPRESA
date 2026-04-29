@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
-import { PurchaseItem } from '../types';
+import { PurchaseItem, Purchase } from '../types';
+import jsPDF from 'jspdf';
+import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
-    const { products, purchases, addPurchase, suppliers } = useData();
+    const { products, purchases, addPurchase, suppliers, config } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Form state
@@ -75,6 +77,8 @@ const Purchases: React.FC = () => {
             finalPaid = paidAmount;
         }
 
+        const nextPurchaseNumber = (config.purchaseCounter || 0) + 1;
+
         addPurchase({
             supplierName: finalSupplierName,
             supplierPhone: finalSupplierPhone,
@@ -83,7 +87,115 @@ const Purchases: React.FC = () => {
             total,
             paidAmount: finalPaid
         });
+
+        generatePurchaseInvoice({
+            id: 'TEMP',
+            purchaseNumber: nextPurchaseNumber,
+            supplierName: finalSupplierName,
+            supplierPhone: finalSupplierPhone,
+            paymentMethod,
+            items,
+            total,
+            paidAmount: finalPaid,
+            date: new Date().toISOString()
+        });
+
         resetForm();
+    };
+
+    const generatePurchaseInvoice = (purchase: Purchase) => {
+        const doc = new jsPDF({ format: [80, 200] });
+        const margin = 5;
+        let y = 10;
+        
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 30, y, 20, 20);
+                y += 25;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
+        
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        y += 5;
+        if (config.nit) {
+            doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
+            y += 4;
+        }
+        doc.text(`Tels: ${config.phone1}${config.phone2 ? ` / ${config.phone2}` : ''}`, 40, y, { align: 'center' });
+        y += 4;
+        doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
+        y += 4;
+        doc.text(config.email, 40, y, { align: 'center' });
+        
+        y += 6;
+        doc.setLineWidth(0.1);
+        doc.line(margin, y, 80 - margin, y);
+        
+        y += 6;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('FACTURA DE COMPRA', 40, y, { align: 'center' });
+        y += 4;
+        doc.text(`No. C-${(purchase.purchaseNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
+        
+        y += 8;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const purchaseDate = new Date(purchase.date);
+        doc.text(`Fecha: ${format(purchaseDate, 'dd/MM/yyyy')}`, margin, y);
+        doc.text(`Hora: ${format(purchaseDate, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        y += 4;
+        doc.text(`Proveedor: ${purchase.supplierName}`, margin, y);
+        
+        y += 6;
+        doc.line(margin, y, 80 - margin, y);
+        y += 5;
+        
+        // Table Header
+        doc.setFont('helvetica', 'bold');
+        doc.text('Cant.', margin, y);
+        doc.text('Producto', margin + 10, y);
+        doc.text('Total', 80 - margin, y, { align: 'right' });
+        y += 3;
+        
+        // Items
+        doc.setFont('helvetica', 'normal');
+        purchase.items.forEach(item => {
+            const p = products.find(prod => prod.id === item.productId);
+            y += 5;
+            doc.text(`${item.quantity}`, margin, y);
+            
+            const name = p?.name || 'Producto';
+            const splitName = doc.splitTextToSize(name, 40);
+            doc.text(splitName, margin + 10, y);
+            
+            doc.text(`${formatCurrency(item.quantity * item.cost)}`, 80 - margin, y, { align: 'right' });
+            
+            if (splitName.length > 1) y += (splitName.length - 1) * 3;
+        });
+        
+        y += 8;
+        doc.line(margin, y, 80 - margin, y);
+        y += 6;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL:', margin, y);
+        doc.text(formatCurrency(purchase.total), 80 - margin, y, { align: 'right' });
+        
+        y += 10;
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        doc.text('Comprobante de ingreso de mercancía', 40, y, { align: 'center' });
+        
+        doc.save(`Compra_${purchase.purchaseNumber || Date.now()}.pdf`);
     };
 
     const resetForm = () => {
@@ -126,15 +238,16 @@ const Purchases: React.FC = () => {
                                 <th className="px-8 py-5">Items</th>
                                 <th className="px-8 py-5">Total</th>
                                 <th className="px-8 py-5">Método</th>
+                                <th className="px-8 py-5 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {purchases.map(p => (
+                            {purchases.slice().reverse().map(p => (
                                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col">
                                             <span className="font-bold text-slate-900">{p.supplierName}</span>
-                                            <span className="text-xs text-slate-400">{p.supplierPhone}</span>
+                                            <span className="text-xs text-slate-400">Ref: C-{(p.purchaseNumber || 0).toString().padStart(6, '0')}</span>
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-sm text-slate-600 font-medium">{formatDate(p.date)}</td>
@@ -144,6 +257,15 @@ const Purchases: React.FC = () => {
                                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
                                             {p.paymentMethod}
                                         </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
+                                        <button 
+                                            onClick={() => generatePurchaseInvoice(p)}
+                                            className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
+                                            title="Ver Factura"
+                                        >
+                                            <FileText size={18} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
