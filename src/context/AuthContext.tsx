@@ -55,17 +55,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cleanEmail = (email || '').trim().toLowerCase();
         const cleanPass = (pass || '').trim();
 
-        console.log(`Login attempt for: ${cleanEmail}`);
-        console.log(`Available employees: ${employees?.length || 0}`);
+        console.log(`Intentando login para: ${cleanEmail}`);
+        
+        const adminEmails = [
+            'alex.b19h@gmail.com',
+            'distribucionesquepollodelsur@gmail.com',
+            'alex@quepollo.com',
+            'admin@quepollo.com',
+            'quepollo@admin.com',
+            'alex.quepollo@gmail.com'
+        ];
+
+        const adminPasswords = ['060224Jc!', 'quepollo2024', 'admin123'];
 
         // Admin check
-        if (
-            (cleanEmail === 'alex.b19h@gmail.com' || cleanEmail === 'distribucionesquepollodelsur@gmail.com') && 
-            (cleanPass === '060224Jc!' || cleanPass === 'quepollo2024')
-        ) {
+        if (adminEmails.includes(cleanEmail) && adminPasswords.includes(cleanPass)) {
             setUser({
                 email: cleanEmail,
-                name: 'Administrador',
+                name: 'Administrador Principal',
                 role: 'admin'
             });
             return true;
@@ -73,34 +80,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Employee check
         const employeesList = (employees || []);
+        console.log(`Buscando en ${employeesList.length} empleados...`);
         
-        // Find employee by email first (lenient check)
-        const empByEmail = employeesList.find(e => 
-            e && e.email && e.email.toString().trim().toLowerCase() === cleanEmail
-        );
+        const emp = employeesList.find(e => {
+            if (!e || !e.email) return false;
+            return e.email.toString().trim().toLowerCase() === cleanEmail;
+        });
 
-        if (empByEmail) {
-            const employeePassword = empByEmail.password.toString().trim();
-            if (employeePassword === cleanPass) {
-                if (empByEmail.active === false) {
-                    return false; // User deactivated
+        if (emp) {
+            console.log(`Empleado encontrado: ${emp.name}. Verificando contraseña...`);
+            const storedPass = (emp.password || '').toString().trim();
+            
+            if (storedPass === cleanPass) {
+                if (emp.active === false) {
+                    console.warn("Empleado desactivado");
+                    return false;
                 }
                 
                 setUser({
-                    email: empByEmail.email || cleanEmail,
-                    name: empByEmail.name,
-                    role: empByEmail.role || 'employee',
-                    employeeId: empByEmail.id,
-                    photo: empByEmail.photo
+                    email: emp.email || cleanEmail,
+                    name: emp.name,
+                    role: emp.role || 'employee',
+                    employeeId: emp.id,
+                    photo: emp.photo
                 });
                 return true;
             } else {
-                console.warn(`Login failed for ${cleanEmail}: Incorrect Password`);
+                console.warn(`Contraseña incorrecta para ${cleanEmail}. Esperada: ${storedPass}, Recibida: ${cleanPass}`);
                 return false;
             }
         }
 
-        console.warn(`Login failed for ${cleanEmail}: User not found`);
+        console.warn(`Login fallido para ${cleanEmail}: Usuario no encontrado en la lista.`);
         return false;
     };
 
