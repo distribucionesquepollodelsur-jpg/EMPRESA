@@ -305,9 +305,7 @@ const Purchases: React.FC = () => {
                                         >
                                             <Trash2 size={18} />
                                         </button>
-                                    </td>
-                                </tr>
-                            ))}
+    )}
                                             onClick={() => generatePurchaseInvoice(p)}
                                             className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
                                             title="Ver Factura"
