@@ -57,40 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log(`Intentando login para: ${cleanEmail}`);
         
-        // 1. Employee check first (Check the registered users in the database)
-        const employeesList = (employees || []);
-        console.log(`Buscando en ${employeesList.length} empleados registrados...`);
-        
-        const emp = employeesList.find(e => {
-            if (!e || !e.email) return false;
-            return e.email.toString().trim().toLowerCase() === cleanEmail;
-        });
-
-        if (emp) {
-            console.log(`Usuario encontrado: ${emp.name}. Verificando contraseña...`);
-            const storedPass = (emp.password || '').toString().trim();
-            
-            if (storedPass === cleanPass) {
-                if (emp.active === false) {
-                    console.warn("Cuenta desactivada");
-                    return false;
-                }
-                
-                setUser({
-                    email: emp.email || cleanEmail,
-                    name: emp.name,
-                    role: emp.role || 'employee', // Use the role defined in the registry
-                    employeeId: emp.id,
-                    photo: emp.photo
-                });
-                return true;
-            } else {
-                console.warn(`Contraseña incorrecta para ${cleanEmail}`);
-                return false;
-            }
-        }
-
-        // 2. Hardcoded Admin check (Fallback for initial setup or owners not in list)
+        // 1. Hardcoded Admin check (Fallback for initial setup or owners not in list)
+        // We check this FIRST to ensure owners can always get back in even if they created an employee account with the same email.
         const hardcodedAdmins = [
             'alex.b19h@gmail.com',
             'distribucionesquepollodelsur@gmail.com',
@@ -109,7 +77,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return true;
         }
 
-        console.warn(`Login fallido para ${cleanEmail}: Usuario no encontrado.`);
+        // 2. Employee check (Check the registered users in the database)
+        const employeesList = (employees || []);
+        
+        const emp = employeesList.find(e => {
+            if (!e || !e.email) return false;
+            return e.email.toString().trim().toLowerCase() === cleanEmail;
+        });
+
+        if (emp) {
+            const storedPass = (emp.password || '').toString().trim();
+            if (storedPass === cleanPass) {
+                if (emp.active === false) {
+                    console.warn("Cuenta desactivada");
+                    return false;
+                }
+                
+                setUser({
+                    email: emp.email || cleanEmail,
+                    name: emp.name,
+                    role: emp.role || 'employee',
+                    employeeId: emp.id,
+                    photo: emp.photo
+                });
+                return true;
+            }
+        }
+
+        console.warn(`Login fallido para ${cleanEmail}`);
         return false;
     };
 

@@ -25,7 +25,7 @@ import Config from './pages/Config';
 
 const MainContent: React.FC = () => {
   const { isAuthenticated, user, hasEnteredBase } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
 
   if (!isAuthenticated) {
     return <Login />;
