@@ -42,6 +42,7 @@ export interface Sale {
     items: SaleItem[];
     total: number;
     paidAmount: number;
+    paymentMethod: 'cash' | 'credit';
     payments?: { date: string, amount: number, method: string }[];
 }
 
@@ -77,6 +78,16 @@ export interface Advance {
     employeeId: string;
     date: string;
     amount: number;
+}
+
+export interface Reprimand {
+    id: string;
+    employeeId: string;
+    date: string;
+    reason: string;
+    type: 'time' | 'salary_day';
+    hours?: number; // solo si es 'time'
+    status: 'pending' | 'resolved';
 }
 
 export interface AppConfig {
@@ -116,5 +127,6 @@ export interface AppState {
     advances: Advance[];
     suppliers: Supplier[];
     shifts: Shift[];
+    reprimands: Reprimand[];
     config: AppConfig;
 }

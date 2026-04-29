@@ -9,7 +9,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const Reports: React.FC = () => {
-    const { sales, purchases, cashFlow, config, employees, attendance, advances } = useData();
+    const { sales, purchases, cashFlow, config, employees, attendance, advances, reprimands } = useData();
 
     const currentPeriod = useMemo(() => {
         const now = new Date();
@@ -40,6 +40,17 @@ const Reports: React.FC = () => {
                 })
                 .reduce((sum, a) => sum + a.amount, 0);
 
+            const periodReprimands = reprimands
+                .filter(r => {
+                    const d = new Date(r.date);
+                    return r.employeeId === emp.id && 
+                           r.status === 'pending' && 
+                           r.type === 'salary_day' && 
+                           d >= currentPeriod.start && d <= currentPeriod.end;
+                });
+
+            const reprimandDeduction = periodReprimands.length * (emp.salary / 15);
+
             const periodAttendance = attendance
                 .filter(a => {
                     const d = new Date(a.date);
@@ -48,16 +59,17 @@ const Reports: React.FC = () => {
 
             // Rest day logic: if we assume 15 days, 2 rest days approx.
             // But let's just show sueldo quincenal base.
-            const totalToPay = emp.salary - periodAdvances;
+            const totalToPay = emp.salary - periodAdvances - reprimandDeduction;
 
             return {
                 ...emp,
                 periodAdvances,
+                reprimandDeduction,
                 periodAttendance,
                 totalToPay
             };
         });
-    }, [employees, advances, attendance, currentPeriod]);
+    }, [employees, advances, attendance, reprimands, currentPeriod]);
 
     const stats = useMemo(() => {
         const ingresos = sales.reduce((sum, s) => sum + s.total, 0) + 
@@ -149,11 +161,12 @@ const Reports: React.FC = () => {
         doc.text(`Corte: ${format(currentPeriod.start, 'dd/MM/yyyy')} al ${format(currentPeriod.end, 'dd/MM/yyyy')}`, config.logo ? 50 : 14, y + 8);
 
         autoTable(doc, {
-            head: [['Colaborador', 'Sueldo Q.', 'Adelantos', 'Asistencia', 'Neto a Pagar']],
+            head: [['Colaborador', 'Sueldo Q.', 'Adelantos', 'Amo. (Días)', 'Asistencia', 'Neto a Pagar']],
             body: payrollData.map(p => [
                 p.name,
                 formatCurrency(p.salary),
                 formatCurrency(p.periodAdvances),
+                formatCurrency(p.reprimandDeduction),
                 `${p.periodAttendance} días`,
                 formatCurrency(p.totalToPay)
             ]),
@@ -207,6 +220,7 @@ const Reports: React.FC = () => {
                                 <th className="text-left py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Empleado</th>
                                 <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sueldo Q.</th>
                                 <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Adelantos</th>
+                                <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amones.</th>
                                 <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asistencia</th>
                                 <th className="text-right py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Neto</th>
                             </tr>
@@ -231,6 +245,7 @@ const Reports: React.FC = () => {
                                     </td>
                                     <td className="py-4 text-center text-sm font-bold text-slate-600">{formatCurrency(p.salary)}</td>
                                     <td className="py-4 text-center text-sm font-bold text-red-500">-{formatCurrency(p.periodAdvances)}</td>
+                                    <td className="py-4 text-center text-sm font-bold text-red-500">-{formatCurrency(p.reprimandDeduction)}</td>
                                     <td className="py-4 text-center text-sm font-black text-blue-600">{p.periodAttendance} Días</td>
                                     <td className="py-4 text-right text-sm font-black text-slate-950">{formatCurrency(p.totalToPay)}</td>
                                 </tr>

@@ -30,12 +30,13 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 );
 
 const Employees: React.FC = () => {
-    const { employees, attendance, advances, shifts, addEmployee, updateEmployee, markAttendance, addAdvance, updateShift, deleteEmployee } = useData();
+    const { employees, attendance, advances, shifts, reprimands, addEmployee, updateEmployee, markAttendance, addAdvance, addReprimand, resolveReprimand, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
     const [activeView, setActiveView] = useState<'roster' | 'attendance'>('roster');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+    const [isReprimandModalOpen, setIsReprimandModalOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [justification, setJustification] = useState('');
     const [showJustifyModal, setShowJustifyModal] = useState<{type: keyof Shift, empId: string} | null>(null);
@@ -51,6 +52,11 @@ const Employees: React.FC = () => {
     const [restDay, setRestDay] = useState<number>(0);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [advanceError, setAdvanceError] = useState('');
+
+    // Reprimand inputs
+    const [reprimandReason, setReprimandReason] = useState('');
+    const [reprimandType, setReprimandType] = useState<'time' | 'salary_day'>('time');
+    const [reprimandHours, setReprimandHours] = useState(0);
 
     const daysOfWeek = [
         "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"
@@ -140,6 +146,9 @@ const Employees: React.FC = () => {
         setSalary(0);
         setRestDay(0);
         setSelectedEmployee(null);
+        setReprimandReason('');
+        setReprimandType('time');
+        setReprimandHours(0);
     };
 
     const openEditModal = (emp: Employee) => {
@@ -158,10 +167,23 @@ const Employees: React.FC = () => {
         e.preventDefault();
         if (!selectedEmployee) return;
         
-        const error = (addAdvance as any)(selectedEmployee.id, advanceAmount); 
-        // Note: Using any because it returns a promise but here it's treated as sync in UI part, or I need to await it.
-        // Let's actually await it if we want the error.
         processAdvance(selectedEmployee.id, advanceAmount);
+    };
+
+    const handleAddReprimand = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedEmployee || !reprimandReason) return;
+
+        addReprimand({
+            employeeId: selectedEmployee.id,
+            reason: reprimandReason,
+            type: reprimandType,
+            hours: reprimandType === 'time' ? reprimandHours : undefined
+        });
+
+        alert("Amonestación registrada correctamente.");
+        setIsReprimandModalOpen(false);
+        resetForm();
     };
 
     const processAdvance = async (id: string, amount: number) => {
@@ -339,26 +361,66 @@ const Employees: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="p-4 bg-white border-t border-slate-50 grid grid-cols-2 gap-3">
+                        <div className="p-4 bg-white border-t border-slate-50 grid grid-cols-2 lg:grid-cols-3 gap-3">
                             <button 
                                 onClick={() => {
                                     markAttendance(emp.id, 'present');
                                     alert(`Asistencia marcada para ${emp.name}`);
                                 }}
-                                className="flex-1 py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                                className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
                             >
                                 <UserCheck size={16} /> Pasar Lista
                             </button>
                             <button 
                                 onClick={() => {
                                     setSelectedEmployee(emp);
+                                    setIsReprimandModalOpen(true);
+                                }}
+                                className="py-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-100 border border-red-100 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <ShieldAlert size={16} /> Amonestar
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setSelectedEmployee(emp);
                                     setIsAdvanceModalOpen(true);
                                 }}
-                                className="flex-1 py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10"
+                                className="py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10 col-span-2 lg:col-span-1"
                             >
                                 <Plus size={16} /> Adelanto
                             </button>
                         </div>
+                        
+                        {/* Pending reprimands display */}
+                        {reprimands.filter(r => r.employeeId === emp.id && r.status === 'pending').length > 0 && (
+                            <div className="px-8 pb-8 pt-2 space-y-3">
+                                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+                                    <ShieldAlert size={10} /> Amonestaciones Pendientes
+                                </p>
+                                <div className="space-y-2">
+                                    {reprimands
+                                        .filter(r => r.employeeId === emp.id && r.status === 'pending')
+                                        .map(r => (
+                                            <div key={r.id} className="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between group">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-red-900">{r.reason}</span>
+                                                    <span className="text-[9px] text-red-400 font-bold uppercase tracking-widest">
+                                                        {r.type === 'time' ? `${r.hours}h de Recargo` : 'Día de Sueldo'} · {formatDate(r.date)}
+                                                    </span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => resolveReprimand(r.id)}
+                                                    className="p-1 text-red-300 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                    title="Marcar como cumplida"
+                                                >
+                                                    <CheckCircle2 size={16} />
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
 
@@ -794,6 +856,75 @@ const Employees: React.FC = () => {
                                 </button>
                                 <button type="button" onClick={() => setIsAdvanceModalOpen(false)} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
                                     Cerrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {isReprimandModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-10 space-y-8">
+                        <header className="text-center space-y-2">
+                            <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">Registrar Amonestación</h2>
+                            <p className="text-sm text-slate-400 font-medium tracking-tight italic">Para: {selectedEmployee?.name}</p>
+                        </header>
+
+                        <form onSubmit={handleAddReprimand} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Motivo de la Falta</label>
+                                <textarea 
+                                    required 
+                                    autoFocus
+                                    value={reprimandReason}
+                                    onChange={e => setReprimandReason(e.target.value)}
+                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-slate-950"
+                                    placeholder="Llegada tarde, incumplimiento de tareas..."
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Cobro por:</label>
+                                    <select 
+                                        value={reprimandType}
+                                        onChange={e => setReprimandType(e.target.value as any)}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-slate-950"
+                                    >
+                                        <option value="time">Tiempo Extra</option>
+                                        <option value="salary_day">Día de Sueldo</option>
+                                    </select>
+                                </div>
+                                {reprimandType === 'time' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Horas</label>
+                                        <input 
+                                            type="number" 
+                                            required 
+                                            value={reprimandHours}
+                                            onChange={e => setReprimandHours(parseFloat(e.target.value))}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-slate-950"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex gap-3">
+                                <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
+                                <p className="text-[10px] text-red-800 font-bold leading-relaxed tracking-tight">
+                                    {reprimandType === 'time' 
+                                        ? "El empleado deberá cumplir tiempo extra después de su jornada laboral para compensar la amonestación."
+                                        : "Se descontará el valor de un día laborado del sueldo del empleado al finalizar el periodo actual."}
+                                </p>
+                            </div>
+                            
+                            <div className="flex flex-col gap-3 pt-6">
+                                <button className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-red-600/20 active:scale-95 transition-all">
+                                    Confirmar Amonestación
+                                </button>
+                                <button type="button" onClick={() => { setIsReprimandModalOpen(false); resetForm(); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                    Cancelar
                                 </button>
                             </div>
                         </form>

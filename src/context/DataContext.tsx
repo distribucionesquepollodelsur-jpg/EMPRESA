@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -46,6 +46,8 @@ interface DataContextType extends AppState {
     deleteProduct: (id: string) => void;
     addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => void;
     addSale: (sale: Omit<Sale, 'id' | 'date'>) => void;
+    updateSale: (id: string, updates: Partial<Sale>) => void;
+    deleteSale: (id: string) => void;
     processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => void;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
     updateCashMovement: (id: string, movement: Partial<CashMovement>) => void;
@@ -55,6 +57,8 @@ interface DataContextType extends AppState {
     deleteEmployee: (id: string) => void;
     markAttendance: (employeeId: string, status: Attendance['status']) => void;
     addAdvance: (employeeId: string, amount: number) => Promise<string | null>;
+    addReprimand: (reprimand: Omit<Reprimand, 'id' | 'date' | 'status'>) => void;
+    resolveReprimand: (id: string) => void;
     addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
     updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
     deleteSupplier: (id: string) => void;
@@ -83,6 +87,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [advances, setAdvances] = useState<Advance[]>([]);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
+    const [reprimands, setReprimands] = useState<Reprimand[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -133,6 +138,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts'));
 
+        const unsubReprimands = onSnapshot(collection(db, 'reprimands'), (s) => {
+            setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands'));
+
         return () => {
             unsubEmployees();
             unsubConfig();
@@ -144,6 +153,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unsubAdvances();
             unsubSuppliers();
             unsubShifts();
+            unsubReprimands();
         };
     }, []);
 
@@ -221,8 +231,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
-            // Sync cash
-            if (sale.paidAmount > 0) {
+            // Sync cash - only if it's cash or has paid amount
+            if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
                 await addCashMovement({
                     type: 'entry',
                     amount: sale.paidAmount,
@@ -230,6 +240,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'sales'); }
+    };
+
+    const updateSale = async (id: string, updates: Partial<Sale>) => {
+        try {
+            await updateDoc(doc(db, 'sales', id), updates);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${id}`); }
+    };
+
+    const deleteSale = async (id: string) => {
+        const sale = sales.find(s => s.id === id);
+        if (!sale) return;
+
+        try {
+            // Restore inventory
+            for (const item of sale.items) {
+                const p = products.find(prod => prod.id === item.productId);
+                if (p) {
+                    await updateProduct(p.id, { stock: p.stock + item.quantity });
+                }
+            }
+            
+            await deleteDoc(doc(db, 'sales', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `sales/${id}`); }
     };
 
     const processDespresaje = async (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => {
@@ -362,6 +395,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const addReprimand = async (reprimandData: Omit<Reprimand, 'id' | 'date' | 'status'>) => {
+        try {
+            const reprimand = {
+                ...reprimandData,
+                date: new Date().toISOString(),
+                status: 'pending'
+            };
+            await addDoc(collection(db, 'reprimands'), reprimand);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'reprimands'); }
+    };
+
+    const resolveReprimand = async (id: string) => {
+        try {
+            await updateDoc(doc(db, 'reprimands', id), { status: 'resolved' });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `reprimands/${id}`); }
+    };
+
     const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
         try {
             const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
@@ -466,13 +516,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, shifts, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, shifts, reprimands, config,
             loading,
             addProduct,
             updateProduct,
             deleteProduct,
             addPurchase,
             addSale,
+            updateSale,
+            deleteSale,
             processDespresaje,
             addCashMovement,
             updateCashMovement,
@@ -482,6 +534,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteEmployee,
             markAttendance,
             addAdvance,
+            addReprimand,
+            resolveReprimand,
             addSupplier,
             updateSupplier,
             deleteSupplier,
