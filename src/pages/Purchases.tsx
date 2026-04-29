@@ -297,23 +297,26 @@ const Purchases: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                            {user?.role === 'admin' && 
-                                        <button 
-                                            onClick={() => handleDelete(p.id)}
-                                            className="text-slate-400 hover:text-red-600 p-2 transition-colors"
-                                            title="Eliminar Compra"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+
+    {user?.role === 'admin' && (
+        <button 
+            onClick={() => handleDelete(p.id)}
+            className="text-slate-400 hover:text-red-600 p-2 transition-colors"
+            title="Eliminar Compra"
+        >
+            <Trash2 size={18} />
+        </button>
     )}
-                                        <button 
-                                            onClick={() => generatePurchaseInvoice(p)}
-                                            className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
-                                            title="Ver Factura"
-                                        >
-                                            <FileText size={18} />
-                                        </button>
-                                    </td>
+
+    <button 
+        onClick={() => generatePurchaseInvoice(p)}
+        className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
+        title="Ver Factura"
+    >
+        <FileText size={18} />
+    </button>
+
+</td>
                                 </tr>
                             ))}
                             {purchases.length === 0 && (
