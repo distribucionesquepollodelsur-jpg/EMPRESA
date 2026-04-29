@@ -52,9 +52,19 @@ const Suppliers: React.FC = () => {
                 });
             }
             resetForm();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error in handleSubmit:', error);
-            alert('Hubo un error al guardar el proveedor. Por favor intente de nuevo.');
+            let message = 'Hubo un error al guardar el proveedor. Por favor intente de nuevo.';
+            
+            // Try to extract more detail if it's a Firestore JSON error
+            try {
+                const parsed = JSON.parse(error.message);
+                if (parsed.error) message += `\nDetalle: ${parsed.error}`;
+            } catch (e) {
+                if (error.message) message += `\nError: ${error.message}`;
+            }
+            
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -109,11 +119,22 @@ const Suppliers: React.FC = () => {
     };
 
     const getSupplierBalance = (supplierId: string, supplierName: string) => {
+        const supplier = suppliers.find(s => s.id === supplierId);
+        const initial = supplier?.initialDebt || 0;
+        
         const supplierPurchases = purchases.filter(p => 
             p.supplierId === supplierId || 
             (p.supplierName && supplierName && p.supplierName.toLowerCase() === supplierName.toLowerCase())
         );
-        return supplierPurchases.reduce((sum, p) => sum + (p.total - p.paidAmount), 0);
+        
+        // We filter out any purchase that was created as "Saldo Inicial" to avoid double counting if we include supplier.initialDebt
+        const regularPurchases = supplierPurchases.filter(p => !p.items.some(item => item.productId === 'saldo-inicial'));
+        const saldoInicialPurchases = supplierPurchases.filter(p => p.items.some(item => item.productId === 'saldo-inicial'));
+        
+        const regularBalance = regularPurchases.reduce((sum, p) => sum + (p.total - p.paidAmount), 0);
+        const saldoInicialPayments = saldoInicialPurchases.reduce((sum, p) => sum + p.paidAmount, 0);
+        
+        return initial + regularBalance - saldoInicialPayments;
     };
 
     const filteredSuppliers = suppliers.filter(s => 
@@ -486,29 +507,27 @@ const Suppliers: React.FC = () => {
                                 </div>
                             </div>
 
-                            {(isAdmin || !editingSupplier) && (
-                                <div className="grid grid-cols-2 gap-4 pt-2">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Antiguo {editingSupplier ? '(C)' : ''}</label>
-                                        <input 
-                                            type="number" 
-                                            value={initialDebt || ''}
-                                            onChange={e => setInitialDebt(parseFloat(e.target.value))}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold"
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Saldo</label>
-                                        <input 
-                                            type="date" 
-                                            value={initialDebtDate}
-                                            onChange={e => setInitialDebtDate(e.target.value)}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-xs"
-                                        />
-                                    </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Saldo Antiguo {editingSupplier ? '(Editar)' : ''}</label>
+                                    <input 
+                                        type="number" 
+                                        value={initialDebt || ''}
+                                        onChange={e => setInitialDebt(parseFloat(e.target.value) || 0)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold"
+                                        placeholder="0"
+                                    />
                                 </div>
-                            )}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Saldo</label>
+                                    <input 
+                                        type="date" 
+                                        value={initialDebtDate}
+                                        onChange={e => setInitialDebtDate(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-xs"
+                                    />
+                                </div>
+                            </div>
                             
                             <div className="flex gap-3 pt-6">
                                 <button type="button" onClick={resetForm} className="flex-1 py-3 text-slate-400 font-bold uppercase text-xs tracking-widest">

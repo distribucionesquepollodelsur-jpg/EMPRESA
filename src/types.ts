@@ -68,6 +68,7 @@ export interface Customer {
     name: string;
     phone: string;
     address?: string;
+    nit?: string;
     initialDebt?: number;
     initialDebtDate?: string;
 }
@@ -127,6 +128,9 @@ export interface Supplier {
     id: string;
     name: string;
     phone: string;
+    address?: string;
+    nit?: string;
+    category?: string;
     initialDebt?: number;
     initialDebtDate?: string;
 }

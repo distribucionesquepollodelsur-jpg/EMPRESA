@@ -105,61 +105,18 @@ const Sales: React.FC = () => {
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    const handleConfirmSale = () => {
-        if (cart.length === 0) return;
-        
-        const today = format(new Date(), 'yyyy-MM-dd');
-        let nextSaleNumber = (config.saleCounter || 0) + 1;
-        if (config.lastSequenceDate !== today) {
-            nextSaleNumber = 1;
-        }
-        
-        const sellerName = user?.role === 'admin' ? config.manager : (user?.name || config.manager);
-        
-        addSale({ 
-            items: cart, 
-            total, 
-            customerId: customerId || undefined,
-            customerName: customerName || 'Venta Mostrador',
-            customerPhone,
-            sellerName,
-            paidAmount: paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' ? total : 0),
-            paymentMethod
-        });
-        
-        // Generate PDF
-        generateInvoice(cart, total, nextSaleNumber, customerName || 'Venta Mostrador', customerPhone, sellerName);
-        
-        setCart([]);
-        setCustomerId('');
-        setCustomerName('');
-        setCustomerPhone('');
-        setPaidAmount(0);
-        setPaymentMethod('cash');
-        setIsModalOpen(false);
-    };
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+    const [lastSaleData, setLastSaleData] = useState<{
+        items: SaleItem[];
+        total: number;
+        saleNumber: number;
+        customerName: string;
+        customerPhone: string;
+        sellerName: string;
+    } | null>(null);
 
-    const handleAddPayment = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedSale || paymentValue <= 0) return;
-        addSalePayment(selectedSale.id, paymentValue, 'Efectivo');
-        setIsPaymentModalOpen(false);
-        setPaymentValue(0);
-        setSelectedSale(null);
-    };
-
-    const handleUpdateSale = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedSale) return;
-        updateSale(selectedSale.id, {
-            customerName: editCustomerName,
-            paymentMethod: editPaymentMethod
-        });
-        setIsEditModalOpen(false);
-        setSelectedSale(null);
-    };
-
-    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string) => {
+    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string, mode: 'save' | 'print' = 'save') => {
         const doc = new jsPDF({ format: [80, 250] });
         const margin = 5;
         let y = 10;
@@ -264,7 +221,92 @@ const Sales: React.FC = () => {
         y += 4;
         doc.text('Este documento es un comprobante de venta.', 40, y, { align: 'center' });
         
-        doc.save(`Venta_${saleNumber || Date.now()}.pdf`);
+        if (mode === 'save') {
+            doc.save(`Venta_${saleNumber || Date.now()}.pdf`);
+        } else {
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        }
+    };
+
+    const handleConfirmSale = async () => {
+        if (cart.length === 0) return;
+        setIsSubmitting(true);
+        
+        try {
+            const today = format(new Date(), 'yyyy-MM-dd');
+            let nextSaleNumber = (config.saleCounter || 0) + 1;
+            if (config.lastSequenceDate !== today) {
+                nextSaleNumber = 1;
+            }
+            
+            const sellerName = user?.role === 'admin' ? config.manager : (user?.name || config.manager);
+            
+            const saleItems = [...cart];
+            const saleTotal = total;
+            const cName = customerName || 'Venta Mostrador';
+            const cPhone = customerPhone;
+            const sName = sellerName;
+            const sNum = nextSaleNumber;
+
+            await addSale({ 
+                items: saleItems, 
+                total: saleTotal, 
+                customerId: customerId || undefined,
+                customerName: cName,
+                customerPhone: cPhone,
+                sellerName: sName,
+                paidAmount: paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' ? saleTotal : 0),
+                paymentMethod
+            });
+            
+            setLastSaleData({
+                items: saleItems,
+                total: saleTotal,
+                saleNumber: sNum,
+                customerName: cName,
+                customerPhone: cPhone,
+                sellerName: sName
+            });
+            
+            setCart([]);
+            setCustomerId('');
+            setCustomerName('');
+            setCustomerPhone('');
+            setPaidAmount(0);
+            setPaymentMethod('cash');
+            setIsModalOpen(false);
+            setShowSuccessBanner(true);
+            
+            // Auto-hide banner after 10 seconds if not clicked
+            setTimeout(() => setShowSuccessBanner(false), 10000);
+        } catch (error) {
+            console.error("Error confirming sale:", error);
+            alert("Error al procesar la venta. Verifique su conexión.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleAddPayment = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedSale || paymentValue <= 0) return;
+        addSalePayment(selectedSale.id, paymentValue, 'Efectivo');
+        setIsPaymentModalOpen(false);
+        setPaymentValue(0);
+        setSelectedSale(null);
+    };
+
+    const handleUpdateSale = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedSale) return;
+        updateSale(selectedSale.id, {
+            customerName: editCustomerName,
+            paymentMethod: editPaymentMethod
+        });
+        setIsEditModalOpen(false);
+        setSelectedSale(null);
     };
 
     const filteredProducts = products.filter(p => 
@@ -272,8 +314,44 @@ const Sales: React.FC = () => {
     );
 
     return (
-        <div className="space-y-6">
-            <header className="flex justify-between items-center">
+        <div className="space-y-6 relative">
+            {showSuccessBanner && lastSaleData && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl border border-slate-700 flex flex-col md:flex-row items-center gap-6">
+                        <div className="flex-1 text-center md:text-left">
+                            <h4 className="text-lg font-black uppercase tracking-tight text-orange-500">¡Venta Exitosa!</h4>
+                            <p className="text-xs text-slate-400 font-bold">¿Desea imprimir o guardar la factura V-{(lastSaleData.saleNumber || 0).toString().padStart(6, '0')}?</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => {
+                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'print');
+                                    setShowSuccessBanner(false);
+                                }}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 transition-all flex items-center gap-2"
+                            >
+                                <FileText size={14} /> Imprimir
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'save');
+                                    setShowSuccessBanner(false);
+                                }}
+                                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                            >
+                                <ShoppingCart size={14} /> Guardar PDF
+                            </button>
+                            <button 
+                                onClick={() => setShowSuccessBanner(false)}
+                                className="p-2 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <Plus className="rotate-45" size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <header className="flex justify-between items-center text-slate-900">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Ventas</h1>
                     <p className="text-slate-500 text-sm">Gestiona ventas y facturación en tiempo real</p>

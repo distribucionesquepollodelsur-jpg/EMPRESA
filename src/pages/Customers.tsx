@@ -35,9 +35,19 @@ const Customers: React.FC = () => {
     const [newTotal, setNewTotal] = useState<number>(0);
 
     const getCustomerBalance = (customerId: string) => {
+        const customer = customers.find(c => c.id === customerId);
+        const initial = customer?.initialDebt || 0;
+
         const customerSales = sales.filter(s => s.customerId === customerId);
-        const totalDebt = customerSales.reduce((sum, s) => sum + (s.total - (s.paidAmount || 0)), 0);
-        return totalDebt;
+        
+        // Filter out "Saldo Inicial" sales to avoid double counting
+        const regularSales = customerSales.filter(s => !s.items.some(item => item.productId === 'saldo-inicial'));
+        const saldoInicialSales = customerSales.filter(s => s.items.some(item => item.productId === 'saldo-inicial'));
+
+        const regularDebt = regularSales.reduce((sum, s) => sum + (s.total - (s.paidAmount || 0)), 0);
+        const saldoInicialPaid = saldoInicialSales.reduce((sum, s) => sum + (s.paidAmount || 0), 0);
+
+        return initial + regularDebt - saldoInicialPaid;
     };
 
     const getCustomerSales = (customerId: string) => {
@@ -68,9 +78,19 @@ const Customers: React.FC = () => {
                 await addCustomer(customerData);
             }
             closeModal();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error in handleSubmit:', error);
-            alert('Hubo un error al guardar el cliente. Por favor intente de nuevo.');
+            let message = 'Hubo un error al guardar el cliente. Por favor intente de nuevo.';
+            
+            // Try to extract more detail if it's a Firestore JSON error
+            try {
+                const parsed = JSON.parse(error.message);
+                if (parsed.error) message += `\nDetalle: ${parsed.error}`;
+            } catch (e) {
+                if (error.message) message += `\nError: ${error.message}`;
+            }
+            
+            alert(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -545,26 +565,24 @@ const Customers: React.FC = () => {
                                 </div>
                             </div>
 
-                            {(isAdmin || !editingCustomer) && (
-                                <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
-                                    <div className="flex items-center gap-2 text-slate-900">
-                                        <Wallet size={18} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Saldo Inicial {editingCustomer ? '(Corrección)' : '(Deuda Antigua)'}</span>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <input 
-                                            type="number" 
-                                            value={initialDebt || ''}
-                                            onChange={e => setInitialDebt(Number(e.target.value))}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-black text-lg text-red-600"
-                                            placeholder="0.00"
-                                        />
-                                        <p className="text-[8px] text-slate-400 font-bold uppercase">
-                                            {editingCustomer ? 'Solo modifique este valor si digitó mal la deuda inicial al crear el cliente.' : 'Se registrará como un saldo pendiente al crear el cliente.'}
-                                        </p>
-                                    </div>
+                            <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <Wallet size={18} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Saldo Inicial {editingCustomer ? '(Editar)' : '(Deuda Antigua)'}</span>
                                 </div>
-                            )}
+                                <div className="space-y-2">
+                                    <input 
+                                        type="number" 
+                                        value={initialDebt || ''}
+                                        onChange={e => setInitialDebt(parseFloat(e.target.value) || 0)}
+                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-black text-lg text-red-600"
+                                        placeholder="0.00"
+                                    />
+                                    <p className="text-[8px] text-slate-400 font-bold uppercase">
+                                        {editingCustomer ? 'Modifique este valor si desea corregir el saldo inicial registrado para este cliente.' : 'Se registrará como un saldo pendiente al crear el cliente.'}
+                                    </p>
+                                </div>
+                            </div>
 
                             <div className="flex gap-4 pt-4">
                                 <button 

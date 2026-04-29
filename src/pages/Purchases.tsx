@@ -46,7 +46,7 @@ const Purchases: React.FC = () => {
 
     const total = items.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (items.length === 0) return;
         
@@ -64,13 +64,17 @@ const Purchases: React.FC = () => {
             const existing = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
             if (!existing) {
                 // Automatically add new supplier to the system
-                addSupplier({
-                    name: supplierName,
-                    phone: supplierPhone,
-                    address: '',
-                    nit: '',
-                    initialDebt: 0
-                });
+                try {
+                    await addSupplier({
+                        name: supplierName,
+                        phone: supplierPhone,
+                        address: '',
+                        nit: '',
+                        initialDebt: 0
+                    });
+                } catch (err) {
+                    console.error("Auto-add supplier failed:", err);
+                }
             }
         }
 
@@ -87,33 +91,39 @@ const Purchases: React.FC = () => {
             nextPurchaseNumber = 1;
         }
 
-        addPurchase({
-            supplierId: supplierId || undefined,
-            supplierName: finalSupplierName,
-            supplierPhone: finalSupplierPhone,
-            buyerName,
-            buyerPhone,
-            paymentMethod,
-            items,
-            total,
-            paidAmount: finalPaid
-        });
+        try {
+            await addPurchase({
+                supplierId: supplierId || undefined,
+                supplierName: finalSupplierName,
+                supplierPhone: finalSupplierPhone,
+                buyerName,
+                buyerPhone,
+                paymentMethod,
+                items,
+                total,
+                paidAmount: finalPaid
+            });
 
-        generatePurchaseInvoice({
-            id: 'TEMP',
-            purchaseNumber: nextPurchaseNumber,
-            supplierName: finalSupplierName,
-            supplierPhone: finalSupplierPhone,
-            buyerName,
-            buyerPhone,
-            paymentMethod,
-            items,
-            total,
-            paidAmount: finalPaid,
-            date: new Date().toISOString()
-        });
+            generatePurchaseInvoice({
+                id: 'NUEVA',
+                purchaseNumber: nextPurchaseNumber,
+                supplierName: finalSupplierName,
+                supplierPhone: finalSupplierPhone,
+                buyerName,
+                buyerPhone,
+                paymentMethod,
+                items,
+                total,
+                paidAmount: finalPaid,
+                date: new Date().toISOString(),
+                paymentStatus: finalPaid >= total ? 'paid' : 'pending'
+            });
 
-        resetForm();
+            resetForm();
+        } catch (error) {
+            console.error("Error saving purchase:", error);
+            alert("Error al guardar la compra.");
+        }
     };
 
     const generatePurchaseInvoice = (purchase: Purchase) => {

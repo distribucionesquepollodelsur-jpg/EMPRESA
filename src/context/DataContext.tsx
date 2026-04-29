@@ -36,41 +36,58 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  console.error(`Firestore Error [${operationType}] at ${path}:`, error);
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 interface DataContextType extends AppState {
     loading: boolean;
-    addProduct: (product: Omit<Product, 'id'>) => void;
-    updateProduct: (id: string, product: Partial<Product>) => void;
-    deleteProduct: (id: string) => void;
-    addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => void;
-    addSale: (sale: Omit<Sale, 'id' | 'date'>) => void;
-    updateSale: (id: string, updates: Partial<Sale>) => void;
-    updatePurchase: (id: string, updates: Partial<Purchase>) => void;
-    deleteSale: (id: string) => void;
-    processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => void;
+    addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+    updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+    deleteProduct: (id: string) => Promise<void>;
+    addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => Promise<void>;
+    addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>;
+    updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
+    updatePurchase: (id: string, updates: Partial<Purchase>) => Promise<void>;
+    deleteSale: (id: string) => Promise<void>;
+    processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => Promise<void>;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
-    updateCashMovement: (id: string, movement: Partial<CashMovement>) => void;
-    deleteCashMovement: (id: string) => void;
-    addEmployee: (employee: Omit<Employee, 'id' | 'active'>) => void;
-    updateEmployee: (id: string, employee: Partial<Employee>) => void;
-    deleteEmployee: (id: string) => void;
-    markAttendance: (employeeId: string, status: Attendance['status']) => void;
+    updateCashMovement: (id: string, movement: Partial<CashMovement>) => Promise<void>;
+    deleteCashMovement: (id: string) => Promise<void>;
+    addEmployee: (employee: Omit<Employee, 'id' | 'active'>) => Promise<void>;
+    updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+    deleteEmployee: (id: string) => Promise<void>;
+    markAttendance: (employeeId: string, status: Attendance['status']) => Promise<void>;
     addAdvance: (employeeId: string, amount: number) => Promise<string | null>;
-    addReprimand: (reprimand: Omit<Reprimand, 'id' | 'date' | 'status'>) => void;
-    resolveReprimand: (id: string) => void;
-    addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
-    updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
-    deleteSupplier: (id: string) => void;
-    addCustomer: (customer: Omit<Customer, 'id'>) => void;
-    updateCustomer: (id: string, customer: Partial<Customer>) => void;
-    deleteCustomer: (id: string) => void;
-    addPurchasePayment: (purchaseId: string, amount: number, method: string) => void;
-    addSalePayment: (saleId: string, amount: number, method: string) => void;
-    updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => void;
-    updateConfig: (config: Partial<AppConfig>) => void;
-    resetData: () => void;
+    addReprimand: (reprimand: Omit<Reprimand, 'id' | 'date' | 'status'>) => Promise<void>;
+    resolveReprimand: (id: string) => Promise<void>;
+    addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
+    updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>;
+    deleteSupplier: (id: string) => Promise<void>;
+    addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+    updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+    deleteCustomer: (id: string) => Promise<void>;
+    addPurchasePayment: (purchaseId: string, amount: number, method: string) => Promise<void>;
+    addSalePayment: (saleId: string, amount: number, method: string) => Promise<void>;
+    updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
+    updateConfig: (config: Partial<AppConfig>) => Promise<void>;
+    resetData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -88,6 +105,12 @@ const initialConfig: AppConfig = {
     saleCounter: 1,
     purchaseCounter: 1,
     lastSequenceDate: ''
+};
+
+const clean = (data: any) => {
+    return Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -178,7 +201,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addProduct = async (product: Omit<Product, 'id'>) => {
         try {
-            await addDoc(collection(db, 'products'), product);
+            await addDoc(collection(db, 'products'), clean(product));
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'products'); }
     };
 
@@ -220,7 +243,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         try {
-            const docRef = await addDoc(collection(db, 'purchases'), purchase);
+            const docRef = await addDoc(collection(db, 'purchases'), clean(purchase));
             await updateConfig({ 
                 purchaseCounter: nextNumber,
                 lastSequenceDate: today
@@ -260,7 +283,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         try {
-            const docRef = await addDoc(collection(db, 'sales'), sale);
+            const docRef = await addDoc(collection(db, 'sales'), clean(sale));
             await updateConfig({ 
                 saleCounter: nextNumber,
                 lastSequenceDate: today
@@ -463,7 +486,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
         try {
-            const docRef = await addDoc(collection(db, 'suppliers'), supplierData);
+            const docRef = await addDoc(collection(db, 'suppliers'), clean(supplierData));
             
             if (supplierData.initialDebt && supplierData.initialDebt > 0) {
                 const today = format(new Date(), 'yyyy-MM-dd');
@@ -496,7 +519,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updateSupplier = async (id: string, updates: Partial<Supplier>) => {
         try {
-            await updateDoc(doc(db, 'suppliers', id), updates);
+            await updateDoc(doc(db, 'suppliers', id), clean(updates));
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
     };
 
@@ -508,7 +531,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
         try {
-            const docRef = await addDoc(collection(db, 'customers'), customerData);
+            const docRef = await addDoc(collection(db, 'customers'), clean(customerData));
             
             if (customerData.initialDebt && customerData.initialDebt > 0) {
                 const today = format(new Date(), 'yyyy-MM-dd');
@@ -537,7 +560,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updateCustomer = async (id: string, updates: Partial<Customer>) => {
         try {
-            await updateDoc(doc(db, 'customers', id), updates);
+            await updateDoc(doc(db, 'customers', id), clean(updates));
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${id}`); }
     };
 
