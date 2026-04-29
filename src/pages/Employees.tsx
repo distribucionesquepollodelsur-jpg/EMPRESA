@@ -30,21 +30,15 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 );
 
 const Employees: React.FC = () => {
-    const { employees, attendance, advances, shifts, addEmployee, markAttendance, addAdvance, updateShift, deleteEmployee } = useData();
+    const { employees, attendance, advances, shifts, addEmployee, updateEmployee, markAttendance, addAdvance, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
     const [activeView, setActiveView] = useState<'roster' | 'attendance'>('roster');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [justification, setJustification] = useState('');
     const [showJustifyModal, setShowJustifyModal] = useState<{type: keyof Shift, empId: string} | null>(null);
-
-    const getEmployeePresenceCount = (id: string) => {
-        const now = new Date();
-        return attendance.filter(a => a.employeeId === id && 
-                                   a.status === 'present' &&
-                                   new Date(a.date).getMonth() === now.getMonth()).length;
-    };
 
     // Form inputs
     const [name, setName] = useState('');
@@ -54,8 +48,36 @@ const Employees: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [role, setRole] = useState<'admin' | 'employee'>('employee');
     const [salary, setSalary] = useState(0);
+    const [restDay, setRestDay] = useState<number>(0);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [advanceError, setAdvanceError] = useState('');
+
+    const daysOfWeek = [
+        "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"
+    ];
+
+    const getEmployeePresenceCount = (id: string) => {
+        const now = new Date();
+        const day = now.getDate();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+
+        let periodStart: Date;
+        let periodEnd: Date;
+
+        if (day <= 15) {
+            periodStart = new Date(year, month, 1);
+            periodEnd = new Date(year, month, 15, 23, 59, 59);
+        } else {
+            periodStart = new Date(year, month, 16);
+            periodEnd = new Date(year, month + 1, 0, 23, 59, 59);
+        }
+
+        return attendance.filter(a => a.employeeId === id && 
+                                   a.status === 'present' &&
+                                   new Date(a.date) >= periodStart &&
+                                   new Date(a.date) <= periodEnd).length;
+    };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -80,24 +102,70 @@ const Employees: React.FC = () => {
             password: password.trim(), 
             role, 
             salary,
-            photo
+            photo,
+            restDay
         };
         addEmployee(employeeData);
         alert(`Empleado ${employeeData.name} registrado con éxito. Ya puede ingresar al sistema con su correo y contraseña.`);
+        resetForm();
+        setIsAddModalOpen(false);
+    };
+
+    const handleUpdateEmployee = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedEmployee) return;
+
+        const updates: Partial<Employee> = {
+            name,
+            email,
+            password,
+            role,
+            salary,
+            photo,
+            restDay
+        };
+
+        updateEmployee(selectedEmployee.id, updates);
+        alert("Información del empleado actualizada correctamente.");
+        setIsEditModalOpen(false);
+        resetForm();
+    };
+
+    const resetForm = () => {
         setName('');
         setPhoto(null);
         setEmail('');
         setPassword('');
         setRole('employee');
         setSalary(0);
-        setIsAddModalOpen(false);
+        setRestDay(0);
+        setSelectedEmployee(null);
+    };
+
+    const openEditModal = (emp: Employee) => {
+        setSelectedEmployee(emp);
+        setName(emp.name);
+        setEmail(emp.email || '');
+        setPassword(emp.password || '');
+        setRole(emp.role);
+        setSalary(emp.salary);
+        setPhoto(emp.photo || null);
+        setRestDay(emp.restDay || 0);
+        setIsEditModalOpen(true);
     };
 
     const handleAddAdvance = (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedEmployee) return;
         
-        const error = addAdvance(selectedEmployee.id, advanceAmount);
+        const error = (addAdvance as any)(selectedEmployee.id, advanceAmount); 
+        // Note: Using any because it returns a promise but here it's treated as sync in UI part, or I need to await it.
+        // Let's actually await it if we want the error.
+        processAdvance(selectedEmployee.id, advanceAmount);
+    };
+
+    const processAdvance = async (id: string, amount: number) => {
+        const error = await addAdvance(id, amount);
         if (error) {
             setAdvanceError(error);
         } else {
@@ -105,14 +173,29 @@ const Employees: React.FC = () => {
             setIsAdvanceModalOpen(false);
             setAdvanceError('');
         }
-    };
+    }
 
     const getEmployeeAdvances = (id: string) => {
         const now = new Date();
+        const day = now.getDate();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+
+        let periodStart: Date;
+        let periodEnd: Date;
+
+        if (day <= 15) {
+            periodStart = new Date(year, month, 1);
+            periodEnd = new Date(year, month, 15, 23, 59, 59);
+        } else {
+            periodStart = new Date(year, month, 16);
+            periodEnd = new Date(year, month + 1, 0, 23, 59, 59);
+        }
+
         return advances
             .filter(a => a.employeeId === id && 
-                        new Date(a.date).getMonth() === now.getMonth() &&
-                        new Date(a.date).getFullYear() === now.getFullYear())
+                        new Date(a.date) >= periodStart &&
+                        new Date(a.date) <= periodEnd)
             .reduce((sum, a) => sum + a.amount, 0);
     };
 
@@ -192,14 +275,25 @@ const Employees: React.FC = () => {
                                 <div className="flex flex-col">
                                     <h3 className="text-xl font-black text-slate-900 capitalize">{emp.name}</h3>
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Base: {formatCurrency(emp.salary)}</span>
+                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Quincenal: {formatCurrency(emp.salary)}</span>
+                                        <div className="flex items-center gap-2">
+                                           <span className="text-[10px] font-bold text-slate-400">Descanso: {daysOfWeek[emp.restDay || 0]}</span>
+                                        </div>
                                         <span className="text-[10px] font-bold text-slate-400">{emp.email}</span>
-                                        <button 
-                                            onClick={() => alert(`La contraseña de ${emp.name} es: ${emp.password}`)}
-                                            className="text-[10px] font-black text-blue-500 uppercase tracking-widest text-left hover:underline"
-                                        >
-                                            Ver Contraseña
-                                        </button>
+                                        <div className="flex gap-4 items-center">
+                                            <button 
+                                                onClick={() => alert(`La contraseña de ${emp.name} es: ${emp.password}`)}
+                                                className="text-[10px] font-black text-blue-500 uppercase tracking-widest text-left hover:underline"
+                                            >
+                                                Ver Contraseña
+                                            </button>
+                                            <button 
+                                                onClick={() => openEditModal(emp)}
+                                                className="text-[10px] font-black text-orange-500 uppercase tracking-widest text-left hover:underline flex items-center gap-1"
+                                            >
+                                                <Plus size={10} /> Editar
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -423,6 +517,121 @@ const Employees: React.FC = () => {
                     </div>
                 </div>
             )}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-10 space-y-8">
+                        <header className="text-center space-y-2">
+                            <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">Editar Empleado</h2>
+                            <p className="text-sm text-slate-400 font-medium tracking-tight">Actualiza la información de {selectedEmployee?.name}.</p>
+                        </header>
+                        
+                        <form onSubmit={handleUpdateEmployee} className="space-y-6">
+                            <div className="flex justify-center mb-6">
+                                <label className="relative group cursor-pointer">
+                                    <div className="w-24 h-24 bg-slate-100 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-slate-400 transition-all overflow-hidden">
+                                        {photo ? (
+                                            <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <>
+                                                <Plus size={24} />
+                                                <span className="text-[10px] font-bold uppercase">Foto</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                                </label>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Email</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value.trim())}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
+                                    <div className="relative">
+                                        <input 
+                                            type={showPassword ? "text" : "password"} 
+                                            required 
+                                            value={password}
+                                            onChange={e => setPassword(e.target.value.trim())}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-3 text-slate-400 hover:text-slate-600"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Rol</label>
+                                    <select 
+                                        value={role}
+                                        onChange={e => setRole(e.target.value as any)}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                    >
+                                        <option value="employee">Empleado</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Sueldo Quincenal</label>
+                                    <input 
+                                        type="number" 
+                                        required 
+                                        value={salary}
+                                        onChange={e => setSalary(parseFloat(e.target.value))}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Día de Descanso</label>
+                                <select 
+                                    value={restDay}
+                                    onChange={e => setRestDay(parseInt(e.target.value))}
+                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                >
+                                    {daysOfWeek.map((day, idx) => (
+                                        <option key={idx} value={idx}>{day}</option>
+                                    ))}
+                                </select>
+                             </div>
+
+                            <div className="flex flex-col gap-3 pt-6">
+                                <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
+                                    Guardar Cambios
+                                </button>
+                                <button type="button" onClick={() => { setIsEditModalOpen(false); resetForm(); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
                     <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-10 space-y-8">
@@ -505,7 +714,7 @@ const Employees: React.FC = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Sueldo Base</label>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Sueldo Quincenal</label>
                                     <input 
                                         type="number" 
                                         required 
@@ -515,6 +724,19 @@ const Employees: React.FC = () => {
                                     />
                                 </div>
                             </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Día de Descanso</label>
+                                <select 
+                                    value={restDay}
+                                    onChange={e => setRestDay(parseInt(e.target.value))}
+                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                >
+                                    {daysOfWeek.map((day, idx) => (
+                                        <option key={idx} value={idx}>{day}</option>
+                                    ))}
+                                </select>
+                             </div>
                             
                             <div className="flex flex-col gap-3 pt-6">
                                 <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">

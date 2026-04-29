@@ -3,11 +3,61 @@ import { useData } from '../context/DataContext';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { TrendingUp, TrendingDown, DollarSign, FileText, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const Reports: React.FC = () => {
-    const { sales, purchases, cashFlow, config } = useData();
+    const { sales, purchases, cashFlow, config, employees, attendance, advances } = useData();
+
+    const currentPeriod = useMemo(() => {
+        const now = new Date();
+        const day = now.getDate();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+        if (day <= 15) {
+            return {
+                start: new Date(year, month, 1),
+                end: new Date(year, month, 15, 23, 59, 59),
+                label: `1ra Quincena - ${format(new Date(year, month, 1), 'MMMM', { locale: es })}`
+            };
+        } else {
+            return {
+                start: new Date(year, month, 16),
+                end: new Date(year, month + 1, 0, 23, 59, 59),
+                label: `2da Quincena - ${format(new Date(year, month, 1), 'MMMM', { locale: es })}`
+            };
+        }
+    }, []);
+
+    const payrollData = useMemo(() => {
+        return employees.map(emp => {
+            const periodAdvances = advances
+                .filter(a => {
+                    const d = new Date(a.date);
+                    return a.employeeId === emp.id && d >= currentPeriod.start && d <= currentPeriod.end;
+                })
+                .reduce((sum, a) => sum + a.amount, 0);
+
+            const periodAttendance = attendance
+                .filter(a => {
+                    const d = new Date(a.date);
+                    return a.employeeId === emp.id && d >= currentPeriod.start && d <= currentPeriod.end && a.status === 'present';
+                }).length;
+
+            // Rest day logic: if we assume 15 days, 2 rest days approx.
+            // But let's just show sueldo quincenal base.
+            const totalToPay = emp.salary - periodAdvances;
+
+            return {
+                ...emp,
+                periodAdvances,
+                periodAttendance,
+                totalToPay
+            };
+        });
+    }, [employees, advances, attendance, currentPeriod]);
 
     const stats = useMemo(() => {
         const ingresos = sales.reduce((sum, s) => sum + s.total, 0) + 
@@ -79,6 +129,42 @@ const Reports: React.FC = () => {
         doc.save(`reporte-financiero-${Date.now()}.pdf`);
     };
 
+    const generatePayrollReport = () => {
+        const doc = new jsPDF();
+        let y = 20;
+
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 30, 30);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+
+        doc.setFontSize(18);
+        doc.text(`PRE-NÓMINA: ${currentPeriod.label}`, config.logo ? 50 : 14, y - 5);
+        doc.setFontSize(10);
+        doc.text(config.companyName, config.logo ? 50 : 14, y + 2);
+        doc.text(`Corte: ${format(currentPeriod.start, 'dd/MM/yyyy')} al ${format(currentPeriod.end, 'dd/MM/yyyy')}`, config.logo ? 50 : 14, y + 8);
+
+        autoTable(doc, {
+            head: [['Colaborador', 'Sueldo Q.', 'Adelantos', 'Asistencia', 'Neto a Pagar']],
+            body: payrollData.map(p => [
+                p.name,
+                formatCurrency(p.salary),
+                formatCurrency(p.periodAdvances),
+                `${p.periodAttendance} días`,
+                formatCurrency(p.totalToPay)
+            ]),
+            startY: y + 20,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42] }
+        });
+
+        doc.save(`nomina-${currentPeriod.label.replace(/\s+/g, '-')}.pdf`);
+    };
+
     return (
         <div className="space-y-10">
             <header className="flex justify-between items-end">
@@ -86,13 +172,73 @@ const Reports: React.FC = () => {
                     <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Informes Financieros</h1>
                     <p className="text-slate-500 font-medium italic">Análisis profundo de la operación de Que Pollo.</p>
                 </div>
-                <button 
-                    onClick={generateFinancialReport}
-                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
-                >
-                    <Download size={20} /> Exportar Balance PDF
-                </button>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={generatePayrollReport}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 active:scale-95 transition-all outline-none"
+                    >
+                        <FileText size={20} /> Nómina Quincenal
+                    </button>
+                    <button 
+                        onClick={generateFinancialReport}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                    >
+                        <Download size={20} /> Exportar Balance PDF
+                    </button>
+                </div>
             </header>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-950 uppercase tracking-tighter">Resumen de Nómina</h3>
+                        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">{currentPeriod.label}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Corte de Pago</p>
+                        <p className="text-sm font-black text-slate-900">{format(currentPeriod.end, 'dd/MM/yyyy')}</p>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-slate-100">
+                                <th className="text-left py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Empleado</th>
+                                <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sueldo Q.</th>
+                                <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Adelantos</th>
+                                <th className="text-center py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Asistencia</th>
+                                <th className="text-right py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {payrollData.map(p => (
+                                <tr key={p.id} className="group hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-4">
+                                        <div className="flex items-center gap-3">
+                                            {p.photo ? (
+                                                <img src={p.photo} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-400 uppercase">
+                                                    {p.name.charAt(0)}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900">{p.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Descansa: {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][p.restDay || 0]}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="py-4 text-center text-sm font-bold text-slate-600">{formatCurrency(p.salary)}</td>
+                                    <td className="py-4 text-center text-sm font-bold text-red-500">-{formatCurrency(p.periodAdvances)}</td>
+                                    <td className="py-4 text-center text-sm font-black text-blue-600">{p.periodAttendance} Días</td>
+                                    <td className="py-4 text-right text-sm font-black text-slate-950">{formatCurrency(p.totalToPay)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
+import { formatCurrency } from '../lib/utils';
 import { onAuthStateChanged } from 'firebase/auth';
 import { 
     collection, 
@@ -193,7 +194,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Sync cash
             if (purchase.paymentMethod !== 'credit') {
                 await addCashMovement({
-                    date: getEffectiveCashDate().toISOString() as any,
                     type: 'exit',
                     amount: purchase.total,
                     reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`
@@ -222,7 +222,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Sync cash
             if (sale.paidAmount > 0) {
                 await addCashMovement({
-                    date: getEffectiveCashDate().toISOString() as any,
                     type: 'entry',
                     amount: sale.paidAmount,
                     reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}`
@@ -297,17 +296,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const employee = employees.find(e => e.id === employeeId);
         if (!employee) return "Empleado no encontrado";
 
+        // Tope legal (30% del sueldo base quincenal)
         const maxAdvance = employee.salary * 0.3;
         
         const now = new Date();
-        const currentMonthAdvances = advances
-            .filter(a => a.employeeId === employeeId && 
-                    new Date(a.date).getMonth() === now.getMonth() &&
-                    new Date(a.date).getFullYear() === now.getFullYear())
+        const day = now.getDate();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+
+        // Determinar periodo actual (1-15 o 16-fin de mes)
+        let periodStart: Date;
+        let periodEnd: Date;
+
+        if (day <= 15) {
+            periodStart = new Date(year, month, 1);
+            periodEnd = new Date(year, month, 15, 23, 59, 59);
+        } else {
+            periodStart = new Date(year, month, 16);
+            periodEnd = new Date(year, month + 1, 0, 23, 59, 59);
+        }
+
+        const currentPeriodAdvances = advances
+            .filter(a => {
+                const advanceDate = new Date(a.date);
+                return a.employeeId === employeeId && 
+                       advanceDate >= periodStart && 
+                       advanceDate <= periodEnd;
+            })
             .reduce((sum, a) => sum + a.amount, 0);
 
-        if (currentMonthAdvances + amount > maxAdvance) {
-            return "Excede el tope del 30% del sueldo";
+        if (currentPeriodAdvances + amount > maxAdvance) {
+            return `Excede el tope del 30% (${formatCurrency(maxAdvance)}) para este periodo quincenal. Adelantos actuales: ${formatCurrency(currentPeriodAdvances)}`;
         }
 
         try {

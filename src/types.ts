@@ -62,6 +62,7 @@ export interface Employee {
     salary: number;
     active: boolean;
     photo?: string | null;
+    restDay?: number; // 0-6 (0=Domingo, 1=Lunes, etc.)
 }
 
 export interface Attendance {
