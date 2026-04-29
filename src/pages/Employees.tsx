@@ -70,6 +70,10 @@ const Employees: React.FC = () => {
 
     const handleAddEmployee = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!name || !email || !password) {
+            alert("Por favor completa todos los campos (Nombre, Email y Contraseña)");
+            return;
+        }
         const employeeData = { 
             name: name.trim(), 
             email: email.trim().toLowerCase(), 
@@ -513,7 +517,7 @@ const Employees: React.FC = () => {
                             </div>
                             
                             <div className="flex flex-col gap-3 pt-6">
-                                <button className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
+                                <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
                                     Registrar con Éxito
                                 </button>
                                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">

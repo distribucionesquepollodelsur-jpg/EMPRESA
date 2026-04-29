@@ -57,39 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log(`Intentando login para: ${cleanEmail}`);
         
-        // 1. Hardcoded Admin check (Fallback for initial setup or owners not in list)
-        // We check this FIRST to ensure owners can always get back in even if they created an employee account with the same email.
-        const hardcodedAdmins = [
-            'alex.b19h@gmail.com',
-            'distribucionesquepollodelsur@gmail.com',
-            'alex@quepollo.com',
-            'admin@quepollo.com'
-        ];
-
-        const hardcodedPass = ['060224Jc!', 'quepollo2024'];
-
-        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
-            setUser({
-                email: cleanEmail,
-                name: 'Administrador Principal',
-                role: 'admin'
-            });
-            return true;
-        }
-
-        // 2. Employee check (Check the registered users in the database)
         const employeesList = (employees || []);
+        console.log(`Buscando en ${employeesList.length} registros...`);
         
-        const emp = employeesList.find(e => {
-            if (!e || !e.email) return false;
-            return e.email.toString().trim().toLowerCase() === cleanEmail;
-        });
+        // 1. Check registered users first
+        const emp = employeesList.find(e => 
+            e && e.email && e.email.toString().trim().toLowerCase() === cleanEmail
+        );
 
         if (emp) {
             const storedPass = (emp.password || '').toString().trim();
             if (storedPass === cleanPass) {
                 if (emp.active === false) {
-                    console.warn("Cuenta desactivada");
+                    console.warn(`Intento de login para cuenta desactivada: ${cleanEmail}`);
                     return false;
                 }
                 
@@ -100,11 +80,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     employeeId: emp.id,
                     photo: emp.photo
                 });
+                console.log(`Login exitoso como empleado: ${emp.name}`);
                 return true;
             }
+            console.warn(`Password incorrecto para usuario registrado: ${cleanEmail}`);
         }
 
-        console.warn(`Login fallido para ${cleanEmail}`);
+        // 2. Hardcoded Admin check (Fallback)
+        const hardcodedAdmins = [
+            'alex.b19h@gmail.com',
+            'distribucionesquepollodelsur@gmail.com',
+            'alex@quepollo.com',
+            'admin@quepollo.com',
+            'quepollo@admin.com'
+        ];
+
+        const hardcodedPass = ['060224Jc!', 'quepollo2024', 'admin123'];
+
+        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
+            setUser({
+                email: cleanEmail,
+                name: 'Administrador Principal',
+                role: 'admin'
+            });
+            console.log(`Login exitoso como admin (fallback): ${cleanEmail}`);
+            return true;
+        }
+
+        console.warn(`Login fallido para ${cleanEmail}: No coincide con registro ni fallback.`);
         return false;
     };
 
