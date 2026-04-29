@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: true },
         { id: 'inventory', label: 'Inventario', icon: Package, adminOnly: false }, // Employees need to see stock to sell
         { id: 'suppliers', label: 'Proveedores', icon: Truck, adminOnly: true },
+        { id: 'customers', label: 'Clientes', icon: Users, adminOnly: false },
         { id: 'credits', label: 'Cuentas', icon: History },
         { id: 'purchases', label: 'Compras', icon: ShoppingCart, adminOnly: true },
         { id: 'sales', label: 'Ventas', icon: Tag },

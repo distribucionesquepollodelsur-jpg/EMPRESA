@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -62,6 +62,9 @@ interface DataContextType extends AppState {
     addSupplier: (supplier: Omit<Supplier, 'id'>) => void;
     updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
     deleteSupplier: (id: string) => void;
+    addCustomer: (customer: Omit<Customer, 'id'>) => void;
+    updateCustomer: (id: string, customer: Partial<Customer>) => void;
+    deleteCustomer: (id: string) => void;
     addPurchasePayment: (purchaseId: string, amount: number, method: string) => void;
     addSalePayment: (saleId: string, amount: number, method: string) => void;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => void;
@@ -95,6 +98,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [attendance, setAttendance] = useState<Attendance[]>([]);
     const [advances, setAdvances] = useState<Advance[]>([]);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [reprimands, setReprimands] = useState<Reprimand[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
@@ -143,6 +147,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'suppliers'));
 
+        const unsubCustomers = onSnapshot(collection(db, 'customers'), (s) => {
+            setCustomers(s.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'customers'));
+
         const unsubShifts = onSnapshot(collection(db, 'shifts'), (s) => {
             setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts'));
@@ -161,6 +169,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unsubAttendance();
             unsubAdvances();
             unsubSuppliers();
+            unsubCustomers();
             unsubShifts();
             unsubReprimands();
         };
@@ -476,6 +485,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `suppliers/${id}`); }
     };
 
+    const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
+        try {
+            const docRef = await addDoc(collection(db, 'customers'), customerData);
+            
+            if (customerData.initialDebt && customerData.initialDebt > 0) {
+                const today = format(new Date(), 'yyyy-MM-dd');
+                let nextSaleNumber = (config.saleCounter || 0) + 1;
+                if (config.lastSequenceDate !== today) nextSaleNumber = 1;
+
+                await addDoc(collection(db, 'sales'), {
+                    date: customerData.initialDebtDate || new Date().toISOString(),
+                    customerName: customerData.name,
+                    customerId: docRef.id,
+                    customerPhone: customerData.phone,
+                    items: [],
+                    total: customerData.initialDebt,
+                    paidAmount: 0,
+                    paymentMethod: 'credit',
+                    saleNumber: nextSaleNumber
+                });
+                
+                await updateConfig({ 
+                    saleCounter: nextSaleNumber,
+                    lastSequenceDate: today
+                });
+            }
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'customers'); }
+    };
+
+    const updateCustomer = async (id: string, updates: Partial<Customer>) => {
+        try {
+            await updateDoc(doc(db, 'customers', id), updates);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${id}`); }
+    };
+
+    const deleteCustomer = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'customers', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `customers/${id}`); }
+    };
+
     const updateShift = async (employeeId: string, type: string, justification?: string) => {
         const today = format(new Date(), 'yyyy-MM-dd');
         const q = query(collection(db, 'shifts'), where('employeeId', '==', employeeId), where('date', '==', today));
@@ -549,7 +599,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, shifts, reprimands, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, config,
             loading,
             addProduct,
             updateProduct,
@@ -572,6 +622,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addSupplier,
             updateSupplier,
             deleteSupplier,
+            addCustomer,
+            updateCustomer,
+            deleteCustomer,
             updateShift,
             addPurchasePayment,
             addSalePayment,

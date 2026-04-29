@@ -53,7 +53,7 @@ const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number
 };
 
 const Sales: React.FC = () => {
-    const { products, sales, addSale, updateSale, deleteSale, addSalePayment, config } = useData();
+    const { products, sales, customers, addSale, updateSale, deleteSale, addSalePayment, config } = useData();
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -63,6 +63,7 @@ const Sales: React.FC = () => {
     
     // Cart management
     const [cart, setCart] = useState<SaleItem[]>([]);
+    const [customerId, setCustomerId] = useState<string>('');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paidAmount, setPaidAmount] = useState<number>(0);
@@ -118,6 +119,7 @@ const Sales: React.FC = () => {
         addSale({ 
             items: cart, 
             total, 
+            customerId: customerId || undefined,
             customerName: customerName || 'Venta Mostrador',
             customerPhone,
             sellerName,
@@ -129,6 +131,7 @@ const Sales: React.FC = () => {
         generateInvoice(cart, total, nextSaleNumber, customerName || 'Venta Mostrador', customerPhone, sellerName);
         
         setCart([]);
+        setCustomerId('');
         setCustomerName('');
         setCustomerPhone('');
         setPaidAmount(0);
@@ -438,26 +441,55 @@ const Sales: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Referencia</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Nombre..."
-                                                value={customerName}
-                                                onChange={e => setCustomerName(e.target.value)}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seleccionar Cliente</label>
+                                            <select 
                                                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
-                                            />
+                                                value={customerId}
+                                                onChange={e => {
+                                                    const cid = e.target.value;
+                                                    setCustomerId(cid);
+                                                    if (cid) {
+                                                        const cust = customers.find(c => c.id === cid);
+                                                        if (cust) {
+                                                            setCustomerName(cust.name);
+                                                            setCustomerPhone(cust.phone);
+                                                        }
+                                                    } else {
+                                                        setCustomerName('');
+                                                        setCustomerPhone('');
+                                                    }
+                                                }}
+                                            >
+                                                <option value="">Venta Mostrador (Nuevo / Casual)</option>
+                                                {customers.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Celular..."
-                                                value={customerPhone}
-                                                onChange={e => setCustomerPhone(e.target.value)}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
-                                            />
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Nombre..."
+                                                    value={customerName}
+                                                    onChange={e => setCustomerName(e.target.value)}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Celular..."
+                                                    value={customerPhone}
+                                                    onChange={e => setCustomerPhone(e.target.value)}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="space-y-1">

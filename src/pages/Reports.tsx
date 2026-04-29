@@ -9,7 +9,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const Reports: React.FC = () => {
-    const { sales, purchases, cashFlow, config, employees, attendance, advances, reprimands } = useData();
+    const { sales, purchases, cashFlow, config, employees, attendance, advances, reprimands, customers } = useData();
 
     const currentPeriod = useMemo(() => {
         const now = new Date();
@@ -75,6 +75,15 @@ const Reports: React.FC = () => {
         const totalVentas = sales.reduce((sum, s) => sum + s.total, 0);
         const ventasCredito = sales.reduce((sum, s) => sum + (s.total - s.paidAmount), 0);
         
+        // Debt from specific registered customers
+        const customerDebt = customers.reduce((sum, c) => {
+            const balance = sales.filter(s => s.customerId === c.id).reduce((sSum, s) => sSum + (s.total - s.paidAmount), 0);
+            return sum + balance;
+        }, 0);
+
+        // Debt from occasional/counter sales
+        const otherDebt = ventasCredito - customerDebt;
+        
         // Real cash entries come from cashFlow which includes sale payments and cash sales
         const ingresosCaja = cashFlow.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
         
@@ -84,11 +93,13 @@ const Reports: React.FC = () => {
         return {
             totalVentas,
             ventasCredito,
+            customerDebt,
+            otherDebt,
             ingresosCaja,
             egresos: totalEgresos,
             balance: ingresosCaja - totalEgresos
         };
-    }, [sales, purchases, cashFlow]);
+    }, [sales, purchases, cashFlow, customers]);
 
     const pieData = [
         { name: 'Efectivo en Caja', value: stats.ingresosCaja, color: '#22c55e' },
@@ -122,7 +133,9 @@ const Reports: React.FC = () => {
             head: [['Concepto', 'Total']],
             body: [
                 ['Ventas Totales (Facturado)', formatCurrency(stats.totalVentas)],
-                ['Cartera Pendiente (Crédito)', formatCurrency(stats.ventasCredito)],
+                ['Cartera Pendiente (Suma Total)', formatCurrency(stats.ventasCredito)],
+                ['   - Deuda Clientes Registrados', formatCurrency(stats.customerDebt)],
+                ['   - Deuda Ventas Mostrador', formatCurrency(stats.otherDebt)],
                 ['Ingresos Reales a Caja', formatCurrency(stats.ingresosCaja)],
                 ['Total Egresos', formatCurrency(stats.egresos)],
                 ['Balance (Ingresos Reales - Egresos)', formatCurrency(stats.balance)]
@@ -272,7 +285,17 @@ const Reports: React.FC = () => {
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden ring-2 ring-blue-100">
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Cartera (A Crédito)</p>
                     <h3 className="text-xl font-black text-blue-600 tracking-tighter">{formatCurrency(stats.ventasCredito)}</h3>
-                    <div className="mt-2 p-1 bg-blue-600 text-white text-[8px] font-black rounded uppercase tracking-widest inline-block">
+                    <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-[8px] font-bold text-blue-400 uppercase tracking-widest">
+                            <span>Clientes base:</span>
+                            <span>{formatCurrency(stats.customerDebt)}</span>
+                        </div>
+                        <div className="flex justify-between text-[8px] font-bold text-blue-400 uppercase tracking-widest">
+                            <span>Mostrador:</span>
+                            <span>{formatCurrency(stats.otherDebt)}</span>
+                        </div>
+                    </div>
+                    <div className="mt-2 p-1 bg-blue-600 text-white text-[8px] font-black rounded uppercase tracking-widest inline-block w-full text-center">
                         ¡DINERO NO ESTÁ EN CAJA!
                     </div>
                 </div>

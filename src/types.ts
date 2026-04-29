@@ -42,6 +42,7 @@ export interface Sale {
     id: string;
     saleNumber: number;
     date: string;
+    customerId?: string;
     customerName?: string;
     customerPhone?: string;
     sellerName?: string;
@@ -59,6 +60,15 @@ export interface CashMovement {
     type: 'entry' | 'exit';
     amount: number;
     reason: string;
+}
+
+export interface Customer {
+    id: string;
+    name: string;
+    phone: string;
+    address?: string;
+    initialDebt?: number;
+    initialDebtDate?: string;
 }
 
 export interface Employee {
@@ -142,6 +152,7 @@ export interface AppState {
     attendance: Attendance[];
     advances: Advance[];
     suppliers: Supplier[];
+    customers: Customer[];
     shifts: Shift[];
     reprimands: Reprimand[];
     config: AppConfig;

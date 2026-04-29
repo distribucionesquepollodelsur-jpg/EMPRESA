@@ -16,6 +16,7 @@ import Inventory from './pages/Inventory';
 import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
 import Sales from './pages/Sales';
+import Customers from './pages/Customers';
 import Despresaje from './pages/Despresaje';
 import CashFlow from './pages/CashFlow';
 import Employees from './pages/Employees';
@@ -57,6 +58,7 @@ const MainContent: React.FC = () => {
       case 'suppliers': return <Suppliers />;
       case 'purchases': return <Purchases />;
       case 'sales': return <Sales />;
+      case 'customers': return <Customers />;
       case 'despresaje': return <Despresaje />;
       case 'cash': return <CashFlow />;
       case 'employees': return <Employees />;
