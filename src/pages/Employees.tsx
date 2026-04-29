@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut } from 'lucide-react';
+import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Employee, Shift } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
@@ -48,12 +48,25 @@ const Employees: React.FC = () => {
 
     // Form inputs
     const [name, setName] = useState('');
+    const [photo, setPhoto] = useState<string | null>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [role, setRole] = useState<'admin' | 'employee'>('employee');
     const [salary, setSalary] = useState(0);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [advanceError, setAdvanceError] = useState('');
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhoto(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleAddEmployee = (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,11 +75,13 @@ const Employees: React.FC = () => {
             email: email.trim().toLowerCase(), 
             password: password.trim(), 
             role, 
-            salary 
+            salary,
+            photo
         };
         addEmployee(employeeData);
         alert(`Empleado ${employeeData.name} registrado con éxito. Ya puede ingresar al sistema con su correo y contraseña.`);
         setName('');
+        setPhoto(null);
         setEmail('');
         setPassword('');
         setRole('employee');
@@ -163,9 +178,13 @@ const Employees: React.FC = () => {
                     <div key={emp.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                         <div className="p-8 border-b border-slate-50 flex justify-between items-start">
                             <div className="flex gap-4">
-                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
-                                    <Users size={32} strokeWidth={1.5} />
-                                </div>
+                                {emp.photo ? (
+                                    <img src={emp.photo} alt={emp.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-100 shadow-sm" />
+                                ) : (
+                                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+                                        <Users size={32} strokeWidth={1.5} />
+                                    </div>
+                                )}
                                 <div className="flex flex-col">
                                     <h3 className="text-xl font-black text-slate-900 capitalize">{emp.name}</h3>
                                     <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Base: {formatCurrency(emp.salary)}</span>
@@ -264,9 +283,13 @@ const Employees: React.FC = () => {
                             return (
                                 <div key={emp.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
-                                            {emp.name.charAt(0)}
-                                        </div>
+                                        {emp.photo ? (
+                                            <img src={emp.photo} alt={emp.name} className="w-12 h-12 rounded-xl object-cover border border-slate-100" />
+                                        ) : (
+                                            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
+                                                {emp.name.charAt(0)}
+                                            </div>
+                                        )}
                                         <div>
                                             <h4 className="font-black text-slate-900">{emp.name}</h4>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{emp.role}</p>
@@ -338,9 +361,13 @@ const Employees: React.FC = () => {
                         return (
                             <div key={record.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-slate-100">
-                                        <Users size={18} className="text-slate-400" />
-                                    </div>
+                                    {emp?.photo ? (
+                                        <img src={emp.photo} alt={emp.name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                                    ) : (
+                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-slate-100">
+                                            <Users size={18} className="text-slate-400" />
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="text-sm font-bold text-slate-900">{emp?.name}</p>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{formatDate(record.date)}</p>
@@ -392,6 +419,22 @@ const Employees: React.FC = () => {
                         </header>
                         
                         <form onSubmit={handleAddEmployee} className="space-y-6">
+                            <div className="flex justify-center mb-6">
+                                <label className="relative group cursor-pointer">
+                                    <div className="w-24 h-24 bg-slate-100 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-slate-400 transition-all overflow-hidden">
+                                        {photo ? (
+                                            <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <>
+                                                <Plus size={24} />
+                                                <span className="text-[10px] font-bold uppercase">Foto</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                                </label>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo</label>
                                 <input 
@@ -417,14 +460,23 @@ const Employees: React.FC = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
-                                    <input 
-                                        type="password" 
-                                        required 
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value.trim())}
-                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
-                                        placeholder="••••••"
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type={showPassword ? "text" : "password"} 
+                                            required 
+                                            value={password}
+                                            onChange={e => setPassword(e.target.value.trim())}
+                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950 text-sm"
+                                            placeholder="••••••"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-3 text-slate-400 hover:text-slate-600"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

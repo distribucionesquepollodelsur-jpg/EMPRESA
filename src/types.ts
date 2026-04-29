@@ -61,6 +61,7 @@ export interface Employee {
     role: 'admin' | 'employee';
     salary: number;
     active: boolean;
+    photo?: string | null;
 }
 
 export interface Attendance {

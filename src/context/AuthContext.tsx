@@ -6,6 +6,7 @@ interface AuthUser {
     name: string;
     role: 'admin' | 'employee';
     employeeId?: string;
+    photo?: string | null;
 }
 
 interface AuthContextType {
@@ -51,14 +52,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user, cashFlow]);
 
     const login = (email: string, pass: string) => {
-        const cleanEmail = email.trim().toLowerCase();
-        const cleanPass = pass.trim();
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanPass = (pass || '').trim();
+
+        console.log(`Login attempt for: ${cleanEmail}`);
+        console.log(`Available employees: ${employees?.length || 0}`);
 
         // Admin check
-        if (cleanEmail === 'alex.b19h@gmail.com' && cleanPass === '060224Jc!') {
+        if (
+            (cleanEmail === 'alex.b19h@gmail.com' || cleanEmail === 'distribucionesquepollodelsur@gmail.com') && 
+            (cleanPass === '060224Jc!' || cleanPass === 'quepollo2024')
+        ) {
             setUser({
                 email: cleanEmail,
-                name: 'Alex (Admin)',
+                name: 'Administrador',
                 role: 'admin'
             });
             return true;
@@ -68,12 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const emp = (employees || []).find(e => {
             if (!e || !e.email || !e.password) return false;
             
-            const employeeEmail = e.email.trim().toLowerCase();
+            const employeeEmail = e.email.toString().trim().toLowerCase();
             const employeePassword = e.password.toString().trim();
             
-            return employeeEmail === cleanEmail && 
-                   employeePassword === cleanPass && 
-                   e.active !== false;
+            const match = employeeEmail === cleanEmail && employeePassword === cleanPass;
+            if (match) console.log(`Matched employee: ${e.name}`);
+            return match && e.active !== false;
         });
         
         if (emp) {
@@ -81,7 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: emp.email || cleanEmail,
                 name: emp.name,
                 role: emp.role || 'employee',
-                employeeId: emp.id
+                employeeId: emp.id,
+                photo: emp.photo
             });
             return true;
         }
