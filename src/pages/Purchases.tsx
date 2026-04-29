@@ -109,22 +109,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         if (paymentMethod === 'credit') {
             finalPaid = paidAmount;
         }
-// ✅ FUNCIÓN PARA ELIMINAR
-const handleDelete = async (id: string) => {
-    console.log("Intentando eliminar:", id);
-
-    const confirmar = window.confirm("¿Seguro que quieres eliminar esta compra?");
-    if (!confirmar) return;
-
-    try {
-        await deletePurchase(id);
-        console.log("Eliminado correctamente");
-        alert("Compra eliminada");
-    } catch (error) {
-        console.error("Error REAL:", error);
-        alert("Error al eliminar");
-    }
-};
         const today = format(new Date(), 'yyyy-MM-dd');
         let nextPurchaseNumber = (config.purchaseCounter || 0) + 1;
         if (config.lastSequenceDate !== today) {
