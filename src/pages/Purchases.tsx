@@ -9,12 +9,16 @@ const Purchases: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Form state
+    const [supplierId, setSupplierId] = useState<string>('');
+    const [isNewSupplier, setIsNewSupplier] = useState(false);
     const [supplierName, setSupplierName] = useState('');
     const [supplierPhone, setSupplierPhone] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit'>('cash');
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [items, setItems] = useState<PurchaseItem[]>([]);
+
+    const { addSupplier } = useData();
 
     const addToItems = (productId: string, cost: number) => {
         setItems(prev => {
@@ -40,14 +44,40 @@ const Purchases: React.FC = () => {
         e.preventDefault();
         if (items.length === 0) return;
         
+        let finalSupplierName = supplierName;
+        let finalSupplierPhone = supplierPhone;
+
+        if (!isNewSupplier && supplierId) {
+            const selected = suppliers.find(s => s.id === supplierId);
+            if (selected) {
+                finalSupplierName = selected.name;
+                finalSupplierPhone = selected.phone;
+            }
+        } else if (isNewSupplier && supplierName) {
+            // Check if supplier already exists with same name
+            const existing = suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+            if (!existing) {
+                // Automatically add new supplier to the system
+                addSupplier({
+                    name: supplierName,
+                    phone: supplierPhone,
+                    address: '',
+                    nit: '',
+                    initialDebt: 0
+                });
+            }
+        }
+
+        if (!finalSupplierName) return;
+
         let finalPaid = total;
         if (paymentMethod === 'credit') {
             finalPaid = paidAmount;
         }
 
         addPurchase({
-            supplierName,
-            supplierPhone,
+            supplierName: finalSupplierName,
+            supplierPhone: finalSupplierPhone,
             paymentMethod,
             items,
             total,
@@ -57,6 +87,8 @@ const Purchases: React.FC = () => {
     };
 
     const resetForm = () => {
+        setSupplierId('');
+        setIsNewSupplier(false);
         setSupplierName('');
         setSupplierPhone('');
         setPaidAmount(0);
@@ -141,27 +173,54 @@ const Purchases: React.FC = () => {
                             <div className="flex-1 p-8 space-y-8 overflow-y-auto">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
-                                            <User size={14} /> Proveedor
-                                        </label>
-                                        <div className="relative">
+                                        <div className="flex justify-between items-center">
+                                            <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                                <User size={14} /> Proveedor
+                                            </label>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsNewSupplier(!isNewSupplier);
+                                                    setSupplierId('');
+                                                    setSupplierName('');
+                                                    setSupplierPhone('');
+                                                }}
+                                                className="text-[10px] font-bold text-blue-600 hover:underline"
+                                            >
+                                                {isNewSupplier ? 'Seleccionar Existente' : '+ Nuevo Proveedor'}
+                                            </button>
+                                        </div>
+                                        
+                                        {!isNewSupplier ? (
+                                            <select 
+                                                required 
+                                                value={supplierId}
+                                                onChange={e => {
+                                                    const id = e.target.value;
+                                                    setSupplierId(id);
+                                                    const selected = suppliers.find(s => s.id === id);
+                                                    if (selected) {
+                                                        setSupplierPhone(selected.phone);
+                                                        setSupplierName(selected.name);
+                                                    }
+                                                }}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold appearance-none mb-1"
+                                            >
+                                                <option value="">Seleccione un proveedor...</option>
+                                                {suppliers.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
                                             <input 
                                                 type="text" 
                                                 required 
-                                                list="suppliers-list"
-                                                placeholder="Nombre del Proveedor"
+                                                placeholder="Nombre del Nuevo Proveedor"
                                                 value={supplierName}
-                                                onChange={e => {
-                                                    setSupplierName(e.target.value);
-                                                    const existing = suppliers.find(s => s.name === e.target.value);
-                                                    if (existing) setSupplierPhone(existing.phone);
-                                                }}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold"
+                                                onChange={e => setSupplierName(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold"
                                             />
-                                            <datalist id="suppliers-list">
-                                                {suppliers.map(s => <option key={s.id} value={s.name} />)}
-                                            </datalist>
-                                        </div>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
@@ -172,7 +231,11 @@ const Purchases: React.FC = () => {
                                             placeholder="Opcional"
                                             value={supplierPhone}
                                             onChange={e => setSupplierPhone(e.target.value)}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            readOnly={!isNewSupplier && !!supplierId}
+                                            className={cn(
+                                                "w-full px-4 py-3 border rounded-xl outline-none transition-all",
+                                                !isNewSupplier && !!supplierId ? "bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed" : "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                            )}
                                         />
                                     </div>
                                 </div>
