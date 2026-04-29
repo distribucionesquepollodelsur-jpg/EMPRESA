@@ -72,28 +72,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Employee check
-        const emp = (employees || []).find(e => {
-            if (!e || !e.email || !e.password) return false;
-            
-            const employeeEmail = e.email.toString().trim().toLowerCase();
-            const employeePassword = e.password.toString().trim();
-            
-            const match = employeeEmail === cleanEmail && employeePassword === cleanPass;
-            if (match) console.log(`Matched employee: ${e.name}`);
-            return match && e.active !== false;
-        });
+        const employeesList = (employees || []);
         
-        if (emp) {
-            setUser({
-                email: emp.email || cleanEmail,
-                name: emp.name,
-                role: emp.role || 'employee',
-                employeeId: emp.id,
-                photo: emp.photo
-            });
-            return true;
+        // Find employee by email first (lenient check)
+        const empByEmail = employeesList.find(e => 
+            e && e.email && e.email.toString().trim().toLowerCase() === cleanEmail
+        );
+
+        if (empByEmail) {
+            const employeePassword = empByEmail.password.toString().trim();
+            if (employeePassword === cleanPass) {
+                if (empByEmail.active === false) {
+                    return false; // User deactivated
+                }
+                
+                setUser({
+                    email: empByEmail.email || cleanEmail,
+                    name: empByEmail.name,
+                    role: empByEmail.role || 'employee',
+                    employeeId: empByEmail.id,
+                    photo: empByEmail.photo
+                });
+                return true;
+            } else {
+                console.warn(`Login failed for ${cleanEmail}: Incorrect Password`);
+                return false;
+            }
         }
 
+        console.warn(`Login failed for ${cleanEmail}: User not found`);
         return false;
     };
 

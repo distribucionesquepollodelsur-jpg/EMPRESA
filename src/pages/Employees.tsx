@@ -187,7 +187,16 @@ const Employees: React.FC = () => {
                                 )}
                                 <div className="flex flex-col">
                                     <h3 className="text-xl font-black text-slate-900 capitalize">{emp.name}</h3>
-                                    <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Base: {formatCurrency(emp.salary)}</span>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Base: {formatCurrency(emp.salary)}</span>
+                                        <span className="text-[10px] font-bold text-slate-400">{emp.email}</span>
+                                        <button 
+                                            onClick={() => alert(`La contraseña de ${emp.name} es: ${emp.password}`)}
+                                            className="text-[10px] font-black text-blue-500 uppercase tracking-widest text-left hover:underline"
+                                        >
+                                            Ver Contraseña
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">

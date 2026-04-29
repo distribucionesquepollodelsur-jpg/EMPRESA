@@ -63,9 +63,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     </h1>
 
                     <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-black">
-                            {user?.name.charAt(0)}
-                        </div>
+                        {user?.photo ? (
+                            <img src={user.photo} alt={user.name} className="w-10 h-10 rounded-lg object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-black">
+                                {user?.name.charAt(0)}
+                            </div>
+                        )}
                         <div className="flex flex-col min-w-0">
                             <span className="text-sm font-bold text-white truncate">{user?.name}</span>
                             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{user?.role === 'admin' ? 'Administrador' : 'Empleado'}</span>

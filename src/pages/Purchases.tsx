@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2 } from 'lucide-react';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { PurchaseItem } from '../types';
 
 const Purchases: React.FC = () => {
