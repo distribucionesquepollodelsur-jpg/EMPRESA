@@ -79,13 +79,12 @@ const Inventory: React.FC = () => {
 
         y += 25;
         autoTable(doc, {
-            head: [['Producto', 'Unidad', 'Stock', 'Costo', 'Venta', 'Valor Total']],
+            head: [['Producto', 'Unidad', 'Stock', 'Costo', 'Valor Total']],
             body: products.map(p => [
                 p.name,
                 p.unit.toUpperCase(),
                 `${p.stock} ${p.unit}`,
                 formatCurrency(p.cost),
-                formatCurrency(p.price),
                 formatCurrency(p.stock * p.cost)
             ]),
             startY: y,
@@ -159,7 +158,6 @@ const Inventory: React.FC = () => {
                                 <th className="px-6 py-4">Unidad</th>
                                 <th className="px-6 py-4">Stock</th>
                                 <th className="px-6 py-4">Costo</th>
-                                <th className="px-6 py-4">Precio Venta</th>
                                 <th className="px-6 py-4 text-right">Acciones</th>
                             </tr>
                         </thead>
@@ -184,7 +182,6 @@ const Inventory: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-slate-600">{formatCurrency(p.cost)}</td>
-                                    <td className="px-6 py-4 text-slate-900 font-medium">{formatCurrency(p.price)}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
                                         {user?.role === 'admin' ? (
                                             <>
@@ -253,22 +250,13 @@ const Inventory: React.FC = () => {
                                 />
                             </div>
                         </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Costo</label>
                                     <input 
                                         type="number" 
                                         value={cost} 
                                         onChange={e => setCost(parseFloat(e.target.value))}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Precio de Venta</label>
-                                    <input 
-                                        type="number" 
-                                        value={price} 
-                                        onChange={e => setPrice(parseFloat(e.target.value))}
                                         className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
                                     />
                                 </div>
