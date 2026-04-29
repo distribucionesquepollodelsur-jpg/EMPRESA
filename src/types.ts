@@ -21,6 +21,7 @@ export interface Purchase {
     id: string;
     purchaseNumber: number;
     date: string;
+    supplierId?: string;
     supplierName: string;
     supplierPhone: string;
     buyerName?: string;

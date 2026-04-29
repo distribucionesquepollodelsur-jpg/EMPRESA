@@ -462,6 +462,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await addDoc(collection(db, 'purchases'), {
                     date: supplierData.initialDebtDate || new Date().toISOString(),
                     supplierName: supplierData.name,
+                    supplierId: docRef.id,
                     supplierPhone: supplierData.phone,
                     items: [],
                     total: supplierData.initialDebt,

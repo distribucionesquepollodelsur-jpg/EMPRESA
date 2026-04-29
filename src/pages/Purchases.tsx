@@ -88,6 +88,7 @@ const Purchases: React.FC = () => {
         }
 
         addPurchase({
+            supplierId: supplierId || undefined,
             supplierName: finalSupplierName,
             supplierPhone: finalSupplierPhone,
             buyerName,
