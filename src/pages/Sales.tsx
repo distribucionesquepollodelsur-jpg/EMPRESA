@@ -64,6 +64,7 @@ const Sales: React.FC = () => {
     // Cart management
     const [cart, setCart] = useState<SaleItem[]>([]);
     const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
 
@@ -105,21 +106,31 @@ const Sales: React.FC = () => {
 
     const handleConfirmSale = () => {
         if (cart.length === 0) return;
-        const nextSaleNumber = (config.saleCounter || 0) + 1;
+        
+        const today = format(new Date(), 'yyyy-MM-dd');
+        let nextSaleNumber = (config.saleCounter || 0) + 1;
+        if (config.lastSequenceDate !== today) {
+            nextSaleNumber = 1;
+        }
+        
+        const sellerName = user?.name || config.manager;
         
         addSale({ 
             items: cart, 
             total, 
             customerName: customerName || 'Venta Mostrador',
+            customerPhone,
+            sellerName,
             paidAmount: paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' ? total : 0),
             paymentMethod
         });
         
         // Generate PDF
-        generateInvoice(cart, total, nextSaleNumber);
+        generateInvoice(cart, total, nextSaleNumber, customerName || 'Venta Mostrador', customerPhone, sellerName);
         
         setCart([]);
         setCustomerName('');
+        setCustomerPhone('');
         setPaidAmount(0);
         setPaymentMethod('cash');
         setIsModalOpen(false);
@@ -145,8 +156,8 @@ const Sales: React.FC = () => {
         setSelectedSale(null);
     };
 
-    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number) => {
-        const doc = new jsPDF({ format: [80, 200] });
+    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string) => {
+        const doc = new jsPDF({ format: [80, 250] });
         const margin = 5;
         let y = 10;
         
@@ -193,8 +204,19 @@ const Sales: React.FC = () => {
         const now = new Date();
         doc.text(`Fecha: ${format(now, 'dd/MM/yyyy')}`, margin, y);
         doc.text(`Hora: ${format(now, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('INFORMACIÓN DE VENTA', margin, y);
         y += 4;
-        doc.text(`Cliente: ${customerName || 'Venta Mostrador'}`, margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Vendedor: ${sName || config.manager}`, margin, y);
+        y += 4;
+        doc.text(`Cliente: ${cName || 'Venta Mostrador'}`, margin, y);
+        if (cPhone) {
+            y += 4;
+            doc.text(`Tel: ${cPhone}`, margin, y);
+        }
         
         y += 6;
         doc.line(margin, y, 80 - margin, y);
@@ -330,7 +352,7 @@ const Sales: React.FC = () => {
                                                 </>
                                             )}
                                             <button 
-                                                onClick={() => generateInvoice(sale.items, sale.total)}
+                                                onClick={() => generateInvoice(sale.items, sale.total, sale.saleNumber, sale.customerName, sale.customerPhone, sale.sellerName)}
                                                 className="text-slate-400 hover:text-orange-500 p-2 transition-colors"
                                                 title="Ver Factura"
                                             >
@@ -416,15 +438,27 @@ const Sales: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Referencia</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Nombre del Cliente..."
-                                            value={customerName}
-                                            onChange={e => setCustomerName(e.target.value)}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-sm"
-                                        />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Referencia</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Nombre..."
+                                                value={customerName}
+                                                onChange={e => setCustomerName(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Celular..."
+                                                value={customerPhone}
+                                                onChange={e => setCustomerPhone(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-xs"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">

@@ -82,7 +82,8 @@ const initialConfig: AppConfig = {
     email: 'distribucionesdelsurquepollo@gmail.com',
     manager: 'Jorge Luis Lasprilla',
     saleCounter: 1,
-    purchaseCounter: 1
+    purchaseCounter: 1,
+    lastSequenceDate: ''
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -195,7 +196,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date' | 'purchaseNumber'>) => {
-        const nextNumber = (config.purchaseCounter || 0) + 1;
+        const today = format(new Date(), 'yyyy-MM-dd');
+        let nextNumber = (config.purchaseCounter || 0) + 1;
+        
+        if (config.lastSequenceDate !== today) {
+            nextNumber = 1;
+        }
+
         const purchase = {
             ...purchaseData,
             purchaseNumber: nextNumber,
@@ -204,7 +211,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const docRef = await addDoc(collection(db, 'purchases'), purchase);
-            await updateConfig({ purchaseCounter: nextNumber });
+            await updateConfig({ 
+                purchaseCounter: nextNumber,
+                lastSequenceDate: today
+            });
             
             // Sync inventory
             for (const item of purchase.items) {
@@ -226,7 +236,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const addSale = async (saleData: Omit<Sale, 'id' | 'date' | 'saleNumber'>) => {
-        const nextNumber = (config.saleCounter || 0) + 1;
+        const today = format(new Date(), 'yyyy-MM-dd');
+        let nextNumber = (config.saleCounter || 0) + 1;
+        
+        if (config.lastSequenceDate !== today) {
+            nextNumber = 1;
+        }
+
         const sale = {
             ...saleData,
             saleNumber: nextNumber,
@@ -235,7 +251,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const docRef = await addDoc(collection(db, 'sales'), sale);
-            await updateConfig({ saleCounter: nextNumber });
+            await updateConfig({ 
+                saleCounter: nextNumber,
+                lastSequenceDate: today
+            });
             
             // Sync inventory
             for (const item of sale.items) {

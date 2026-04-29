@@ -23,6 +23,8 @@ export interface Purchase {
     date: string;
     supplierName: string;
     supplierPhone: string;
+    buyerName?: string;
+    buyerPhone?: string;
     items: PurchaseItem[];
     total: number;
     paidAmount: number;
@@ -41,6 +43,9 @@ export interface Sale {
     saleNumber: number;
     date: string;
     customerName?: string;
+    customerPhone?: string;
+    sellerName?: string;
+    sellerPhone?: string;
     items: SaleItem[];
     total: number;
     paidAmount: number;
@@ -104,6 +109,7 @@ export interface AppConfig {
     manager: string;
     saleCounter: number;
     purchaseCounter: number;
+    lastSequenceDate: string;
 }
 
 export interface Supplier {

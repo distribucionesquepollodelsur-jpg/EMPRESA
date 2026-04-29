@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { PurchaseItem, Purchase } from '../types';
 import jsPDF from 'jspdf';
@@ -8,6 +9,7 @@ import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
     const { products, purchases, addPurchase, suppliers, config } = useData();
+    const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Form state
@@ -15,6 +17,8 @@ const Purchases: React.FC = () => {
     const [isNewSupplier, setIsNewSupplier] = useState(false);
     const [supplierName, setSupplierName] = useState('');
     const [supplierPhone, setSupplierPhone] = useState('');
+    const [buyerName, setBuyerName] = useState(user?.name || config.manager);
+    const [buyerPhone, setBuyerPhone] = useState(config.phone1);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit'>('cash');
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
@@ -77,11 +81,17 @@ const Purchases: React.FC = () => {
             finalPaid = paidAmount;
         }
 
-        const nextPurchaseNumber = (config.purchaseCounter || 0) + 1;
+        const today = format(new Date(), 'yyyy-MM-dd');
+        let nextPurchaseNumber = (config.purchaseCounter || 0) + 1;
+        if (config.lastSequenceDate !== today) {
+            nextPurchaseNumber = 1;
+        }
 
         addPurchase({
             supplierName: finalSupplierName,
             supplierPhone: finalSupplierPhone,
+            buyerName,
+            buyerPhone,
             paymentMethod,
             items,
             total,
@@ -93,6 +103,8 @@ const Purchases: React.FC = () => {
             purchaseNumber: nextPurchaseNumber,
             supplierName: finalSupplierName,
             supplierPhone: finalSupplierPhone,
+            buyerName,
+            buyerPhone,
             paymentMethod,
             items,
             total,
@@ -104,7 +116,7 @@ const Purchases: React.FC = () => {
     };
 
     const generatePurchaseInvoice = (purchase: Purchase) => {
-        const doc = new jsPDF({ format: [80, 200] });
+        const doc = new jsPDF({ format: [80, 250] });
         const margin = 5;
         let y = 10;
         
@@ -151,8 +163,23 @@ const Purchases: React.FC = () => {
         const purchaseDate = new Date(purchase.date);
         doc.text(`Fecha: ${format(purchaseDate, 'dd/MM/yyyy')}`, margin, y);
         doc.text(`Hora: ${format(purchaseDate, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        
+        y += 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('INFORMACIÓN DE COMPRA', margin, y);
+        y += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Comprador: ${purchase.buyerName || config.manager}`, margin, y);
+        if (purchase.buyerPhone) {
+            y += 4;
+            doc.text(`Tel Comp: ${purchase.buyerPhone}`, margin, y);
+        }
         y += 4;
         doc.text(`Proveedor: ${purchase.supplierName}`, margin, y);
+        if (purchase.supplierPhone) {
+            y += 4;
+            doc.text(`Tel Prov: ${purchase.supplierPhone}`, margin, y);
+        }
         
         y += 6;
         doc.line(margin, y, 80 - margin, y);
@@ -293,7 +320,39 @@ const Purchases: React.FC = () => {
 
                         <form onSubmit={handleSubmit} className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                             <div className="flex-1 p-8 space-y-8 overflow-y-auto">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50/30 p-4 rounded-3xl border border-blue-100/50">
+                                    <div className="md:col-span-2 space-y-1">
+                                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest pl-1 mb-2">Información del Comprador</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                            <User size={14} /> Nombre Comprador
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            required
+                                            value={buyerName}
+                                            onChange={e => setBuyerName(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                            <Phone size={14} /> Teléfono Comprador
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            value={buyerPhone}
+                                            onChange={e => setBuyerPhone(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2 space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2">Información del Proveedor</p>
+                                    </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
