@@ -28,15 +28,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     const [isOpen, setIsOpen] = React.useState(false);
 
     const menuItems = [
-        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
-        { id: 'inventory', label: 'Inventario', icon: Package, adminOnly: true },
+        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: true },
+        { id: 'inventory', label: 'Inventario', icon: Package, adminOnly: false }, // Employees need to see stock to sell
         { id: 'suppliers', label: 'Proveedores', icon: Truck, adminOnly: true },
         { id: 'credits', label: 'Cuentas', icon: History },
-        { id: 'purchases', label: 'Compras', icon: ShoppingCart },
+        { id: 'purchases', label: 'Compras', icon: ShoppingCart, adminOnly: true },
         { id: 'sales', label: 'Ventas', icon: Tag },
-        { id: 'despresaje', label: 'Despresaje', icon: Scissors },
+        { id: 'despresaje', label: 'Despresaje', icon: Scissors, adminOnly: true },
         { id: 'cash', label: 'Caja', icon: Wallet },
-        { id: 'employees', label: 'Empleados', icon: Users },
+        { id: 'employees', label: 'Empleados', icon: Users, adminOnly: true },
         { id: 'reports', label: 'Reportes', icon: BarChart3, adminOnly: true },
         { id: 'config', label: 'Configuración', icon: Settings, adminOnly: true },
     ];

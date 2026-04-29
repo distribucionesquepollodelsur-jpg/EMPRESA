@@ -57,19 +57,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log(`Intentando login para: ${cleanEmail}`);
         
-        const adminEmails = [
+        // 1. Employee check first (Check the registered users in the database)
+        const employeesList = (employees || []);
+        console.log(`Buscando en ${employeesList.length} empleados registrados...`);
+        
+        const emp = employeesList.find(e => {
+            if (!e || !e.email) return false;
+            return e.email.toString().trim().toLowerCase() === cleanEmail;
+        });
+
+        if (emp) {
+            console.log(`Usuario encontrado: ${emp.name}. Verificando contraseña...`);
+            const storedPass = (emp.password || '').toString().trim();
+            
+            if (storedPass === cleanPass) {
+                if (emp.active === false) {
+                    console.warn("Cuenta desactivada");
+                    return false;
+                }
+                
+                setUser({
+                    email: emp.email || cleanEmail,
+                    name: emp.name,
+                    role: emp.role || 'employee', // Use the role defined in the registry
+                    employeeId: emp.id,
+                    photo: emp.photo
+                });
+                return true;
+            } else {
+                console.warn(`Contraseña incorrecta para ${cleanEmail}`);
+                return false;
+            }
+        }
+
+        // 2. Hardcoded Admin check (Fallback for initial setup or owners not in list)
+        const hardcodedAdmins = [
             'alex.b19h@gmail.com',
             'distribucionesquepollodelsur@gmail.com',
             'alex@quepollo.com',
-            'admin@quepollo.com',
-            'quepollo@admin.com',
-            'alex.quepollo@gmail.com'
+            'admin@quepollo.com'
         ];
 
-        const adminPasswords = ['060224Jc!', 'quepollo2024', 'admin123'];
+        const hardcodedPass = ['060224Jc!', 'quepollo2024'];
 
-        // Admin check
-        if (adminEmails.includes(cleanEmail) && adminPasswords.includes(cleanPass)) {
+        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
             setUser({
                 email: cleanEmail,
                 name: 'Administrador Principal',
@@ -78,40 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return true;
         }
 
-        // Employee check
-        const employeesList = (employees || []);
-        console.log(`Buscando en ${employeesList.length} empleados...`);
-        
-        const emp = employeesList.find(e => {
-            if (!e || !e.email) return false;
-            return e.email.toString().trim().toLowerCase() === cleanEmail;
-        });
-
-        if (emp) {
-            console.log(`Empleado encontrado: ${emp.name}. Verificando contraseña...`);
-            const storedPass = (emp.password || '').toString().trim();
-            
-            if (storedPass === cleanPass) {
-                if (emp.active === false) {
-                    console.warn("Empleado desactivado");
-                    return false;
-                }
-                
-                setUser({
-                    email: emp.email || cleanEmail,
-                    name: emp.name,
-                    role: emp.role || 'employee',
-                    employeeId: emp.id,
-                    photo: emp.photo
-                });
-                return true;
-            } else {
-                console.warn(`Contraseña incorrecta para ${cleanEmail}. Esperada: ${storedPass}, Recibida: ${cleanPass}`);
-                return false;
-            }
-        }
-
-        console.warn(`Login fallido para ${cleanEmail}: Usuario no encontrado en la lista.`);
+        console.warn(`Login fallido para ${cleanEmail}: Usuario no encontrado.`);
         return false;
     };
 

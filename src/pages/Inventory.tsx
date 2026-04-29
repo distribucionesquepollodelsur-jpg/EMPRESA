@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { Package, Plus, Search, Edit2, Trash2, ArrowUpRight, ArrowDownRight, FileText } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { Product, Unit } from '../types';
@@ -8,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 
 const Inventory: React.FC = () => {
     const { products, addProduct, updateProduct, deleteProduct, config } = useData();
+    const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -106,13 +108,15 @@ const Inventory: React.FC = () => {
                         <FileText size={18} />
                         Reporte PDF
                     </button>
-                    <button 
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
-                    >
-                        <Plus size={18} />
-                        Nuevo Producto
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button 
+                            onClick={() => setIsModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+                        >
+                            <Plus size={18} />
+                            Nuevo Producto
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -179,12 +183,18 @@ const Inventory: React.FC = () => {
                                     <td className="px-6 py-4 text-slate-600">{formatCurrency(p.cost)}</td>
                                     <td className="px-6 py-4 text-slate-900 font-medium">{formatCurrency(p.price)}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => deleteProduct(p.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {user?.role === 'admin' ? (
+                                            <>
+                                                <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => deleteProduct(p.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase">Solo Lectura</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
