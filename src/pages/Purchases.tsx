@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
-    const { products, purchases, addPurchase, suppliers, config } = useData();
+    const { products, purchases, addPurchase, suppliers, config, deletePurchase } = useData();
     const { user } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
@@ -237,6 +237,18 @@ const Purchases: React.FC = () => {
     };
 
     const resetForm = () => {
+        const handleDelete = async (id: string) => {
+    const confirmar = window.confirm("¿Seguro que quieres eliminar esta compra?");
+    if (!confirmar) return;
+
+    try {
+        await deletePurchase(id);
+        alert("Compra eliminada");
+    } catch (error) {
+        alert("Error al eliminar");
+        console.error(error);
+    }
+};
         setSupplierId('');
         setIsNewSupplier(false);
         setSupplierName('');
@@ -297,10 +309,20 @@ const Purchases: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-8 py-5 text-right">
+                                        {user?.role === 'admin' && (
+                                        <button 
+                                            onClick={() => handleDelete(p.id)}
+                                            className="text-slate-400 hover:text-red-600 p-2 transition-colors"
+                                            title="Eliminar Compra"
+                                      >
+                                             <Trash2 size={18} />
+                                      </button>
+                                   )}
                                         <button 
                                             onClick={() => generatePurchaseInvoice(p)}
                                             className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
                                             title="Ver Factura"
+                                            
                                         >
                                             <FileText size={18} />
                                         </button>
