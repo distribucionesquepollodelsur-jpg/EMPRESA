@@ -17,7 +17,7 @@ const Purchases: React.FC = () => {
     const [isNewSupplier, setIsNewSupplier] = useState(false);
     const [supplierName, setSupplierName] = useState('');
     const [supplierPhone, setSupplierPhone] = useState('');
-    const [buyerName, setBuyerName] = useState(user?.name || config.manager);
+    const [buyerName, setBuyerName] = useState(user?.role === 'admin' ? config.manager : (user?.name || config.manager));
     const [buyerPhone, setBuyerPhone] = useState(config.phone1);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit'>('cash');
     const [paidAmount, setPaidAmount] = useState<number>(0);
@@ -140,7 +140,7 @@ const Purchases: React.FC = () => {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
             y += 4;
         }
-        doc.text(`Tel: ${config.phone1}${config.phone2 ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
+        doc.text(`Tel: ${config.phone1}${config.phone2 && config.phone2 !== 'Pendiente' ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
         y += 4;
         doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
         y += 4;

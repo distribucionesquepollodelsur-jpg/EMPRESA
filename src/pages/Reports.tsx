@@ -267,25 +267,29 @@ const Reports: React.FC = () => {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas Totales</p>
                     <h3 className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.totalVentas)}</h3>
                     <TrendingUp className="text-slate-50 absolute -right-2 -bottom-2" size={64} />
+                    <p className="text-[8px] text-slate-400 font-bold mt-2">Facturado (Deuda + Efectivo)</p>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cartera (Pendiente)</p>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden ring-2 ring-blue-100">
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Cartera (A Crédito)</p>
                     <h3 className="text-xl font-black text-blue-600 tracking-tighter">{formatCurrency(stats.ventasCredito)}</h3>
-                    <div className="mt-2 p-1 bg-blue-50 text-blue-600 text-[8px] font-black rounded uppercase tracking-widest inline-block">
-                        No en caja
+                    <div className="mt-2 p-1 bg-blue-600 text-white text-[8px] font-black rounded uppercase tracking-widest inline-block">
+                        ¡DINERO NO ESTÁ EN CAJA!
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ingresos Efectivos</p>
                     <h3 className="text-xl font-black text-green-600 tracking-tighter">{formatCurrency(stats.ingresosCaja)}</h3>
+                    <p className="text-[8px] text-green-500 font-bold mt-2">Dinero REAL en caja</p>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Egresos Totales</p>
                     <h3 className="text-xl font-black text-red-600 tracking-tighter">{formatCurrency(stats.egresos)}</h3>
+                    <p className="text-[8px] text-red-400 font-bold mt-2">Pagos y gastos</p>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden bg-slate-50">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Real Caja</p>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats.balance)}</h3>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden bg-slate-950 text-white">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Disponible</p>
+                    <h3 className="text-xl font-black text-white tracking-tighter">{formatCurrency(stats.balance)}</h3>
+                    <p className="text-[8px] text-slate-400 font-bold mt-2">Efectivo actual neto</p>
                 </div>
             </div>
 

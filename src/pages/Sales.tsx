@@ -113,7 +113,7 @@ const Sales: React.FC = () => {
             nextSaleNumber = 1;
         }
         
-        const sellerName = user?.name || config.manager;
+        const sellerName = user?.role === 'admin' ? config.manager : (user?.name || config.manager);
         
         addSale({ 
             items: cart, 
@@ -181,7 +181,7 @@ const Sales: React.FC = () => {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
             y += 4;
         }
-        doc.text(`Tel: ${config.phone1}${config.phone2 ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
+        doc.text(`Tel: ${config.phone1}${config.phone2 && config.phone2 !== 'Pendiente' ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
         y += 4;
         doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
         y += 4;
