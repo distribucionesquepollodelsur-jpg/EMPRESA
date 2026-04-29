@@ -244,7 +244,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             for (const d of derivations) {
                 const prod = products.find(p => p.id === d.productId);
                 if (prod) {
-                    await updateDoc(doc(db, 'products', prod.id), { stock: prod.stock + d.quantity });
+                    await updateProduct(prod.id, { stock: prod.stock + d.quantity });
                 }
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'products'); }

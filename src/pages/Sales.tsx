@@ -6,6 +6,50 @@ import { Product, SaleItem } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number, pr: number) => void }> = ({ product, addToCart }) => {
+    const [tempPrice, setTempPrice] = useState<number>(product.price);
+    const [tempQty, setTempQty] = useState<number>(1);
+
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-500/30 hover:bg-orange-50/20 transition-all group gap-4">
+            <div className="flex-1">
+                <h4 className="font-bold text-slate-900 capitalize">{product.name}</h4>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sugerido: {formatCurrency(product.price)} · Stock: {product.stock} {product.unit}</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Vender a:</label>
+                    <input 
+                        type="number"
+                        value={tempPrice}
+                        onChange={e => setTempPrice(parseFloat(e.target.value))}
+                        className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                    />
+                </div>
+                <div className="flex flex-col">
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant:</label>
+                    <input 
+                        type="number"
+                        value={tempQty}
+                        onChange={e => setTempQty(parseFloat(e.target.value))}
+                        className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+                    />
+                </div>
+                <button 
+                    onClick={() => {
+                        addToCart(product, tempQty, tempPrice);
+                        setTempQty(1); // Reset quantity after adding
+                    }}
+                    className="mt-3 sm:mt-0 p-3 bg-white text-orange-500 rounded-xl shadow-sm border border-slate-200 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
+                >
+                    <Plus size={20} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const Sales: React.FC = () => {
     const { products, sales, addSale, config } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,7 +161,7 @@ const Sales: React.FC = () => {
     };
 
     const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) && p.stock > 0
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -203,46 +247,9 @@ const Sales: React.FC = () => {
                                 </div>
                                 
                                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                                    {filteredProducts.map(p => {
-                                        const [tempPrice, setTempPrice] = useState<number>(p.price);
-                                        const [tempQty, setTempQty] = useState<number>(1);
-
-                                        return (
-                                            <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-500/30 hover:bg-orange-50/20 transition-all group gap-4">
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-slate-900 capitalize">{p.name}</h4>
-                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sugerido: {formatCurrency(p.price)} · Stock: {p.stock} {p.unit}</p>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex flex-col">
-                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Vender a:</label>
-                                                        <input 
-                                                            type="number"
-                                                            value={tempPrice}
-                                                            onChange={e => setTempPrice(parseFloat(e.target.value))}
-                                                            className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
-                                                        />
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant:</label>
-                                                        <input 
-                                                            type="number"
-                                                            value={tempQty}
-                                                            onChange={e => setTempQty(parseFloat(e.target.value))}
-                                                            className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
-                                                        />
-                                                    </div>
-                                                    <button 
-                                                        onClick={() => addToCart(p, tempQty, tempPrice)}
-                                                        className="mt-3 sm:mt-0 p-3 bg-white text-orange-500 rounded-xl shadow-sm border border-slate-200 hover:bg-orange-500 hover:text-white transition-all active:scale-90"
-                                                    >
-                                                        <Plus size={20} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {filteredProducts.map(p => (
+                                        <ProductRow key={p.id} product={p} addToCart={addToCart} />
+                                    ))}
                                 </div>
                             </div>
 
