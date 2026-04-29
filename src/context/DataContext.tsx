@@ -48,6 +48,8 @@ interface DataContextType extends AppState {
     addSale: (sale: Omit<Sale, 'id' | 'date'>) => void;
     processDespresaje: (wholeChickenId: string, bulkQuantity: number, derivations: { productId: string, quantity: number }[]) => void;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
+    updateCashMovement: (id: string, movement: Partial<CashMovement>) => void;
+    deleteCashMovement: (id: string) => void;
     addEmployee: (employee: Omit<Employee, 'id' | 'active'>) => void;
     updateEmployee: (id: string, employee: Partial<Employee>) => void;
     deleteEmployee: (id: string) => void;
@@ -263,6 +265,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const updateCashMovement = async (id: string, updates: Partial<CashMovement>) => {
+        try {
+            await updateDoc(doc(db, 'cashFlow', id), updates);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `cashFlow/${id}`); }
+    };
+
+    const deleteCashMovement = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'cashFlow', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `cashFlow/${id}`); }
+    };
+
     const addEmployee = async (employeeData: Omit<Employee, 'id' | 'active'>) => {
         try {
             await addDoc(collection(db, 'employees'), { ...employeeData, active: true });
@@ -461,6 +475,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addSale,
             processDespresaje,
             addCashMovement,
+            updateCashMovement,
+            deleteCashMovement,
             addEmployee,
             updateEmployee,
             deleteEmployee,

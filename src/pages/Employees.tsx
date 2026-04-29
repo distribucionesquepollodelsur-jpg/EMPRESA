@@ -305,9 +305,7 @@ const Employees: React.FC = () => {
                                     {emp.role === 'admin' ? 'Admin' : 'Empleado'}
                                 </span>
                                 <button 
-                                    onClick={() => {
-                                        if(window.confirm('¿Eliminar empleado?')) deleteEmployee(emp.id);
-                                    }}
+                                    onClick={() => deleteEmployee(emp.id)}
                                     className="p-2 text-slate-300 hover:text-red-500 transition-colors"
                                 >
                                     <Trash2 size={16} />

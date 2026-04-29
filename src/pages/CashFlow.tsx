@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, ShieldAlert, Search, FileText } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, FileText, ShieldAlert } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const CashFlow: React.FC = () => {
-    const { cashFlow, sales, purchases, advances, addCashMovement, config } = useData();
+    const { cashFlow, sales, purchases, advances, addCashMovement, updateCashMovement, deleteCashMovement, config } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Form
@@ -20,10 +21,27 @@ const CashFlow: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        addCashMovement({ type, amount, reason });
+        if (selectedMovement) {
+            updateCashMovement(selectedMovement.id, { type, amount, reason });
+        } else {
+            addCashMovement({ type, amount, reason });
+        }
         setIsModalOpen(false);
         setAmount(0);
         setReason('');
+        setSelectedMovement(null);
+    };
+
+    const handleEdit = (m: any) => {
+        setSelectedMovement(m);
+        setType(m.type);
+        setAmount(m.amount);
+        setReason(m.reason);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = (id: string) => {
+        deleteCashMovement(id);
     };
 
     // Calculate aggregated totals
@@ -165,11 +183,13 @@ const CashFlow: React.FC = () => {
                         <History className="text-slate-400" size={20} />
                         <h3 className="font-bold text-slate-900 uppercase tracking-tight text-sm">Historial de Movimientos Manuales</h3>
                     </div>
-                    <div className="relative">
+                            <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input 
                             type="text" 
                             placeholder="Buscar por justificación..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="bg-slate-50 border-none rounded-xl pl-9 pr-4 py-2 text-xs focus:ring-1 focus:ring-slate-900 outline-none w-64"
                         />
                     </div>
@@ -182,16 +202,19 @@ const CashFlow: React.FC = () => {
                                 <th className="px-8 py-5">Fecha / Hora</th>
                                 <th className="px-8 py-5">Justificación</th>
                                 <th className="px-8 py-5">Monto</th>
-                                <th className="px-8 py-5 text-right">Efecto</th>
+                                <th className="px-8 py-5">Efecto</th>
+                                {isAdmin && <th className="px-8 py-5 text-right">Acciones</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {cashFlow.map(m => (
+                            {cashFlow
+                                .filter(m => m.reason.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .map(m => (
                                 <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-8 py-5 text-sm text-slate-600 font-medium">{formatDate(m.date)}</td>
                                     <td className="px-8 py-5 text-sm text-slate-800 font-bold capitalize">{m.reason}</td>
                                     <td className="px-8 py-5 font-black text-slate-900">{formatCurrency(m.amount)}</td>
-                                    <td className="px-8 py-5 text-right">
+                                    <td className="px-8 py-5">
                                         <div className={cn(
                                             "inline-flex p-1.5 rounded-lg",
                                             m.type === 'entry' ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
@@ -199,11 +222,29 @@ const CashFlow: React.FC = () => {
                                             {m.type === 'entry' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                                         </div>
                                     </td>
+                                    {isAdmin && (
+                                        <td className="px-8 py-5 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button 
+                                                    onClick={() => handleEdit(m)}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                >
+                                                    <FileText size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDelete(m.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                             {cashFlow.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="py-20 text-center text-slate-300 italic">No hay movimientos manuales hoy</td>
+                                    <td colSpan={isAdmin ? 5 : 4} className="py-20 text-center text-slate-300 italic">No hay movimientos manuales hoy</td>
                                 </tr>
                             )}
                         </tbody>
@@ -215,12 +256,14 @@ const CashFlow: React.FC = () => {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
                     <div className="bg-white rounded-[40px] w-full max-w-md shadow-2xl p-10 space-y-8">
-                        <div className="text-center space-y-4">
+                         <div className="text-center space-y-4">
                             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 mx-auto">
                                 <History size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">Registrar Movimiento</h2>
+                                <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">
+                                    {selectedMovement ? 'Editar Movimiento' : 'Registrar Movimiento'}
+                                </h2>
                                 <p className="text-sm text-slate-400 font-medium tracking-tight">Cualquier entrada o salida de efectivo manual.</p>
                             </div>
                         </div>
@@ -283,9 +326,9 @@ const CashFlow: React.FC = () => {
 
                             <div className="flex flex-col gap-3 pt-6">
                                 <button className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
-                                    Confirmar Movimiento
+                                    {selectedMovement ? 'Guardar Cambios' : 'Confirmar Movimiento'}
                                 </button>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                <button type="button" onClick={() => { setIsModalOpen(false); setSelectedMovement(null); setAmount(0); setReason(''); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
                                     Cancelar
                                 </button>
                             </div>

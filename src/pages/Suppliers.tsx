@@ -93,7 +93,7 @@ const Suppliers: React.FC = () => {
                                     <button onClick={() => handleEdit(s)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button onClick={() => { if(window.confirm('¿Eliminar proveedor?')) deleteSupplier(s.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => deleteSupplier(s.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
