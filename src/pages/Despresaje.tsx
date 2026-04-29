@@ -66,7 +66,7 @@ const Despresaje: React.FC = () => {
                 inputProductId: wholeChickenId,
                 inputQuantity: bulkQuantity,
                 outputItems: derivations,
-                totalOutputWeight: derivations.reduce((sum, d) => sum + (d.quantity || 0), 0)
+                totalOutputWeight: derivations.reduce((sum, d) => sum + (isNaN(d.quantity) ? 0 : d.quantity), 0)
             });
             
             // Reset
