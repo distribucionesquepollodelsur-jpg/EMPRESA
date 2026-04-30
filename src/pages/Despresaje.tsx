@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Scissors, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle2, Plus, Lock, Search, History, FileText } from 'lucide-react';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { format } from 'date-fns';
 
 const Despresaje: React.FC = () => {
@@ -275,6 +275,12 @@ const Despresaje: React.FC = () => {
                                 </div>
                                 {inputItems.length > 0 && (
                                     <div className="pt-4 border-t border-slate-100">
+                                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 mb-4 animate-pulse">
+                                            <p className="text-[9px] text-blue-700 font-black uppercase leading-tight">
+                                                Nota: El peso total de una Picada no debe exceder los 4.75 kg. 
+                                                Asegúrese de balancear Pernil y Hueso.
+                                            </p>
+                                        </div>
                                         <div className="flex justify-between items-center text-slate-400 font-bold mb-1">
                                             <span className="text-[10px] uppercase tracking-widest">Peso Total:</span>
                                             <span className="text-xs">{inputItems.reduce((sum, i) => sum + (i.quantity || 0), 0).toFixed(2)} Kg/Und</span>
@@ -343,14 +349,24 @@ const Despresaje: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className="w-full sm:w-32">
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Peso/Cant.</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Peso/Cant.</label>
+                                            {products.find(p => p.id === d.productId)?.name.toLowerCase().includes('picada') && d.quantity > 4.75 && (
+                                                <span className="text-[8px] font-black text-red-400 uppercase tracking-tighter animate-pulse">¡Max 4.75kg!</span>
+                                            )}
+                                        </div>
                                         <input 
                                             type="number"
                                             step="0.01"
                                             required
                                             value={d.quantity || ''}
                                             onChange={e => updateDerivation(index, 'quantity', parseFloat(e.target.value))}
-                                            className="w-full p-3 bg-slate-700 border-none rounded-xl font-bold text-white outline-none focus:ring-1 focus:ring-orange-500 text-sm"
+                                            className={cn(
+                                                "w-full p-3 border-none rounded-xl font-bold text-white outline-none focus:ring-1 text-sm transition-all",
+                                                products.find(p => p.id === d.productId)?.name.toLowerCase().includes('picada') && d.quantity > 4.75 
+                                                ? "bg-red-900/50 ring-1 ring-red-500" 
+                                                : "bg-slate-700 focus:ring-orange-500"
+                                            )}
                                             placeholder="0.00"
                                         />
                                     </div>
