@@ -224,30 +224,44 @@ const Despresaje: React.FC = () => {
                                 <div className="space-y-3">
                                     {inputItems.map((item, idx) => (
                                         <div key={idx} className="flex gap-2 animate-in fade-in zoom-in duration-200">
-                                            <select 
-                                                required
-                                                value={item.productId}
-                                                onChange={e => updateInputItem(idx, 'productId', e.target.value)}
-                                                className="flex-1 p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
-                                            >
-                                                <option value="">Insumo...</option>
-                                                {products.map(p => (
-                                                    <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                                                ))}
-                                            </select>
-                                            <input 
-                                                type="number"
-                                                step="0.01"
-                                                required
-                                                value={item.quantity || ''}
-                                                onChange={e => updateInputItem(idx, 'quantity', parseFloat(e.target.value))}
-                                                className="w-24 p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
-                                                placeholder="Cant."
-                                            />
+                                            <div className="flex-1 space-y-1">
+                                                <select 
+                                                    required
+                                                    value={item.productId}
+                                                    onChange={e => updateInputItem(idx, 'productId', e.target.value)}
+                                                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
+                                                >
+                                                    <option value="">Insumo...</option>
+                                                    {products.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                                                    ))}
+                                                </select>
+                                                {item.productId && (
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter ml-2">
+                                                        Costo: {formatCurrency(products.find(p => p.id === item.productId)?.cost || 0)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="w-24 space-y-1">
+                                                <input 
+                                                    type="number"
+                                                    step="0.01"
+                                                    required
+                                                    value={item.quantity || ''}
+                                                    onChange={e => updateInputItem(idx, 'quantity', parseFloat(e.target.value))}
+                                                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
+                                                    placeholder="Cant."
+                                                />
+                                                {item.productId && item.quantity > 0 && (
+                                                    <span className="text-[9px] font-black text-orange-600 uppercase tracking-tighter block text-right pr-2">
+                                                        {formatCurrency((products.find(p => p.id === item.productId)?.cost || 0) * item.quantity)}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <button 
                                                 type="button"
                                                 onClick={() => removeInputItem(idx)}
-                                                className="p-3 text-slate-300 hover:text-red-500 transition-colors"
+                                                className="p-3 text-slate-300 hover:text-red-500 transition-colors self-start"
                                             >
                                                 <RefreshCw size={14} />
                                             </button>
@@ -260,9 +274,20 @@ const Despresaje: React.FC = () => {
                                     )}
                                 </div>
                                 {inputItems.length > 0 && (
-                                    <div className="pt-2 flex justify-between items-center text-slate-900 font-black">
-                                        <span className="text-[10px] uppercase tracking-widest opacity-50">Total Insumos:</span>
-                                        <span>{inputItems.reduce((sum, i) => sum + (i.quantity || 0), 0).toFixed(2)} Kg/Und</span>
+                                    <div className="pt-4 border-t border-slate-100">
+                                        <div className="flex justify-between items-center text-slate-400 font-bold mb-1">
+                                            <span className="text-[10px] uppercase tracking-widest">Peso Total:</span>
+                                            <span className="text-xs">{inputItems.reduce((sum, i) => sum + (i.quantity || 0), 0).toFixed(2)} Kg/Und</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-900 font-black">
+                                            <span className="text-[10px] uppercase tracking-widest opacity-50">Valor Transformado:</span>
+                                            <span className="text-lg tracking-tighter">
+                                                {formatCurrency(inputItems.reduce((sum, i) => {
+                                                    const cost = products.find(p => p.id === i.productId)?.cost || 0;
+                                                    return sum + (cost * (i.quantity || 0));
+                                                }, 0))}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
