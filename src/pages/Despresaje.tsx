@@ -8,11 +8,18 @@ import { format } from 'date-fns';
 const Despresaje: React.FC = () => {
     const { products, purchases, processings, addProcessing } = useData();
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     
+    const [mode, setMode] = useState<'purchase' | 'manual'>('purchase');
     const [purchaseId, setPurchaseId] = useState('');
     const [wholeChickenId, setWholeChickenId] = useState('');
     const [bulkQuantity, setBulkQuantity] = useState(0);
+    const [inputItems, setInputItems] = useState<{ productId: string, quantity: number }[]>([]);
     const [derivations, setDerivations] = useState<{ productId: string, quantity: number }[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -38,7 +45,24 @@ const Despresaje: React.FC = () => {
         });
     }, [selectedPurchase, products]);
 
-    const availableDerivations = products.filter(p => p.id !== wholeChickenId);
+    const inputIds = mode === 'purchase' ? [wholeChickenId] : inputItems.map(i => i.productId);
+    const availableDerivations = products.filter(p => !inputIds.includes(p.id));
+
+    const addInputItem = () => {
+        setInputItems(prev => [...prev, { productId: '', quantity: 0 }]);
+    };
+
+    const updateInputItem = (index: number, key: string, value: any) => {
+        setInputItems(prev => {
+            const copy = [...prev];
+            copy[index] = { ...copy[index], [key]: value };
+            return copy;
+        });
+    };
+
+    const removeInputItem = (index: number) => {
+        setInputItems(prev => prev.filter((_, i) => i !== index));
+    };
 
     const addDerivation = () => {
         setDerivations(prev => [...prev, { productId: '', quantity: 0 }]);
@@ -58,23 +82,35 @@ const Despresaje: React.FC = () => {
 
     const handleProcess = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!purchaseId || !wholeChickenId || bulkQuantity <= 0 || derivations.length === 0) return;
+        
+        const totalOut = derivations.reduce((sum, d) => sum + (d.quantity || 0), 0);
         
         try {
-            await addProcessing({
-                purchaseId,
-                inputProductId: wholeChickenId,
-                inputQuantity: bulkQuantity,
-                outputItems: derivations,
-                totalOutputWeight: derivations.reduce((sum, d) => sum + (d.quantity || 0), 0)
-            });
+            if (mode === 'purchase') {
+                if (!purchaseId || !wholeChickenId || bulkQuantity <= 0 || derivations.length === 0) return;
+                await addProcessing({
+                    purchaseId,
+                    inputProductId: wholeChickenId,
+                    inputQuantity: bulkQuantity,
+                    outputItems: derivations,
+                    totalOutputWeight: totalOut
+                });
+            } else {
+                if (inputItems.length === 0 || derivations.length === 0) return;
+                await addProcessing({
+                    inputItems: inputItems,
+                    outputItems: derivations,
+                    totalOutputWeight: totalOut
+                });
+            }
             
             // Reset
             setPurchaseId('');
             setWholeChickenId('');
             setBulkQuantity(0);
+            setInputItems([]);
             setDerivations([]);
-            alert('Proceso de despresaje completado exitosamente y relacionado a la factura seleccionada.');
+            alert('Proceso de despresaje completado exitosamente.');
         } catch (error) {
             console.error("Processing failed:", error);
             alert("Error al procesar el despresaje.");
@@ -86,87 +122,165 @@ const Despresaje: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Módulo de Despresaje</h1>
-                    <p className="text-slate-500 font-medium tracking-tight italic">Relacione facturas de compra con la transformación de productos.</p>
+                    <p className="text-slate-500 font-medium tracking-tight italic">Transformación de productos y control de rendimiento.</p>
+                </div>
+                
+                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                    <button 
+                        onClick={() => setMode('purchase')}
+                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'purchase' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Por Factura
+                    </button>
+                    <button 
+                        onClick={() => setMode('manual')}
+                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'manual' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        Multiproducto / Manual
+                    </button>
                 </div>
             </div>
 
             <form onSubmit={handleProcess} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Source Selection - Column 1-4 */}
-                <div className="lg:col-span-4 space-y-6">
+                <div className="lg:col-span-5 space-y-6">
                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                         <div className="flex items-center gap-2 text-slate-900">
                             <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
                                 <FileText size={20} />
                             </div>
-                            <h3 className="font-bold uppercase text-sm tracking-widest">Origen: Factura de Compra</h3>
+                            <h3 className="font-bold uppercase text-sm tracking-widest">
+                                {mode === 'purchase' ? 'Origen: Factura de Compra' : 'Origen: Insumos / Productos a Despresar'}
+                            </h3>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Seleccionar Factura</label>
-                                <select 
-                                    required
-                                    value={purchaseId}
-                                    onChange={e => {
-                                        setPurchaseId(e.target.value);
-                                        setWholeChickenId('');
-                                    }}
-                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
-                                >
-                                    <option value="">Seleccionar Factura...</option>
-                                    {purchaseOptions.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                            Ref: C-{(p.purchaseNumber || 0).toString().padStart(6, '0')} - {p.supplierName} ({format(new Date(p.date), 'dd/MM')})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {purchaseId && (
-                                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Producto a Despresar</label>
-                                        <select 
-                                            required
-                                            value={wholeChickenId}
-                                            onChange={e => setWholeChickenId(e.target.value)}
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
-                                        >
-                                            <option value="">Seleccionar Producto de la Factura...</option>
-                                            {purchaseItems.map(item => (
-                                                <option key={item.productId} value={item.productId}>
-                                                    {item.product?.name} ({item.quantity} {item.product?.unit} comprados)
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cantidad a Usar de esta Factura</label>
-                                        <input 
-                                            type="number"
-                                            step="0.01"
-                                            required
-                                            value={bulkQuantity || ''}
-                                            onChange={e => setBulkQuantity(parseFloat(e.target.value))}
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
-                                            placeholder="0.00"
-                                        />
-                                    </div>
+                        {mode === 'purchase' ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Seleccionar Factura</label>
+                                    <select 
+                                        required
+                                        value={purchaseId}
+                                        onChange={e => {
+                                            setPurchaseId(e.target.value);
+                                            setWholeChickenId('');
+                                        }}
+                                        className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                    >
+                                        <option value="">Seleccionar Factura...</option>
+                                        {purchaseOptions.map(p => (
+                                            <option key={p.id} value={p.id}>
+                                                Ref: C-{(p.purchaseNumber || 0).toString().padStart(6, '0')} - {p.supplierName} ({format(new Date(p.date), 'dd/MM')})
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                            )}
-                        </div>
+
+                                {purchaseId && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Producto a Despresar</label>
+                                            <select 
+                                                required
+                                                value={wholeChickenId}
+                                                onChange={e => setWholeChickenId(e.target.value)}
+                                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                            >
+                                                <option value="">Seleccionar Producto de la Factura...</option>
+                                                {purchaseItems.map(item => (
+                                                    <option key={item.productId} value={item.productId}>
+                                                        {item.product?.name} ({item.quantity} {item.product?.unit} comprados)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cantidad a Usar</label>
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                value={bulkQuantity || ''}
+                                                onChange={e => setBulkQuantity(parseFloat(e.target.value))}
+                                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Insumos (Ej: Pernil, Huesos)</span>
+                                    <button 
+                                        type="button"
+                                        onClick={addInputItem}
+                                        className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline"
+                                    >
+                                        + Añadir Insumo
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {inputItems.map((item, idx) => (
+                                        <div key={idx} className="flex gap-2 animate-in fade-in zoom-in duration-200">
+                                            <select 
+                                                required
+                                                value={item.productId}
+                                                onChange={e => updateInputItem(idx, 'productId', e.target.value)}
+                                                className="flex-1 p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
+                                            >
+                                                <option value="">Insumo...</option>
+                                                {products.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                                                ))}
+                                            </select>
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                value={item.quantity || ''}
+                                                onChange={e => updateInputItem(idx, 'quantity', parseFloat(e.target.value))}
+                                                className="w-24 p-3 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-900 outline-none text-xs"
+                                                placeholder="Cant."
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => removeInputItem(idx)}
+                                                className="p-3 text-slate-300 hover:text-red-500 transition-colors"
+                                            >
+                                                <RefreshCw size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {inputItems.length === 0 && (
+                                        <div className="p-8 border-2 border-dashed border-slate-100 rounded-2xl text-center text-slate-300 font-bold text-[10px] uppercase tracking-widest">
+                                            Seleccione Pernil, Huesos u otros insumos
+                                        </div>
+                                    )}
+                                </div>
+                                {inputItems.length > 0 && (
+                                    <div className="pt-2 flex justify-between items-center text-slate-900 font-black">
+                                        <span className="text-[10px] uppercase tracking-widest opacity-50">Total Insumos:</span>
+                                        <span>{inputItems.reduce((sum, i) => sum + (i.quantity || 0), 0).toFixed(2)} Kg/Und</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                             <AlertCircle className="text-amber-500 flex-shrink-0" size={20} />
                             <p className="text-[10px] text-amber-700 font-bold uppercase leading-relaxed">
-                                El sistema vinculará este despresaje a la factura seleccionada para el control de inventario.
+                                {mode === 'purchase' 
+                                    ? 'El sistema descontará el stock directamente de la factura seleccionada.' 
+                                    : 'El sistema descontará el stock de cada insumo agregado manualmente.'}
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Transformations - Column 5-12 */}
-                <div className="lg:col-span-8 space-y-6 flex flex-col">
+                <div className="lg:col-span-7 space-y-6 flex flex-col">
                     <div className="bg-slate-900 p-8 rounded-3xl shadow-xl flex-1 flex flex-col">
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-2 text-white">
@@ -247,7 +361,11 @@ const Despresaje: React.FC = () => {
                                 </div>
                                 <button 
                                     type="submit"
-                                    disabled={!purchaseId || !wholeChickenId || bulkQuantity <= 0 || derivations.length === 0 || !isAdmin}
+                                    disabled={
+                                        (mode === 'purchase' ? (!purchaseId || !wholeChickenId || bulkQuantity <= 0) : (inputItems.length === 0)) || 
+                                        derivations.length === 0 || 
+                                        !isAdmin
+                                    }
                                     className="px-10 py-4 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-orange-600 disabled:opacity-30 transition-all active:scale-95 shadow-xl shadow-orange-500/10"
                                 >
                                     <CheckCircle2 size={24} /> Guardar Despresaje
@@ -280,21 +398,30 @@ const Despresaje: React.FC = () => {
                                 {processings.slice().reverse().map(p => {
                                     const purchase = purchases.find(pur => pur.id === p.purchaseId);
                                     const inputProd = products.find(prod => prod.id === p.inputProductId);
-                                    const merma = p.inputQuantity - p.totalOutputWeight;
+                                    
+                                    const totalIn = p.inputItems && p.inputItems.length > 0 
+                                        ? p.inputItems.reduce((sum, i) => sum + i.quantity, 0)
+                                        : (p.inputQuantity || 0);
+
+                                    const merma = totalIn - p.totalOutputWeight;
 
                                     return (
                                         <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-8 py-5 font-medium text-slate-600">{formatDate(p.date)}</td>
                                             <td className="px-8 py-5">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-900">{purchase?.supplierName || 'Desconocido'}</span>
-                                                    <span className="text-[10px] text-slate-400 font-bold">Ref: C-{(purchase?.purchaseNumber || 0).toString().padStart(6, '0')}</span>
+                                                    <span className="font-bold text-slate-900">{purchase?.supplierName || (p.inputItems ? 'Multiproducto' : 'Directo')}</span>
+                                                    <span className="text-[10px] text-slate-400 font-bold">
+                                                        {purchase ? `Ref: C-${(purchase.purchaseNumber || 0).toString().padStart(6, '0')}` : 'Manual'}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-900">{p.inputQuantity.toFixed(2)} {inputProd?.unit || 'Kg'}</span>
-                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">{inputProd?.name}</span>
+                                                    <span className="font-bold text-slate-900">{totalIn.toFixed(2)} Kg/Und</span>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">
+                                                        {inputProd ? inputProd.name : `${p.inputItems?.length || 0} Insumos`}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-5">

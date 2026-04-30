@@ -414,10 +414,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             await addDoc(collection(db, 'processings'), clean(processing));
 
-            // Rest bulk from inventory
-            const whole = products.find(p => p.id === processing.inputProductId);
-            if (whole) {
-                await updateProduct(whole.id, { stock: whole.stock - processing.inputQuantity });
+            // Rest input from inventory
+            if (processing.inputItems && processing.inputItems.length > 0) {
+                for (const input of processing.inputItems) {
+                    const prod = products.find(p => p.id === input.productId);
+                    if (prod) {
+                        await updateProduct(prod.id, { stock: prod.stock - input.quantity });
+                    }
+                }
+            } else if (processing.inputProductId && processing.inputQuantity) {
+                // Legacy single input support
+                const whole = products.find(p => p.id === processing.inputProductId);
+                if (whole) {
+                    await updateProduct(whole.id, { stock: whole.stock - processing.inputQuantity });
+                }
             }
 
             // Add derivations to inventory

@@ -158,9 +158,10 @@ export interface ProcessingItem {
 export interface Processing {
     id: string;
     date: string;
-    purchaseId: string;
-    inputProductId: string;
-    inputQuantity: number;
+    purchaseId?: string;
+    inputProductId?: string; // Optional for multi-input
+    inputQuantity?: number; // Optional for multi-input
+    inputItems?: ProcessingItem[]; // Added for multiple inputs
     outputItems: ProcessingItem[];
     totalOutputWeight: number;
 }
