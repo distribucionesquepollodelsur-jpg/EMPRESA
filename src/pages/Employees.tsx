@@ -30,8 +30,14 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 );
 
 const Employees: React.FC = () => {
-    const { employees, attendance, advances, shifts, reprimands, addEmployee, updateEmployee, markAttendance, addAdvance, addReprimand, resolveReprimand, updateShift, deleteEmployee } = useData();
+    const { employees, attendance, advances, shifts, reprimands, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, addReprimand, resolveReprimand, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [activeView, setActiveView] = useState<'roster' | 'attendance'>('roster');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -540,7 +546,22 @@ const Employees: React.FC = () => {
                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{formatDate(record.date)}</p>
                                     </div>
                                 </div>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-200">Asistencia Ok</span>
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-200">Asistencia Ok</span>
+                                    {isAdmin && (
+                                        <button 
+                                            onClick={() => {
+                                                if (window.confirm('¿Seguro que deseas eliminar este registro de asistencia?')) {
+                                                    deleteAttendance(record.id);
+                                                }
+                                            }}
+                                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                            title="Eliminar registro"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}

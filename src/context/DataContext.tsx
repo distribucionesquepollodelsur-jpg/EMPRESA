@@ -75,6 +75,7 @@ interface DataContextType extends AppState {
     updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
     deleteEmployee: (id: string) => Promise<void>;
     markAttendance: (employeeId: string, status: Attendance['status']) => Promise<void>;
+    deleteAttendance: (id: string) => Promise<void>;
     addAdvance: (employeeId: string, amount: number) => Promise<string | null>;
     addReprimand: (reprimand: Omit<Reprimand, 'id' | 'date' | 'status'>) => Promise<void>;
     resolveReprimand: (id: string) => Promise<void>;
@@ -486,6 +487,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'attendance'); }
     };
 
+    const deleteAttendance = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'attendance', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `attendance/${id}`); }
+    };
+
     const addAdvance = async (employeeId: string, amount: number) => {
         const employee = employees.find(e => e.id === employeeId);
         if (!employee) return "Empleado no encontrado";
@@ -748,6 +755,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateEmployee,
             deleteEmployee,
             markAttendance,
+            deleteAttendance,
             addAdvance,
             addReprimand,
             resolveReprimand,
