@@ -8,14 +8,17 @@ import {
     Package, 
     ArrowRight,
     ShoppingBag,
-    Users
+    Users,
+    ShieldCheck
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import BalanceSheetModal from '../components/BalanceSheetModal';
 
 const Dashboard: React.FC = () => {
     const { sales, purchases, products, cashFlow, employees } = useData();
     const { user } = useAuth();
+    const [isBalanceModalOpen, setIsBalanceModalOpen] = React.useState(false);
 
     const totalSalesAmount = sales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchasesAmount = purchases.reduce((sum, p) => sum + p.total, 0);
@@ -118,6 +121,18 @@ const Dashboard: React.FC = () => {
                         <ShoppingBag className="text-orange-400" /> Accesos Rápidos
                     </h3>
                     <div className="space-y-4 flex-1">
+                        {user?.role === 'admin' && (
+                            <button 
+                                onClick={() => setIsBalanceModalOpen(true)}
+                                className="w-full flex items-center justify-between p-5 bg-orange-500 rounded-2xl hover:bg-orange-600 transition-all group text-left shadow-lg shadow-orange-500/20 mb-2 border-b-4 border-orange-700 active:border-b-0 active:translate-y-1"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <ShieldCheck className="text-white" size={24} />
+                                    <span className="font-black text-sm tracking-tight text-white uppercase">Balance General</span>
+                                </div>
+                                <ArrowRight size={18} className="text-white/50 group-hover:translate-x-1 group-hover:text-white transition-all" />
+                            </button>
+                        )}
                         {quickActions.map(btn => (
                             <button 
                                 key={btn.label}
@@ -128,6 +143,11 @@ const Dashboard: React.FC = () => {
                             </button>
                         ))}
                     </div>
+
+                    <BalanceSheetModal 
+                        isOpen={isBalanceModalOpen} 
+                        onClose={() => setIsBalanceModalOpen(false)} 
+                    />
                     <div className="mt-8 pt-8 border-t border-slate-800">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
