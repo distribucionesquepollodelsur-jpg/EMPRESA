@@ -29,7 +29,8 @@ export interface Purchase {
     items: PurchaseItem[];
     total: number;
     paidAmount: number;
-    paymentMethod: 'cash' | 'transfer' | 'credit';
+    paymentMethod: 'cash' | 'transfer' | 'credit' | 'balance';
+    paymentStatus?: 'paid' | 'pending' | 'partial';
     payments?: { date: string, amount: number, method: string }[];
 }
 
@@ -51,7 +52,7 @@ export interface Sale {
     items: SaleItem[];
     total: number;
     paidAmount: number;
-    paymentMethod: 'cash' | 'credit';
+    paymentMethod: 'cash' | 'credit' | 'balance';
     payments?: { date: string, amount: number, method: string }[];
 }
 
@@ -99,6 +100,15 @@ export interface Advance {
     employeeId: string;
     date: string;
     amount: number;
+}
+
+export interface Dotation {
+    id: string;
+    employeeId: string;
+    date: string;
+    item: string;
+    quantity: number;
+    details?: string;
 }
 
 export interface Reprimand {
@@ -178,6 +188,7 @@ export interface AppState {
     customers: Customer[];
     shifts: Shift[];
     reprimands: Reprimand[];
+    dotations: Dotation[];
     processings: Processing[];
     config: AppConfig;
 }

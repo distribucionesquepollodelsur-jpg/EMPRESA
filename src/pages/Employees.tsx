@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff } from 'lucide-react';
+import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
-import { Employee, Shift } from '../types';
+import { Employee, Shift, Dotation } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
 
 import { useData } from '../context/DataContext';
@@ -30,7 +30,7 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 );
 
 const Employees: React.FC = () => {
-    const { employees, attendance, advances, shifts, reprimands, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, addReprimand, resolveReprimand, updateShift, deleteEmployee } = useData();
+    const { employees, attendance, advances, shifts, reprimands, dotations, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, addReprimand, resolveReprimand, addDotation, deleteDotation, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -38,11 +38,12 @@ const Employees: React.FC = () => {
         'alex@quepollo.com',
         'admin@quepollo.com'
     ].includes(user?.email || '');
-    const [activeView, setActiveView] = useState<'roster' | 'attendance'>('roster');
+    const [activeView, setActiveView] = useState<'roster' | 'attendance' | 'dotation'>('roster');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
     const [isReprimandModalOpen, setIsReprimandModalOpen] = useState(false);
+    const [isDotationModalOpen, setIsDotationModalOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [justification, setJustification] = useState('');
     const [showJustifyModal, setShowJustifyModal] = useState<{type: keyof Shift, empId: string} | null>(null);
@@ -63,6 +64,11 @@ const Employees: React.FC = () => {
     const [reprimandReason, setReprimandReason] = useState('');
     const [reprimandType, setReprimandType] = useState<'time' | 'salary_day'>('time');
     const [reprimandHours, setReprimandHours] = useState(0);
+
+    // Dotation inputs
+    const [dotationItem, setDotationItem] = useState('');
+    const [dotationQuantity, setDotationQuantity] = useState(1);
+    const [dotationDetails, setDotationDetails] = useState('');
 
     const daysOfWeek = [
         "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"
@@ -155,6 +161,9 @@ const Employees: React.FC = () => {
         setReprimandReason('');
         setReprimandType('time');
         setReprimandHours(0);
+        setDotationItem('');
+        setDotationQuantity(1);
+        setDotationDetails('');
     };
 
     const openEditModal = (emp: Employee) => {
@@ -190,6 +199,24 @@ const Employees: React.FC = () => {
         alert("Amonestación registrada correctamente.");
         setIsReprimandModalOpen(false);
         resetForm();
+    };
+
+    const handleAddDotation = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedEmployee || !dotationItem || dotationQuantity <= 0) return;
+
+        addDotation({
+            employeeId: selectedEmployee.id,
+            item: dotationItem,
+            quantity: dotationQuantity,
+            details: dotationDetails || undefined
+        });
+
+        alert("Dotación registrada correctamente.");
+        setIsDotationModalOpen(false);
+        setDotationItem('');
+        setDotationQuantity(1);
+        setDotationDetails('');
     };
 
     const processAdvance = async (id: string, amount: number) => {
@@ -274,6 +301,13 @@ const Employees: React.FC = () => {
                                 activeView === 'attendance' ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400")}
                         >
                             Control de Horarios
+                        </button>
+                        <button 
+                            onClick={() => setActiveView('dotation')}
+                            className={cn("text-xs font-black uppercase tracking-widest pb-1 border-b-2 transition-all", 
+                                activeView === 'dotation' ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400")}
+                        >
+                            Dotación
                         </button>
                     </div>
                 </div>
@@ -391,9 +425,18 @@ const Employees: React.FC = () => {
                                     setSelectedEmployee(emp);
                                     setIsAdvanceModalOpen(true);
                                 }}
-                                className="py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10 col-span-2 lg:col-span-1"
+                                className="py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10"
                             >
                                 <Plus size={16} /> Adelanto
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setSelectedEmployee(emp);
+                                    setIsDotationModalOpen(true);
+                                }}
+                                className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                            >
+                                <Wrench size={16} /> Dotación
                             </button>
                         </div>
                         
@@ -437,7 +480,7 @@ const Employees: React.FC = () => {
                     </div>
                 )}
             </div>
-            ) : (
+            ) : activeView === 'attendance' ? (
                 <div className="space-y-6">
                     <div className="bg-orange-50 border border-orange-100 p-6 rounded-3xl flex gap-4">
                         <AlertCircle className="text-orange-500 flex-shrink-0" size={24} />
@@ -519,6 +562,94 @@ const Employees: React.FC = () => {
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[40px] flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+                        <div className="flex items-center gap-6">
+                            <div className="p-4 bg-slate-800 rounded-3xl text-orange-500">
+                                <Wrench size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Historial de Dotaciones</h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Artículos y equipos entregados al personal.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="px-6 py-3 bg-slate-800 rounded-2xl text-center">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Entregas</p>
+                                <p className="text-xl font-black text-white">{dotations.length}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50">
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Fecha</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Colaborador</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Artículo</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Cant.</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Detalles</th>
+                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {dotations.slice().reverse().map(d => {
+                                        const emp = employees.find(e => e.id === d.employeeId);
+                                        return (
+                                            <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
+                                                <td className="px-8 py-5 text-sm font-bold text-slate-500">{formatDate(d.date)}</td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-bold overflow-hidden border border-slate-200">
+                                                            {emp?.photo ? (
+                                                                <img src={emp.photo} alt={emp.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                emp?.name.charAt(0)
+                                                            )}
+                                                        </div>
+                                                        <span className="text-sm font-bold text-slate-900">{emp?.name || 'Desconocido'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <span className="px-3 py-1 bg-slate-100 text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                                        {d.item}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-5 text-sm font-black text-slate-900">{d.quantity}</td>
+                                                <td className="px-8 py-5 text-xs text-slate-500 italic max-w-xs truncate">{d.details || '-'}</td>
+                                                <td className="px-8 py-5 text-right">
+                                                    {isAdmin && (
+                                                        <button 
+                                                            onClick={() => {
+                                                                if (window.confirm('¿Eliminar este registro de dotación?')) {
+                                                                    deleteDotation(d.id);
+                                                                }
+                                                            }}
+                                                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {dotations.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-8 py-20 text-center">
+                                                <Wrench size={48} className="mx-auto text-slate-200 mb-4" />
+                                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No hay registros de dotación.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -681,7 +812,7 @@ const Employees: React.FC = () => {
                                     <input 
                                         type="number" 
                                         required 
-                                        value={salary}
+                                        value={isNaN(salary) ? '' : salary}
                                         onChange={e => setSalary(parseFloat(e.target.value))}
                                         className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
                                     />
@@ -799,7 +930,7 @@ const Employees: React.FC = () => {
                                     <input 
                                         type="number" 
                                         required 
-                                        value={salary}
+                                        value={isNaN(salary) ? '' : salary}
                                         onChange={e => setSalary(parseFloat(e.target.value))}
                                         className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
                                     />
@@ -855,7 +986,7 @@ const Employees: React.FC = () => {
                                     type="number" 
                                     required 
                                     autoFocus
-                                    value={advanceAmount}
+                                    value={isNaN(advanceAmount) ? '' : advanceAmount}
                                     onChange={e => {
                                         setAdvanceAmount(parseFloat(e.target.value));
                                         setAdvanceError('');
@@ -923,7 +1054,7 @@ const Employees: React.FC = () => {
                                         <input 
                                             type="number" 
                                             required 
-                                            value={reprimandHours}
+                                            value={isNaN(reprimandHours) ? '' : reprimandHours}
                                             onChange={e => setReprimandHours(parseFloat(e.target.value))}
                                             className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-500 outline-none transition-all font-bold text-slate-950"
                                         />
@@ -945,6 +1076,73 @@ const Employees: React.FC = () => {
                                     Confirmar Amonestación
                                 </button>
                                 <button type="button" onClick={() => { setIsReprimandModalOpen(false); resetForm(); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {isDotationModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-10 space-y-8 animate-in fade-in zoom-in duration-200">
+                        <div className="text-center space-y-4">
+                            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-orange-500 mx-auto">
+                                <Wrench size={28} />
+                            </div>
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">Entregar Dotación</h2>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic flex items-center justify-center gap-2">
+                                    <BadgeInfo size={12} /> Para: {selectedEmployee?.name}
+                                </p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAddDotation} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Artículo / Equipo</label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    autoFocus
+                                    value={dotationItem}
+                                    onChange={e => setDotationItem(e.target.value)}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-slate-950 text-sm"
+                                    placeholder="Ej: Delantal, Botas, Cuchillo, Guantes"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cantidad</label>
+                                <input 
+                                    type="number" 
+                                    required 
+                                    value={isNaN(dotationQuantity) ? '' : dotationQuantity}
+                                    onChange={e => setDotationQuantity(parseInt(e.target.value))}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-slate-950 text-sm"
+                                    min="1"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detalles Adicionales</label>
+                                <textarea 
+                                    value={dotationDetails}
+                                    onChange={e => setDotationDetails(e.target.value)}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-slate-950 text-sm min-h-[100px]"
+                                    placeholder="Marca, talla, estado, etc."
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-6">
+                                <button className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-900/20 active:scale-95 transition-all">
+                                    Registrar Entrega
+                                </button>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setIsDotationModalOpen(false); setSelectedEmployee(null); }} 
+                                    className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors"
+                                >
                                     Cancelar
                                 </button>
                             </div>

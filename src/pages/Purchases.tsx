@@ -507,7 +507,7 @@ const Purchases: React.FC = () => {
                                                         <input 
                                                             type="number" 
                                                             step="0.01"
-                                                            value={item.quantity}
+                                                            value={item.quantity || ''}
                                                             onChange={e => updateItemQuantity(item.productId, parseFloat(e.target.value))}
                                                             className="w-full bg-slate-50 border-none rounded p-2 text-sm font-bold outline-none"
                                                         />

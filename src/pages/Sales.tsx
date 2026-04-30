@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, ShoppingCart, Search, FileText, CheckCircle2, Edit2, DollarSign, CreditCard, User } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Search, FileText, CheckCircle2, Edit2, DollarSign, CreditCard, User, Coins } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { format } from 'date-fns';
 import { Product, SaleItem, Sale } from '../types';
@@ -24,7 +24,7 @@ const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number
                     <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Vender a:</label>
                     <input 
                         type="number"
-                        value={tempPrice}
+                        value={isNaN(tempPrice) ? '' : tempPrice}
                         onChange={e => setTempPrice(parseFloat(e.target.value))}
                         className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
                     />
@@ -33,7 +33,7 @@ const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number
                     <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant:</label>
                     <input 
                         type="number"
-                        value={tempQty}
+                        value={isNaN(tempQty) ? '' : tempQty}
                         onChange={e => setTempQty(parseFloat(e.target.value))}
                         className="w-20 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold"
                     />
@@ -642,7 +642,7 @@ const Sales: React.FC = () => {
                                                         <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Cant.</label>
                                                         <input 
                                                             type="number"
-                                                            value={item.quantity}
+                                                            value={item.quantity || ''}
                                                             onChange={e => updateCartItem(idx, parseFloat(e.target.value), item.price)}
                                                             className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
                                                         />
@@ -651,7 +651,7 @@ const Sales: React.FC = () => {
                                                         <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio</label>
                                                         <input 
                                                             type="number"
-                                                            value={item.price}
+                                                            value={item.price || ''}
                                                             onChange={e => updateCartItem(idx, item.quantity, parseFloat(e.target.value))}
                                                             className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
                                                         />

@@ -211,6 +211,20 @@
         "lastSequenceDate": { "type": "string" }
       },
       "required": ["companyName", "nit"]
+    },
+    "Dotation": {
+      "title": "Dotation",
+      "description": "Employee equipment allotments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "item": { "type": "string" },
+        "quantity": { "type": "number" },
+        "details": { "type": "string" }
+      },
+      "required": ["employeeId", "date", "item", "quantity"]
     }
   },
   "firestore": {
@@ -226,6 +240,7 @@
     "customers": { "schema": "Customer", "description": "Customer directory" },
     "processings": { "schema": "Processing", "description": "Despresaje records" },
     "shifts": { "schema": "Shift", "description": "Work shifts" },
+    "dotations": { "schema": "Dotation", "description": "Equipment allotments" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
