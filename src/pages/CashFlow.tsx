@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, FileText, ShieldAlert } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, FileText, ShieldAlert, HandCoins } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -16,6 +16,7 @@ const CashFlow: React.FC = () => {
         'admin@quepollo.com'
     ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
     const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -29,9 +30,10 @@ const CashFlow: React.FC = () => {
         if (selectedMovement) {
             updateCashMovement(selectedMovement.id, { type, amount, reason });
         } else {
-            addCashMovement({ type, amount, reason });
+            addCashMovement({ type, amount, reason, category: isLoanModalOpen ? 'loan' : 'manual' });
         }
         setIsModalOpen(false);
+        setIsLoanModalOpen(false);
         setAmount(0);
         setReason('');
         setSelectedMovement(null);
@@ -55,11 +57,12 @@ const CashFlow: React.FC = () => {
     const netBalance = incomes - outcomes;
 
     // For the UI breakdown
-    const salesInCash = cashFlow.filter(m => m.type === 'entry' && m.reason.startsWith('Venta #')).reduce((sum, m) => sum + m.amount, 0);
-    const purchasesInCash = cashFlow.filter(m => m.type === 'exit' && m.reason.startsWith('Compra #')).reduce((sum, m) => sum + m.amount, 0);
-    const advancesInCash = cashFlow.filter(m => m.type === 'exit' && m.reason.startsWith('Adelanto:')).reduce((sum, m) => sum + m.amount, 0);
-    const trulyManualEntries = cashFlow.filter(m => m.type === 'entry' && !m.reason.startsWith('Venta #')).reduce((sum, m) => sum + m.amount, 0);
-    const trulyManualExits = cashFlow.filter(m => m.type === 'exit' && !m.reason.startsWith('Compra #') && !m.reason.startsWith('Adelanto:')).reduce((sum, m) => sum + m.amount, 0);
+    const salesInCash = cashFlow.filter(m => m.type === 'entry' && m.category === 'sale').reduce((sum, m) => sum + m.amount, 0);
+    const purchasesInCash = cashFlow.filter(m => m.type === 'exit' && m.category === 'purchase').reduce((sum, m) => sum + m.amount, 0);
+    const advancesInCash = cashFlow.filter(m => m.type === 'exit' && m.category === 'advance').reduce((sum, m) => sum + m.amount, 0);
+    const loansInCash = cashFlow.filter(m => m.type === 'entry' && m.category === 'loan').reduce((sum, m) => sum + m.amount, 0);
+    const trulyManualEntries = cashFlow.filter(m => m.type === 'entry' && m.category === 'manual').reduce((sum, m) => sum + m.amount, 0);
+    const trulyManualExits = cashFlow.filter(m => m.type === 'exit' && m.category === 'manual').reduce((sum, m) => sum + m.amount, 0);
 
     const generateCashReport = () => {
         const doc = new jsPDF();
@@ -86,10 +89,11 @@ const CashFlow: React.FC = () => {
             head: [['Detalle', 'Ingreso', 'Egreso']],
             body: [
                 ['Ventas (Caja)', formatCurrency(salesInCash), '-'],
+                ['Préstamos Recibidos', formatCurrency(loansInCash), '-'],
                 ['Compras (Caja)', '-', formatCurrency(purchasesInCash)],
                 ['Adelantos Nómina', '-', formatCurrency(advancesInCash)],
-                ['Movimientos Manuales (+)', formatCurrency(trulyManualEntries), '-'],
-                ['Movimientos Manuales (-)', '-', formatCurrency(trulyManualExits)],
+                ['Otros Ingresos', formatCurrency(trulyManualEntries), '-'],
+                ['Otros Egresos', '-', formatCurrency(trulyManualExits)],
                 ['TOTALES', formatCurrency(incomes), formatCurrency(outcomes)],
                 ['BALANCE FINAL', { content: formatCurrency(netBalance), colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }]
             ] as any,
@@ -116,6 +120,19 @@ const CashFlow: React.FC = () => {
                     <p className="text-slate-500 font-medium italic">Gestión de flujo, cierres y movimientos diarios.</p>
                 </div>
                 <div className="flex gap-3">
+                    {isAdmin && (
+                        <button 
+                            onClick={() => {
+                                setType('entry');
+                                setAmount(0);
+                                setReason('');
+                                setIsLoanModalOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-5 py-3 bg-white border border-green-200 text-green-600 rounded-2xl font-bold hover:bg-green-50 transition-all shadow-sm active:scale-95"
+                        >
+                            <HandCoins size={18} /> Préstamo Base
+                        </button>
+                    )}
                     {isAdmin && (
                         <button 
                             onClick={handleBaseInicial}
@@ -259,6 +276,61 @@ const CashFlow: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Loan Modal */}
+            {isLoanModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[40px] w-full max-w-md shadow-2xl p-10 space-y-8 animate-in fade-in zoom-in duration-200">
+                         <div className="text-center space-y-4">
+                            <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 mx-auto">
+                                <HandCoins size={28} />
+                            </div>
+                            <div className="space-y-1">
+                                <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">
+                                    Registrar Préstamo Base
+                                </h2>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Inyección de capital externo para la caja.</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor Prestado</label>
+                                <input 
+                                    type="number" 
+                                    required 
+                                    autoFocus
+                                    value={amount || ''}
+                                    onChange={e => setAmount(parseFloat(e.target.value))}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-green-600 outline-none transition-all font-black text-slate-950 text-2xl text-center"
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Quién hizo el préstamo?</label>
+                                <input 
+                                    type="text"
+                                    required 
+                                    value={reason}
+                                    onChange={e => setReason(e.target.value)}
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-green-600 outline-none transition-all font-bold text-slate-950 text-sm"
+                                    placeholder="Ej: Jorge Lasprilla, Préstamo Bancario, etc."
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-6">
+                                <button className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-900/20 active:scale-95 transition-all">
+                                    Confirmar Préstamo
+                                </button>
+                                <button type="button" onClick={() => { setIsLoanModalOpen(false); setAmount(0); setReason(''); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Cash Modal */}
             {isModalOpen && (

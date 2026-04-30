@@ -8,7 +8,12 @@ import { formatCurrency, formatDate, cn } from '../lib/utils';
 const Suppliers: React.FC = () => {
     const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, updatePurchase } = useData();
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);

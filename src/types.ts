@@ -61,6 +61,7 @@ export interface CashMovement {
     type: 'entry' | 'exit';
     amount: number;
     reason: string;
+    category?: 'sale' | 'purchase' | 'advance' | 'loan' | 'manual';
 }
 
 export interface Customer {
@@ -71,6 +72,7 @@ export interface Customer {
     nit?: string;
     initialDebt?: number;
     initialDebtDate?: string;
+    balance?: number;
 }
 
 export interface Employee {

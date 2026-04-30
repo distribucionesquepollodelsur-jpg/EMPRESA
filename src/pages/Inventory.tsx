@@ -10,6 +10,12 @@ import autoTable from 'jspdf-autotable';
 const Inventory: React.FC = () => {
     const { products, addProduct, updateProduct, deleteProduct, config } = useData();
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -110,7 +116,7 @@ const Inventory: React.FC = () => {
                         <FileText size={18} />
                         Reporte PDF
                     </button>
-                    {user?.role === 'admin' && (
+                    {isAdmin && (
                         <button 
                             onClick={() => setIsModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
@@ -183,7 +189,7 @@ const Inventory: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-slate-600">{formatCurrency(p.cost)}</td>
                                     <td className="px-6 py-4 text-right space-x-2">
-                                        {user?.role === 'admin' ? (
+                                        {isAdmin ? (
                                             <>
                                                 <button onClick={() => handleEdit(p)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
                                                     <Edit2 size={16} />

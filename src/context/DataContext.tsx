@@ -269,7 +269,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await addCashMovement({
                     type: 'exit',
                     amount: purchase.total,
-                    reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`
+                    reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                    category: 'purchase'
                 });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'purchases'); }
@@ -336,7 +337,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await addCashMovement({
                     type: 'entry',
                     amount: isBalancePayment ? 0 : sale.paidAmount,
-                    reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`
+                    reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
+                    category: 'sale'
                 });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'sales'); }
@@ -430,6 +432,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const addCashMovement = async (movementData: Omit<CashMovement, 'id' | 'date'>) => {
         const movement = {
             ...movementData,
+            category: movementData.category || 'manual',
             date: getEffectiveCashDate().toISOString()
         };
 
@@ -530,7 +533,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await addCashMovement({
                 type: 'exit',
                 amount,
-                reason: `Adelanto: ${employee.name}`
+                reason: `Adelanto: ${employee.name}`,
+                category: 'advance'
             });
             return null;
         } catch (e) {
@@ -677,7 +681,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await addCashMovement({
                 type: 'exit',
                 amount: amount,
-                reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`
+                reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
+                category: 'purchase'
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${purchaseId}`); }
     };
@@ -703,7 +708,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await addCashMovement({
                 type: 'entry',
                 amount: method === 'balance' ? 0 : amount,
-                reason: `Abono a Venta #${saleId.slice(0, 8)}${method === 'balance' ? ' [SALDO]' : ''}`
+                reason: `Abono a Venta #${saleId.slice(0, 8)}${method === 'balance' ? ' [SALDO]' : ''}`,
+                category: 'sale'
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
