@@ -154,7 +154,8 @@
         "address": { "type": "string" },
         "nit": { "type": "string" },
         "initialDebt": { "type": "number" },
-        "initialDebtDate": { "type": "string" }
+        "initialDebtDate": { "type": "string" },
+        "balance": { "type": "number", "description": "What the company owes to the customer (Credit)" }
       },
       "required": ["name", "phone"]
     },

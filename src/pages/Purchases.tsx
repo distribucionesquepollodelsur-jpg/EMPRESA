@@ -10,7 +10,12 @@ import { format } from 'date-fns';
 const Purchases: React.FC = () => {
     const { products, purchases, addPurchase, deletePurchase, suppliers, config } = useData();
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Form state
@@ -297,10 +302,10 @@ const Purchases: React.FC = () => {
                                             {p.paymentMethod}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
+                                    <td className="px-8 py-5 text-right flex items-center justify-end gap-3">
                                         <button 
                                             onClick={() => generatePurchaseInvoice(p)}
-                                            className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
+                                            className="text-slate-400 hover:text-blue-600 p-2 transition-all hover:bg-blue-50 rounded-lg"
                                             title="Ver Factura"
                                         >
                                             <FileText size={18} />
@@ -308,17 +313,17 @@ const Purchases: React.FC = () => {
                                         {isAdmin && (
                                             <button 
                                                 onClick={async () => {
-                                                    if (window.confirm('¿Estás seguro de que deseas eliminar esta compra? El stock de los productos involucrados se restará automáticamente.')) {
+                                                    if (window.confirm('¿Seguro de eliminar esta compra? El inventario será RESTAURADO (se restará lo comprado).')) {
                                                         try {
                                                             await deletePurchase(p.id);
-                                                            alert('Compra eliminada y stock actualizado.');
+                                                            alert('Compra eliminada y stock corregido.');
                                                         } catch (error) {
-                                                            console.error("Delete purchase error:", error);
-                                                            alert('Error al eliminar la compra.');
+                                                            console.error("Error deleting:", error);
+                                                            alert('Error al eliminar. Verifique permisos.');
                                                         }
                                                     }
                                                 }}
-                                                className="text-slate-300 hover:text-red-500 p-2 transition-colors"
+                                                className="text-red-300 hover:text-red-600 p-2 transition-all hover:bg-red-50 rounded-lg"
                                                 title="Eliminar Compra"
                                             >
                                                 <Trash2 size={18} />

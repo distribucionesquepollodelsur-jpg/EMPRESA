@@ -275,6 +275,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'purchases'); }
     };
 
+    const updateCustomerBalance = async (customerId: string, amount: number, reason: string) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer) return;
+        
+        try {
+            const currentBalance = customer.balance || 0;
+            await updateCustomer(customerId, { balance: currentBalance + amount });
+            
+            // Log as a special movement
+            await addCashMovement({
+                amount: 0,
+                type: 'entry',
+                reason: `Cargar Saldo (Trueque) - ${customer.name}: ${reason} (Nuevo Saldo: ${currentBalance + amount})`
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
+    };
+
     const addSale = async (saleData: Omit<Sale, 'id' | 'date' | 'saleNumber'>) => {
         const today = format(new Date(), 'yyyy-MM-dd');
         let nextNumber = (config.saleCounter || 0) + 1;
@@ -305,11 +322,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             // Sync cash - only if it's cash or has paid amount
+            // Handle Balance Payment
+            if (sale.paymentMethod === 'balance' && sale.customerId) {
+                const customer = customers.find(c => c.id === sale.customerId);
+                if (customer) {
+                    const balanceUsed = Math.min(customer.balance || 0, sale.paidAmount);
+                    await updateCustomer(customer.id, { balance: (customer.balance || 0) - balanceUsed });
+                }
+            }
+
             if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
+                const isBalancePayment = sale.paymentMethod === 'balance';
                 await addCashMovement({
                     type: 'entry',
-                    amount: sale.paidAmount,
-                    reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}`
+                    amount: isBalancePayment ? 0 : sale.paidAmount,
+                    reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`
                 });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'sales'); }
@@ -339,6 +366,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     await updateProduct(p.id, { stock: p.stock + item.quantity });
                 }
             }
+
+            // Find and delete associated cash movement
+            const saleSnippet = id.slice(0, 8);
+            const movement = cashFlow.find(m => m.reason.includes(`Venta #${saleSnippet}`));
+            if (movement) {
+                await deleteCashMovement(movement.id);
+            }
             
             await deleteDoc(doc(db, 'sales', id));
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `sales/${id}`); }
@@ -355,6 +389,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (p) {
                     await updateProduct(p.id, { stock: p.stock - item.quantity });
                 }
+            }
+
+            // Find and delete associated cash movement
+            const purchaseSnippet = id.slice(0, 8);
+            const movement = cashFlow.find(m => m.reason.includes(`Compra #${purchaseSnippet}`));
+            if (movement) {
+                await deleteCashMovement(movement.id);
             }
             
             await deleteDoc(doc(db, 'purchases', id));
@@ -646,6 +687,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sale) return;
 
         try {
+            // Handle Balance adjustment if method is balance
+            if (method === 'balance' && sale.customerId) {
+                const customer = customers.find(c => c.id === sale.customerId);
+                if (customer) {
+                    await updateCustomer(customer.id, { balance: (customer.balance || 0) - amount });
+                }
+            }
+
             await updateDoc(doc(db, 'sales', saleId), {
                 paidAmount: sale.paidAmount + amount,
                 payments: [...(sale.payments || []), { date: new Date().toISOString(), amount, method }]
@@ -653,8 +702,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             await addCashMovement({
                 type: 'entry',
-                amount: amount,
-                reason: `Abono a Venta #${saleId.slice(0, 8)}`
+                amount: method === 'balance' ? 0 : amount,
+                reason: `Abono a Venta #${saleId.slice(0, 8)}${method === 'balance' ? ' [SALDO]' : ''}`
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
@@ -701,6 +750,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteSupplier,
             addCustomer,
             updateCustomer,
+            updateCustomerBalance,
             deleteCustomer,
             updateShift,
             addPurchasePayment,

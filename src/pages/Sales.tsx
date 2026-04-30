@@ -55,6 +55,12 @@ const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number
 const Sales: React.FC = () => {
     const { products, sales, customers, addSale, updateSale, deleteSale, addSalePayment, config } = useData();
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -104,6 +110,9 @@ const Sales: React.FC = () => {
     };
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    const selectedCustomerData = customers.find(c => c.id === customerId);
+    const customerBalance = selectedCustomerData?.balance || 0;
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessBanner, setShowSuccessBanner] = useState(false);
@@ -407,7 +416,7 @@ const Sales: React.FC = () => {
                                             >
                                                 <DollarSign size={18} />
                                             </button>
-                                            {user?.role === 'admin' && (
+                                            {isAdmin && (
                                                 <>
                                                     <button 
                                                         onClick={() => {
@@ -517,7 +526,30 @@ const Sales: React.FC = () => {
                                             <CreditCard size={20} />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Crédito</span>
                                         </button>
+                                        {customerBalance > 0 && (
+                                            <button 
+                                                onClick={() => {
+                                                    setPaymentMethod('balance');
+                                                    setPaidAmount(Math.min(total, customerBalance));
+                                                }}
+                                                className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
+                                                    paymentMethod === 'balance' 
+                                                    ? 'bg-green-600 border-green-600 text-white shadow-lg shadow-green-600/20' 
+                                                    : 'bg-green-50 border-green-100 text-green-600 hover:border-green-500/30'
+                                                }`}
+                                            >
+                                                <Coins size={20} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Saldo</span>
+                                            </button>
+                                        )}
                                     </div>
+
+                                    {paymentMethod === 'balance' && (
+                                        <div className="p-3 bg-green-50 rounded-xl border border-green-100 flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Saldo Disponible:</span>
+                                            <span className="font-black text-green-700">{formatCurrency(customerBalance)}</span>
+                                        </div>
+                                    )}
 
                                     <div className="space-y-4">
                                         <div className="space-y-2">
@@ -572,13 +604,20 @@ const Sales: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            {paymentMethod === 'cash' ? 'Monto Recibido' : 'Cuota Inicial'}
+                                            {paymentMethod === 'cash' ? 'Monto Recibido' : (paymentMethod === 'balance' ? 'Monto de Saldo a Usar' : 'Cuota Inicial')}
                                         </label>
                                         <input 
                                             type="number" 
                                             placeholder="Monto..."
                                             value={paidAmount || ''}
-                                            onChange={e => setPaidAmount(parseFloat(e.target.value))}
+                                            onChange={e => {
+                                                const val = parseFloat(e.target.value);
+                                                if (paymentMethod === 'balance') {
+                                                    setPaidAmount(Math.min(val, customerBalance, total));
+                                                } else {
+                                                    setPaidAmount(val);
+                                                }
+                                            }}
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-black text-sm text-green-600"
                                         />
                                     </div>

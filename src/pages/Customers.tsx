@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2 } from 'lucide-react';
+import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Customer, Sale } from '../types';
 
 const Customers: React.FC = () => {
-    const { customers, sales, addCustomer, updateCustomer, deleteCustomer, addSalePayment, updateSale } = useData();
+    const { customers, sales, addCustomer, updateCustomer, updateCustomerBalance, deleteCustomer, addSalePayment, updateSale } = useData();
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isEditTotalModalOpen, setIsEditTotalModalOpen] = useState(false);
+    const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
     
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -33,6 +39,25 @@ const Customers: React.FC = () => {
 
     // Edit total state
     const [newTotal, setNewTotal] = useState<number>(0);
+
+    // Balance logic
+    const [balanceAmount, setBalanceAmount] = useState<number>(0);
+    const [balanceReason, setBalanceReason] = useState('');
+
+    const handleBalanceSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCustomer || balanceAmount <= 0) return;
+        
+        try {
+            await updateCustomerBalance(selectedCustomer.id, balanceAmount, balanceReason);
+            setIsBalanceModalOpen(false);
+            setBalanceAmount(0);
+            setBalanceReason('');
+            alert('Saldo a favor registrado exitosamente.');
+        } catch (error) {
+            alert('Error al registrar saldo.');
+        }
+    };
 
     const getCustomerBalance = (customerId: string) => {
         const customer = customers.find(c => c.id === customerId);
@@ -239,6 +264,16 @@ const Customers: React.FC = () => {
                                                 <button 
                                                     onClick={() => {
                                                         setSelectedCustomer(customer);
+                                                        setIsBalanceModalOpen(true);
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                    title="Registrar Saldo a Favor (Trueque)"
+                                                >
+                                                    <Coins size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        setSelectedCustomer(customer);
                                                         setIsDetailModalOpen(true);
                                                     }}
                                                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -301,11 +336,17 @@ const Customers: React.FC = () => {
                                 </button>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                    <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Saldo Pendiente</p>
+                                    <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Deuda Cliente</p>
                                     <p className="text-2xl font-black text-white tracking-tighter">
                                         {formatCurrency(getCustomerBalance(selectedCustomer.id))}
+                                    </p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                    <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Saldo Favor (Trueque)</p>
+                                    <p className="text-2xl font-black text-white tracking-tighter">
+                                        {formatCurrency(selectedCustomer.balance || 0)}
                                     </p>
                                 </div>
                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
@@ -499,6 +540,9 @@ const Customers: React.FC = () => {
                                 >
                                     <option value="cash">Efectivo (Caja)</option>
                                     <option value="transfer">Transferencia Bancaria</option>
+                                    {selectedCustomer && (selectedCustomer.balance || 0) > 0 && (
+                                        <option value="balance">Saldo a Favor (Trueque)</option>
+                                    )}
                                 </select>
                             </div>
 
@@ -508,6 +552,60 @@ const Customers: React.FC = () => {
                                 </button>
                                 <button type="submit" className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
                                     Confirmar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para Registrar Saldo a Favor / Trueque */}
+            {isBalanceModalOpen && selectedCustomer && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 space-y-6">
+                        <header className="space-y-1">
+                            <h3 className="text-xl font-black tracking-tighter uppercase">Saldo Favor (Trueque)</h3>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">
+                                {selectedCustomer.name}
+                            </p>
+                        </header>
+
+                        <div className="p-4 bg-green-50 rounded-2xl flex justify-between items-center text-green-700">
+                            <span className="text-[10px] font-black uppercase tracking-widest">Saldo Actual:</span>
+                            <span className="font-black text-lg">{formatCurrency(selectedCustomer.balance || 0)}</span>
+                        </div>
+
+                        <form onSubmit={handleBalanceSubmit} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor a Cargar</label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    autoFocus
+                                    value={balanceAmount || ''}
+                                    onChange={e => setBalanceAmount(parseFloat(e.target.value))}
+                                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-600 outline-none text-2xl font-black text-slate-900 text-center tracking-tighter"
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo / Concepto</label>
+                                <textarea 
+                                    required
+                                    value={balanceReason}
+                                    onChange={e => setBalanceReason(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-600 outline-none font-bold text-sm h-24"
+                                    placeholder="Ej: Intercambio por servicios, devolución, etc."
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setIsBalanceModalOpen(false)} className="flex-1 py-4 text-slate-400 font-black uppercase text-xs tracking-widest">
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="flex-1 py-4 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-900/20 active:scale-95 transition-all">
+                                    Cargar Saldo
                                 </button>
                             </div>
                         </form>

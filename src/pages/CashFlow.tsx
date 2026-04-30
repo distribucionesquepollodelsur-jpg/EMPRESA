@@ -9,7 +9,12 @@ import autoTable from 'jspdf-autotable';
 const CashFlow: React.FC = () => {
     const { cashFlow, sales, purchases, advances, addCashMovement, updateCashMovement, deleteCashMovement, config } = useData();
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com',
+        'alex@quepollo.com',
+        'admin@quepollo.com'
+    ].includes(user?.email || '');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,14 +49,17 @@ const CashFlow: React.FC = () => {
         deleteCashMovement(id);
     };
 
-    // Calculate aggregated totals
-    const manualEntries = cashFlow.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
-    const manualExits = cashFlow.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
-    const salesTotal = sales.reduce((sum, s) => sum + s.total, 0);
-    const purchasesTotal = purchases.reduce((sum, p) => sum + p.total, 0);
-    const advancesTotal = advances.reduce((sum, a) => sum + a.amount, 0);
+    // Calculate totals based ONLY on cash flow movements for accuracy
+    const incomes = cashFlow.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
+    const outcomes = cashFlow.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
+    const netBalance = incomes - outcomes;
 
-    const netBalance = (manualEntries + salesTotal) - (manualExits + purchasesTotal + advancesTotal);
+    // For the UI breakdown
+    const salesInCash = cashFlow.filter(m => m.type === 'entry' && m.reason.startsWith('Venta #')).reduce((sum, m) => sum + m.amount, 0);
+    const purchasesInCash = cashFlow.filter(m => m.type === 'exit' && m.reason.startsWith('Compra #')).reduce((sum, m) => sum + m.amount, 0);
+    const advancesInCash = cashFlow.filter(m => m.type === 'exit' && m.reason.startsWith('Adelanto:')).reduce((sum, m) => sum + m.amount, 0);
+    const trulyManualEntries = cashFlow.filter(m => m.type === 'entry' && !m.reason.startsWith('Venta #')).reduce((sum, m) => sum + m.amount, 0);
+    const trulyManualExits = cashFlow.filter(m => m.type === 'exit' && !m.reason.startsWith('Compra #') && !m.reason.startsWith('Adelanto:')).reduce((sum, m) => sum + m.amount, 0);
 
     const generateCashReport = () => {
         const doc = new jsPDF();
@@ -77,12 +85,12 @@ const CashFlow: React.FC = () => {
         autoTable(doc, {
             head: [['Detalle', 'Ingreso', 'Egreso']],
             body: [
-                ['Ventas (Automático)', formatCurrency(salesTotal), '-'],
-                ['Compras (Automático)', '-', formatCurrency(purchasesTotal)],
-                ['Adelantos Nómina', '-', formatCurrency(advancesTotal)],
-                ['Movimientos Manuales (+)', formatCurrency(manualEntries), '-'],
-                ['Movimientos Manuales (-)', '-', formatCurrency(manualExits)],
-                ['TOTALES', formatCurrency(salesTotal + manualEntries), formatCurrency(purchasesTotal + advancesTotal + manualExits)],
+                ['Ventas (Caja)', formatCurrency(salesInCash), '-'],
+                ['Compras (Caja)', '-', formatCurrency(purchasesInCash)],
+                ['Adelantos Nómina', '-', formatCurrency(advancesInCash)],
+                ['Movimientos Manuales (+)', formatCurrency(trulyManualEntries), '-'],
+                ['Movimientos Manuales (-)', '-', formatCurrency(trulyManualExits)],
+                ['TOTALES', formatCurrency(incomes), formatCurrency(outcomes)],
                 ['BALANCE FINAL', { content: formatCurrency(netBalance), colSpan: 2, styles: { fontStyle: 'bold', halign: 'center' } }]
             ] as any,
             startY: y,
@@ -139,11 +147,11 @@ const CashFlow: React.FC = () => {
                         <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
                             <ArrowUpRight size={24} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ingresos</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entradas</span>
                     </div>
                     <div>
-                        <h4 className="text-3xl font-black text-slate-900">{formatCurrency(salesTotal + manualEntries)}</h4>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-1">Ventas + Entradas Manuales</p>
+                        <h4 className="text-3xl font-black text-slate-900">{formatCurrency(incomes)}</h4>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-1">Total Ingresos de Caja</p>
                     </div>
                 </div>
 
@@ -152,11 +160,11 @@ const CashFlow: React.FC = () => {
                         <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center">
                             <ArrowDownRight size={24} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Egresos</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salidas</span>
                     </div>
                     <div>
-                        <h4 className="text-3xl font-black text-slate-900">{formatCurrency(purchasesTotal + manualExits + advancesTotal)}</h4>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-1">Compras + Salidas + Nómina</p>
+                        <h4 className="text-3xl font-black text-slate-900">{formatCurrency(outcomes)}</h4>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-1">Total Egresos de Caja</p>
                     </div>
                 </div>
 
