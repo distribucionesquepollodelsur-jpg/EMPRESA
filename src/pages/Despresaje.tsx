@@ -66,7 +66,7 @@ const Despresaje: React.FC = () => {
                 inputProductId: wholeChickenId,
                 inputQuantity: bulkQuantity,
                 outputItems: derivations,
-                totalOutputWeight: derivations.reduce((sum, d) => sum + (isNaN(d.quantity) ? 0 : d.quantity), 0)
+                totalOutputWeight: derivations.reduce((sum, d) => sum + (d.quantity || 0), 0)
             });
             
             // Reset
@@ -147,7 +147,7 @@ const Despresaje: React.FC = () => {
                                             step="0.01"
                                             required
                                             value={bulkQuantity || ''}
-                                            onChange={e => setBulkQuantity(e.target.value ? parseFloat(e.target.value) : 0)}
+                                            onChange={e => setBulkQuantity(parseFloat(e.target.value))}
                                             className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
                                             placeholder="0.00"
                                         />
@@ -210,7 +210,7 @@ const Despresaje: React.FC = () => {
                                             step="0.01"
                                             required
                                             value={d.quantity || ''}
-                                            onChange={e => updateDerivation(index, 'quantity', e.target.value ? parseFloat(e.target.value) : 0)}
+                                            onChange={e => updateDerivation(index, 'quantity', parseFloat(e.target.value))}
                                             className="w-full p-3 bg-slate-700 border-none rounded-xl font-bold text-white outline-none focus:ring-1 focus:ring-orange-500 text-sm"
                                             placeholder="0.00"
                                         />

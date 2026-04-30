@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Default deny for all
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
 
     // Helper functions
@@ -77,6 +77,12 @@ service cloud.firestore {
     
     // Shifts
     match /shifts/{shiftId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Processings
+    match /processings/{processingId} {
       allow read: if true;
       allow write: if true;
     }

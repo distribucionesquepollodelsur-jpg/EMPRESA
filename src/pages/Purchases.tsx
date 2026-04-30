@@ -8,8 +8,9 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 const Purchases: React.FC = () => {
-    const { products, purchases, addPurchase, suppliers, config } = useData();
+    const { products, purchases, addPurchase, deletePurchase, suppliers, config } = useData();
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     // Form state
@@ -296,27 +297,34 @@ const Purchases: React.FC = () => {
                                             {p.paymentMethod}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-5 text-right">
-
-    {user?.role === 'admin' && (
-        <button 
-            onClick={() => handleDelete(p.id)}
-            className="text-slate-400 hover:text-red-600 p-2 transition-colors"
-            title="Eliminar Compra"
-        >
-            <Trash2 size={18} />
-        </button>
-    )}
-
-    <button 
-        onClick={() => generatePurchaseInvoice(p)}
-        className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
-        title="Ver Factura"
-    >
-        <FileText size={18} />
-    </button>
-
-</td>
+                                    <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
+                                        <button 
+                                            onClick={() => generatePurchaseInvoice(p)}
+                                            className="text-slate-400 hover:text-blue-600 p-2 transition-colors"
+                                            title="Ver Factura"
+                                        >
+                                            <FileText size={18} />
+                                        </button>
+                                        {isAdmin && (
+                                            <button 
+                                                onClick={async () => {
+                                                    if (window.confirm('¿Estás seguro de que deseas eliminar esta compra? El stock de los productos involucrados se restará automáticamente.')) {
+                                                        try {
+                                                            await deletePurchase(p.id);
+                                                            alert('Compra eliminada y stock actualizado.');
+                                                        } catch (error) {
+                                                            console.error("Delete purchase error:", error);
+                                                            alert('Error al eliminar la compra.');
+                                                        }
+                                                    }
+                                                }}
+                                                className="text-slate-300 hover:text-red-500 p-2 transition-colors"
+                                                title="Eliminar Compra"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                             {purchases.length === 0 && (

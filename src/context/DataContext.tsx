@@ -62,11 +62,11 @@ interface DataContextType extends AppState {
     updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
     deleteProduct: (id: string) => Promise<void>;
     addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => Promise<void>;
-    deletePurchase: (id: string) => Promise<void>;
     addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>;
     updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
     updatePurchase: (id: string, updates: Partial<Purchase>) => Promise<void>;
     deleteSale: (id: string) => Promise<void>;
+    deletePurchase: (id: string) => Promise<void>;
     addProcessing: (processing: Omit<Processing, 'id' | 'date'>) => Promise<void>;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
     updateCashMovement: (id: string, movement: Partial<CashMovement>) => Promise<void>;
@@ -342,6 +342,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             await deleteDoc(doc(db, 'sales', id));
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `sales/${id}`); }
+    };
+
+    const deletePurchase = async (id: string) => {
+        const purchase = purchases.find(p => p.id === id);
+        if (!purchase) return;
+
+        try {
+            // Restore inventory (subtract what was added)
+            for (const item of purchase.items) {
+                const p = products.find(prod => prod.id === item.productId);
+                if (p) {
+                    await updateProduct(p.id, { stock: p.stock - item.quantity });
+                }
+            }
+            
+            await deleteDoc(doc(db, 'purchases', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `purchases/${id}`); }
     };
 
     const addProcessing = async (processingData: Omit<Processing, 'id' | 'date'>) => {
@@ -667,6 +684,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addSale,
             updateSale,
             deleteSale,
+            deletePurchase,
             addProcessing,
             addCashMovement,
             updateCashMovement,
