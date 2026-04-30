@@ -101,19 +101,46 @@ const BalanceSheetModal: React.FC<BalanceSheetModalProps> = ({ isOpen, onClose }
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4 items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/10">
-                        <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Patrimonio Neto (Capital Real)</p>
-                            <h3 className="text-4xl font-black tracking-tighter text-orange-400">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Patrimonio Neto (Capital Real)</p>
+                                <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest", 
+                                    equity >= 0 ? "bg-green-500/20 text-green-400 border border-green-500/20" : "bg-red-500/20 text-red-400 border border-red-500/20"
+                                )}>
+                                    {equity >= 0 ? 'Dando Frutos' : 'En Deuda'}
+                                </span>
+                            </div>
+                            <h3 className={cn("text-4xl font-black tracking-tighter", equity >= 0 ? "text-orange-400" : "text-red-400")}>
                                 {formatCurrency(equity)}
                             </h3>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-6 items-center">
                             <div className="text-right">
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Ratio Activo/Pasivo</p>
                                 <p className="text-lg font-black text-white">{(totalAssets / (totalLiabilities || 1)).toFixed(2)}</p>
                             </div>
+                            <div className={cn("p-4 rounded-2xl shadow-inner", equity >= 0 ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500")}>
+                                {equity >= 0 ? <TrendingUp size={24} /> : <AlertCircle size={24} />}
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Status Banner */}
+                <div className={cn("px-8 py-3 flex items-center justify-center gap-3", 
+                    equity >= 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                )}>
+                    {equity >= 0 ? (
+                        <>
+                            <PiggyBank size={16} className="animate-bounce" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">La empresa está generando valor positivo y crecimiento.</p>
+                        </>
+                    ) : (
+                        <>
+                            <AlertCircle size={16} className="animate-pulse" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Alerta: Los pasivos superan a los activos. Se recomienda revisión.</p>
+                        </>
+                    )}
                 </div>
 
                 {/* Body */}
