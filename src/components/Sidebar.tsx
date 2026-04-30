@@ -13,7 +13,8 @@ import {
     X,
     Truck,
     BarChart3,
-    History
+    History,
+    ShieldCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         { id: 'despresaje', label: 'Despresaje', icon: Scissors, adminOnly: false },
         { id: 'cash', label: 'Caja', icon: Wallet },
         { id: 'employees', label: 'Empleados', icon: Users, adminOnly: true },
+        { id: 'assets', label: 'Activos Fijos', icon: ShieldCheck, adminOnly: true },
         { id: 'reports', label: 'Reportes', icon: BarChart3, adminOnly: true },
         { id: 'config', label: 'Configuración', icon: Settings, adminOnly: true },
     ];

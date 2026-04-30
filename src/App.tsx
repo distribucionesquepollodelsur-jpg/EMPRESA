@@ -20,6 +20,7 @@ import Customers from './pages/Customers';
 import Despresaje from './pages/Despresaje';
 import CashFlow from './pages/CashFlow';
 import Employees from './pages/Employees';
+import Assets from './pages/Assets';
 import Credits from './pages/Credits';
 import Reports from './pages/Reports';
 import Config from './pages/Config';
@@ -62,6 +63,7 @@ const MainContent: React.FC = () => {
       case 'despresaje': return <Despresaje />;
       case 'cash': return <CashFlow />;
       case 'employees': return <Employees />;
+      case 'assets': return <Assets />;
       case 'credits': return <Credits />;
       case 'reports': return <Reports />;
       case 'config': return <Config />;

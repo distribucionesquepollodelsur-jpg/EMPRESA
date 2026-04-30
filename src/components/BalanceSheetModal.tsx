@@ -20,7 +20,7 @@ interface BalanceSheetModalProps {
 }
 
 const BalanceSheetModal: React.FC<BalanceSheetModalProps> = ({ isOpen, onClose }) => {
-    const { products, sales, purchases, cashFlow, customers } = useData();
+    const { products, sales, purchases, cashFlow, customers, assets } = useData();
 
     if (!isOpen) return null;
 
@@ -39,7 +39,9 @@ const BalanceSheetModal: React.FC<BalanceSheetModalProps> = ({ isOpen, onClose }
         return sum + (s.total - (s.paidAmount || 0));
     }, 0);
 
-    const totalAssets = cashOnHand + inventoryValue + accountsReceivable;
+    const fixedAssetsValue = assets.reduce((sum, a) => sum + a.value, 0);
+
+    const totalAssets = cashOnHand + inventoryValue + accountsReceivable + fixedAssetsValue;
 
     // 2. Liabilities (Pasivos)
     const accountsPayable = purchases.reduce((sum, p) => {
@@ -153,7 +155,8 @@ const BalanceSheetModal: React.FC<BalanceSheetModalProps> = ({ isOpen, onClose }
                         items={[
                             { label: 'Efectivo en Caja', value: cashOnHand, icon: Wallet, iconColor: 'bg-green-50 text-green-600' },
                             { label: 'Valor de Inventario', value: inventoryValue, icon: Package, iconColor: 'bg-blue-50 text-blue-600' },
-                            { label: 'Cuentas por Cobrar', value: accountsReceivable, icon: TrendingUp, iconColor: 'bg-emerald-50 text-emerald-600' }
+                            { label: 'Cuentas por Cobrar', value: accountsReceivable, icon: TrendingUp, iconColor: 'bg-emerald-50 text-emerald-600' },
+                            { label: 'Activos Fijos', value: fixedAssetsValue, icon: ShieldCheck, iconColor: 'bg-orange-50 text-orange-600' }
                         ]}
                     />
 

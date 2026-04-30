@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -81,6 +81,9 @@ interface DataContextType extends AppState {
     resolveReprimand: (id: string) => Promise<void>;
     addDotation: (dotation: Omit<Dotation, 'id' | 'date'>) => Promise<void>;
     deleteDotation: (id: string) => Promise<void>;
+    addAsset: (asset: Omit<Asset, 'id'>) => Promise<void>;
+    updateAsset: (id: string, asset: Partial<Asset>) => Promise<void>;
+    deleteAsset: (id: string) => Promise<void>;
     addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
     updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>;
     deleteSupplier: (id: string) => Promise<void>;
@@ -130,6 +133,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [reprimands, setReprimands] = useState<Reprimand[]>([]);
     const [dotations, setDotations] = useState<Dotation[]>([]);
+    const [assets, setAssets] = useState<Asset[]>([]);
     const [processings, setProcessings] = useState<Processing[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
@@ -197,6 +201,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'processings'));
 
+        const unsubAssets = onSnapshot(collection(db, 'assets'), (s) => {
+            setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'assets'));
+
         return () => {
             unsubEmployees();
             unsubConfig();
@@ -212,6 +220,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unsubReprimands();
             unsubDotations();
             unsubProcessings();
+            unsubAssets();
         };
     }, []);
 
@@ -601,6 +610,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `dotations/${id}`); }
     };
 
+    const addAsset = async (assetData: Omit<Asset, 'id'>) => {
+        try {
+            await addDoc(collection(db, 'assets'), clean(assetData));
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'assets'); }
+    };
+
+    const updateAsset = async (id: string, updates: Partial<Asset>) => {
+        try {
+            await updateDoc(doc(db, 'assets', id), clean(updates));
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `assets/${id}`); }
+    };
+
+    const deleteAsset = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'assets', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `assets/${id}`); }
+    };
+
     const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
         try {
             const docRef = await addDoc(collection(db, 'suppliers'), clean(supplierData));
@@ -770,7 +797,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, config,
             loading,
             addProduct,
             updateProduct,
@@ -795,6 +822,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             resolveReprimand,
             addDotation,
             deleteDotation,
+            addAsset,
+            updateAsset,
+            deleteAsset,
             addSupplier,
             updateSupplier,
             deleteSupplier,

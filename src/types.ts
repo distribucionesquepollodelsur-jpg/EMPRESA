@@ -121,6 +121,15 @@ export interface Reprimand {
     status: 'pending' | 'resolved';
 }
 
+export interface Asset {
+    id: string;
+    name: string;
+    category: 'Vehículo' | 'Electrodoméstico' | 'Maquinaria' | 'Mueble' | 'Otro';
+    value: number;
+    purchaseDate: string;
+    description?: string;
+}
+
 export interface AppConfig {
     logo: string | null;
     companyName: string;
@@ -189,6 +198,7 @@ export interface AppState {
     shifts: Shift[];
     reprimands: Reprimand[];
     dotations: Dotation[];
+    assets: Asset[];
     processings: Processing[];
     config: AppConfig;
 }

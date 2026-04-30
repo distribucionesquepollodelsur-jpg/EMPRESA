@@ -225,6 +225,20 @@
         "details": { "type": "string" }
       },
       "required": ["employeeId", "date", "item", "quantity"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "Company fixed assets (vehicles, machinery, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Vehículo", "Electrodoméstico", "Maquinaria", "Mueble", "Otro"] },
+        "value": { "type": "number" },
+        "purchaseDate": { "type": "string", "format": "date" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "category", "value", "purchaseDate"]
     }
   },
   "firestore": {
@@ -241,6 +255,7 @@
     "processings": { "schema": "Processing", "description": "Despresaje records" },
     "shifts": { "schema": "Shift", "description": "Work shifts" },
     "dotations": { "schema": "Dotation", "description": "Equipment allotments" },
+    "assets": { "schema": "Asset", "description": "Company fixed assets" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
