@@ -286,7 +286,7 @@ const Purchases: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {purchases.slice().reverse().map(p => (
+                            {[...purchases].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
                                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col">

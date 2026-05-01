@@ -227,7 +227,7 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                                 <Clock size={12} /> Últimas Ventas
                             </h5>
                             <div className="space-y-2">
-                                {todaySales.slice(0, 5).map(s => (
+                                {[...todaySales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(s => (
                                     <div key={s.id} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group hover:bg-slate-100 transition-colors">
                                         <div>
                                             <p className="text-xs font-black text-slate-900 uppercase">Venta #{s.id.slice(-4)}</p>
@@ -253,7 +253,7 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                                 <ArrowRightLeft size={12} /> Movimientos de Caja
                             </h5>
                             <div className="space-y-2">
-                                {todayCashFlow.slice(0, 5).map(m => (
+                                {[...todayCashFlow].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(m => (
                                     <div key={m.id} className="p-4 bg-slate-50 rounded-2xl flex justify-between items-center group hover:bg-slate-100 transition-colors border-l-4 border-l-transparent hover:border-l-orange-500">
                                         <div className="flex-1 pr-4">
                                             <p className="text-xs font-black text-slate-900 uppercase truncate">{m.description}</p>

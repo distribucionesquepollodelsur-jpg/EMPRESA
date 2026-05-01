@@ -232,7 +232,8 @@ const CashFlow: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {cashFlow
+                            {[...cashFlow]
+                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                 .filter(m => m.reason.toLowerCase().includes(searchTerm.toLowerCase()))
                                 .map(m => (
                                 <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">

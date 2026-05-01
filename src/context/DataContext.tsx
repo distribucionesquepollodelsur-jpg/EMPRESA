@@ -94,6 +94,8 @@ interface DataContextType extends AppState {
     deleteCustomer: (id: string) => Promise<void>;
     addPurchasePayment: (purchaseId: string, amount: number, method: string) => Promise<void>;
     addSalePayment: (saleId: string, amount: number, method: string) => Promise<void>;
+    deletePurchasePayment: (purchaseId: string, paymentIndex: number) => Promise<void>;
+    deleteSalePayment: (saleId: string, paymentIndex: number) => Promise<void>;
     addCustomerDebtAbono: (customerId: string, amount: number) => Promise<void>;
     addSupplierDebtAbono: (supplierId: string, amount: number) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
@@ -819,18 +821,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const addPurchasePayment = async (purchaseId: string, amount: number, method: string) => {
         const purchase = purchases.find(p => p.id === purchaseId);
         if (!purchase) return;
-
+        
         try {
-            await updateDoc(doc(db, 'purchases', purchaseId), {
-                paidAmount: purchase.paidAmount + amount,
-                payments: [...(purchase.payments || []), { date: new Date().toISOString(), amount, method }]
-            });
-
-            await addCashMovement({
+            const cashMovementId = await addCashMovement({
                 type: 'exit',
                 amount: amount,
                 reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
                 category: 'purchase'
+            }) || undefined;
+
+            await updateDoc(doc(db, 'purchases', purchaseId), {
+                paidAmount: purchase.paidAmount + amount,
+                payments: [...(purchase.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${purchaseId}`); }
+    };
+
+    const deletePurchasePayment = async (purchaseId: string, paymentIndex: number) => {
+        const purchase = purchases.find(p => p.id === purchaseId);
+        if (!purchase || !purchase.payments || !purchase.payments[paymentIndex]) return;
+
+        const payment = purchase.payments[paymentIndex];
+
+        try {
+            if (payment.cashMovementId) {
+                await deleteCashMovement(payment.cashMovementId);
+            }
+
+            const updatedPayments = purchase.payments.filter((_, i) => i !== paymentIndex);
+            await updateDoc(doc(db, 'purchases', purchaseId), {
+                paidAmount: purchase.paidAmount - payment.amount,
+                payments: updatedPayments
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${purchaseId}`); }
     };
@@ -848,16 +869,43 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
-            await updateDoc(doc(db, 'sales', saleId), {
-                paidAmount: sale.paidAmount + amount,
-                payments: [...(sale.payments || []), { date: new Date().toISOString(), amount, method }]
-            });
-
-            await addCashMovement({
+            const cashMovementId = await addCashMovement({
                 type: 'entry',
                 amount: method === 'balance' ? 0 : amount,
                 reason: `Abono a Venta #${saleId.slice(0, 8)}${method === 'balance' ? ' [SALDO]' : ''}`,
                 category: 'sale'
+            }) || undefined;
+
+            await updateDoc(doc(db, 'sales', saleId), {
+                paidAmount: sale.paidAmount + amount,
+                payments: [...(sale.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
+    };
+
+    const deleteSalePayment = async (saleId: string, paymentIndex: number) => {
+        const sale = sales.find(s => s.id === saleId);
+        if (!sale || !sale.payments || !sale.payments[paymentIndex]) return;
+
+        const payment = sale.payments[paymentIndex];
+
+        try {
+            // Revert Balance adjustment if method was balance
+            if (payment.method === 'balance' && sale.customerId) {
+                const customer = customers.find(c => c.id === sale.customerId);
+                if (customer) {
+                    await updateCustomer(customer.id, { balance: (customer.balance || 0) + payment.amount });
+                }
+            }
+
+            if (payment.cashMovementId) {
+                await deleteCashMovement(payment.cashMovementId);
+            }
+
+            const updatedPayments = sale.payments.filter((_, i) => i !== paymentIndex);
+            await updateDoc(doc(db, 'sales', saleId), {
+                paidAmount: sale.paidAmount - payment.amount,
+                payments: updatedPayments
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
@@ -953,6 +1001,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateShift,
             addPurchasePayment,
             addSalePayment,
+            deletePurchasePayment,
+            deleteSalePayment,
             addCustomerDebtAbono,
             addSupplierDebtAbono,
             updateConfig,

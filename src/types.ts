@@ -31,7 +31,7 @@ export interface Purchase {
     paidAmount: number;
     paymentMethod: 'cash' | 'transfer' | 'credit' | 'balance';
     paymentStatus?: 'paid' | 'pending' | 'partial';
-    payments?: { date: string, amount: number, method: string }[];
+    payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
 }
 
 export interface SaleItem {
@@ -53,7 +53,7 @@ export interface Sale {
     total: number;
     paidAmount: number;
     paymentMethod: 'cash' | 'credit' | 'balance';
-    payments?: { date: string, amount: number, method: string }[];
+    payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
 }
 
 export interface CashMovement {

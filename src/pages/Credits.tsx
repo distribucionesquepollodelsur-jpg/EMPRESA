@@ -12,7 +12,8 @@ import {
     History,
     CreditCard,
     Edit2,
-    Lock
+    Lock,
+    Trash2
 } from 'lucide-react';
 
 const Credits: React.FC = () => {
@@ -21,6 +22,8 @@ const Credits: React.FC = () => {
         sales, 
         addPurchasePayment, 
         addSalePayment, 
+        deletePurchasePayment,
+        deleteSalePayment,
         updatePurchase, 
         updateSale,
         customers,
@@ -75,6 +78,10 @@ const Credits: React.FC = () => {
     const filteredItems = activeTab === 'toPay' 
         ? pendingPurchases.filter(p => p.supplierName.toLowerCase().includes(searchTerm.toLowerCase()))
         : pendingSales.filter(s => (s.customerName || 'Cliente').toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const sortedFilteredItems = useMemo(() => {
+        return [...filteredItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredItems]);
 
     const handleAddPayment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -161,7 +168,7 @@ const Credits: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-                {filteredItems.map(item => {
+                {sortedFilteredItems.map(item => {
                     const pending = item.total - (item.paidAmount || 0);
                     return (
                         <div key={item.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -301,6 +308,43 @@ const Credits: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleAddPayment} className="space-y-6">
+                            {/* Historial de Abonos */}
+                            {!selectedItem.isInitial && selectedItem.payments && selectedItem.payments.length > 0 && (
+                                <div className="space-y-3 pt-4 border-t border-slate-100">
+                                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                        <History size={12} /> Historial de Abonos
+                                    </h3>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                        {selectedItem.payments.map((p: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 group">
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-900">{formatCurrency(p.amount)}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase">{formatDate(p.date)} • {p.method}</p>
+                                                </div>
+                                                {isAdmin && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            if (window.confirm('¿Eliminar este abono? El dinero regresará o saldrá de caja según corresponda.')) {
+                                                                if (activeTab === 'toPay') {
+                                                                    await deletePurchasePayment(selectedItem.id, idx);
+                                                                } else {
+                                                                    await deleteSalePayment(selectedItem.id, idx);
+                                                                }
+                                                                setSelectedItem(null);
+                                                            }
+                                                        }}
+                                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
                                 <div className="relative">
