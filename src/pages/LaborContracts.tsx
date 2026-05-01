@@ -169,11 +169,14 @@ const LaborContracts: React.FC = () => {
 
                     const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de mantener las cláusulas intactas.";
                     const result = await ai.models.generateContent({
-                        model: "gemini-3-flash-preview",
-                        contents: [
-                            { text: prompt },
-                            { inlineData: { data: base64, mimeType: file.type } }
-                        ]
+                        model: "gemini-2.0-flash",
+                        contents: [{
+                            role: "user",
+                            parts: [
+                                { text: prompt },
+                                { inlineData: { data: base64, mimeType: file.type } }
+                            ]
+                        }]
                     });
                     
                     const text = result.text;
@@ -294,8 +297,11 @@ const LaborContracts: React.FC = () => {
             ${selectedContract.dotationText}`;
 
             const result = await ai.models.generateContent({
-                model: "gemini-3-flash-preview",
-                contents: [{ text: prompt }]
+                model: "gemini-2.0-flash",
+                contents: [{
+                    role: "user",
+                    parts: [{ text: prompt }]
+                }]
             });
             
             const explanation = result.text;
