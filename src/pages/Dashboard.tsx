@@ -35,7 +35,15 @@ const Dashboard: React.FC = () => {
     }, []);
 
     const handleInstall = async () => {
+        // If we are in an iframe (like AI Studio preview), we MUST open in a new tab
+        // because browsers block PWA installation prompts inside iframes.
+        if (window.self !== window.top) {
+            window.open(window.location.href, '_blank');
+            return;
+        }
+
         if (!deferredPrompt) return;
+
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
