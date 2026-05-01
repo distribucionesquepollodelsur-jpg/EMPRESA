@@ -36,7 +36,7 @@ import { cn } from '../lib/utils';
 import SignaturePad from 'react-signature-canvas';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 interface SignatureData {
     worker?: string;
@@ -135,24 +135,38 @@ const LaborContracts: React.FC = () => {
             reader.onload = async () => {
                 const base64 = (reader.result as string).split(',')[1];
                 
-                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-                const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-                const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de mantener las cláusulas intactas.";
-                const result = await model.generateContent([
-                    prompt,
-                    { inlineData: { data: base64, mimeType: file.type } }
-                ]);
-                
-                const text = result.response.text();
-                if (type === 'contract') setContractText(text);
-                if (type === 'regulations') setRegulationsText(text);
-                if (type === 'dotation') setDotationText(text);
-                setLoading(false);
+                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de mantener las cláusulas intactas.";
+                    const result = await ai.models.generateContent({
+                        model: "gemini-3-flash-preview",
+                        contents: [
+                            { text: prompt },
+                            { inlineData: { data: base64, mimeType: file.type } }
+                        ]
+                    });
+                    
+                    const text = result.text;
+                    if (!text) throw new Error("No se pudo extraer el texto del documento.");
+
+                    if (type === 'contract') setContractText(text);
+                    if (type === 'regulations') setRegulationsText(text);
+                    if (type === 'dotation') setDotationText(text);
+                } catch (apiError: any) {
+                    console.error("Gemini API Error:", apiError);
+                    if (apiError.message?.includes('429') || apiError.message?.includes('RESOURCE_EXHAUSTED')) {
+                        alert("La cuota del servicio de inteligencia artificial se ha agotado temporalmente. Por favor, intente de nuevo en unos minutos o ingrese el texto manualmente.");
+                    } else {
+                        alert("Error al procesar el documento con inteligencia artificial. Por favor, intente de nuevo.");
+                    }
+                } finally {
+                    setLoading(false);
+                }
             };
         } catch (error) {
-            console.error("Error digitalizing document:", error);
-            alert("Error al digitalizar el documento.");
+            console.error("Error reading file:", error);
+            alert("Error al leer el archivo.");
             setLoading(false);
         }
     };
