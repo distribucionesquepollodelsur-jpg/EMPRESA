@@ -42,12 +42,18 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { GoogleGenAI } from '@google/genai';
 
+interface SignatureInfo {
+    image: string;
+    name: string;
+    documentId: string;
+}
+
 interface SignatureData {
-    worker?: string;
-    employer?: string;
-    boss?: string;
-    hr?: string;
-    legalRep?: string;
+    worker?: SignatureInfo;
+    employer?: SignatureInfo;
+    boss?: SignatureInfo;
+    hr?: SignatureInfo;
+    legalRep?: SignatureInfo;
 }
 
 interface LaborContract {
@@ -77,6 +83,8 @@ const LaborContracts: React.FC = () => {
     const [selectedContract, setSelectedContract] = useState<LaborContract | null>(null);
     const [isSigningMode, setIsSigningMode] = useState(false);
     const [currentSigningRole, setCurrentSigningRole] = useState<keyof SignatureData | null>(null);
+    const [signerName, setSignerName] = useState('');
+    const [signerDocumentId, setSignerDocumentId] = useState('');
     const [loading, setLoading] = useState(false);
     
     // AI Explanation state
@@ -193,27 +201,28 @@ const LaborContracts: React.FC = () => {
     };
 
     const handleSaveSignature = async () => {
-        if (!sigPad.current || !selectedContract || !currentSigningRole) return;
+        if (!sigPad.current || !selectedContract || !currentSigningRole || !signerName || !signerDocumentId) {
+            alert("Por favor completa los datos y firma.");
+            return;
+        }
         
         const signatureBase64 = sigPad.current.getTrimmedCanvas().toDataURL('image/png');
         
         try {
             const updatedSignatures = {
                 ...selectedContract.signatures,
-                [currentSigningRole]: signatureBase64
+                [currentSigningRole]: {
+                    image: signatureBase64,
+                    name: signerName.toUpperCase(),
+                    documentId: signerDocumentId
+                }
             };
 
             const updates: any = {
                 signatures: updatedSignatures
             };
 
-            // Check if all necessary signatures are present to mark as signed
-            const employee = employees.find(e => e.id === selectedContract.employeeId);
-            const isMinor = false; // Add logic if minor (e.g., employee.age < 18)
-
             const requiredSignatures = ['worker', 'employer', 'boss', 'hr'];
-            if (isMinor) requiredSignatures.push('legalRep');
-
             const allSigned = requiredSignatures.every(role => !!updatedSignatures[role as keyof SignatureData]);
 
             if (allSigned) {
@@ -222,17 +231,25 @@ const LaborContracts: React.FC = () => {
             }
 
             await updateDoc(doc(db, 'contracts', selectedContract.id), updates);
-            setSelectedContract({ ...selectedContract, ...updates });
+            
+            const updatedContract = { ...selectedContract, ...updates };
+            setSelectedContract(updatedContract);
             setCurrentSigningRole(null);
+            setSignerName('');
+            setSignerDocumentId('');
             sigPad.current.clear();
+
+            if (allSigned) {
+                setTimeout(() => downloadPDF(updatedContract), 1000);
+            }
         } catch (error) {
             console.error("Error saving signature:", error);
             alert("Error al guardar la firma.");
         }
     };
 
-    const downloadPDF = async () => {
-        if (!contractRef.current) return;
+    const downloadPDF = async (contractToDownload = selectedContract) => {
+        if (!contractRef.current || !contractToDownload) return;
         setLoading(true);
         try {
             const canvas = await html2canvas(contractRef.current, {
@@ -245,7 +262,7 @@ const LaborContracts: React.FC = () => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Contrato_${selectedContract?.employeeName}.pdf`);
+            pdf.save(`Contrato_${contractToDownload.employeeName}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
             alert("Error al generar el PDF.");
@@ -515,9 +532,14 @@ const LaborContracts: React.FC = () => {
                         {/* Left Side: Document Viewer */}
                         <div className="lg:w-2/3 bg-white p-6 lg:p-12 overflow-y-auto" ref={contractRef}>
                             <div className="max-w-prose mx-auto space-y-12">
-                                <div className="text-center space-y-2 pb-8 border-b-4 border-slate-900">
-                                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Contrato de Trabajo</h2>
-                                    <p className="font-bold text-slate-500 tracking-widest uppercase text-sm">Distribuciones Que Pollo del Sur</p>
+                                <div className="text-center space-y-4 pb-8 border-b-4 border-slate-900 flex flex-col items-center">
+                                    <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center p-4">
+                                        <img src="/icon.svg" alt="Que Pollo del Sur Logo" className="w-full h-full invert brightness-0" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Contrato de Trabajo</h2>
+                                        <p className="font-bold text-slate-500 tracking-widest uppercase text-sm">Distribuciones Que Pollo del Sur</p>
+                                    </div>
                                 </div>
 
                                 <section className="space-y-6">
@@ -544,27 +566,43 @@ const LaborContracts: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-12 pt-20 border-t border-slate-100">
                                     <div className="space-y-4">
                                         <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker} alt="Firma Trabajador" className="h-full object-contain" />}
+                                            {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker.image} alt="Firma Trabajador" className="h-full object-contain" />}
                                         </div>
-                                        <p className="text-center font-black uppercase text-xs">Firma: {selectedContract.employeeName}<br/>TRABAJADOR</p>
+                                        <div className="text-center space-y-1">
+                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
+                                            <p className="font-bold text-[10px] text-slate-500">CC: {selectedContract.signatures?.worker?.documentId || '________________'}</p>
+                                            <p className="font-black uppercase text-[10px] text-slate-400">TRABAJADOR</p>
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer} alt="Firma Empleador" className="h-full object-contain" />}
+                                            {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer.image} alt="Firma Empleador" className="h-full object-contain" />}
                                         </div>
-                                        <p className="text-center font-black uppercase text-xs">Firma: Representante Legal<br/>EMPLEADOR</p>
+                                        <div className="text-center space-y-1">
+                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
+                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.employer?.documentId || '________________'}</p>
+                                            <p className="font-black uppercase text-[10px] text-slate-400">EMPLEADOR</p>
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss} alt="Firma Jefe" className="h-full object-contain" />}
+                                            {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss.image} alt="Firma Jefe" className="h-full object-contain" />}
                                         </div>
-                                        <p className="text-center font-black uppercase text-xs">Firma: Jefe Inmediato</p>
+                                        <div className="text-center space-y-1">
+                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
+                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.boss?.documentId || '________________'}</p>
+                                            <p className="font-black uppercase text-[10px] text-slate-400">JEFE INMEDIATO</p>
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr} alt="Firma RH" className="h-full object-contain" />}
+                                            {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain" />}
                                         </div>
-                                        <p className="text-center font-black uppercase text-xs">Firma: Jefe Talento Humano</p>
+                                        <div className="text-center space-y-1">
+                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.hr?.name || 'Jefe Talento Humano'}</p>
+                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.hr?.documentId || '________________'}</p>
+                                            <p className="font-black uppercase text-[10px] text-slate-400">TALENTO HUMANO</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -695,44 +733,72 @@ const LaborContracts: React.FC = () => {
             {/* Signature Modal */}
             {currentSigningRole && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-                    <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl p-8 space-y-8 animate-in zoom-in duration-200">
+                    <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl p-8 space-y-6 animate-in zoom-in duration-200">
                         <div className="text-center space-y-2">
                             <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto text-orange-600 mb-2">
-                                <PenTool size={32} />
+                                <PenTool size={28} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 uppercase">Firma Digital</h3>
-                            <p className="text-sm text-slate-500 font-medium">Firma aquí como <span className="font-bold text-slate-900 uppercase">{currentSigningRole}</span></p>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Firma Digital Authorizada</h3>
+                            <p className="text-xs text-slate-500 font-medium">Firma aquí como <span className="font-black text-slate-900 uppercase">{currentSigningRole}</span></p>
                         </div>
 
-                        <div className="bg-slate-50 border-2 border-slate-100 rounded-3xl overflow-hidden touch-none">
+                        <div className="space-y-3">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nombre Completo</label>
+                                <input 
+                                    type="text" 
+                                    value={signerName}
+                                    onChange={(e) => setSignerName(e.target.value)}
+                                    placeholder="Ingrese nombre y apellido"
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-xl transition-all outline-none font-bold text-sm"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Número de Documento</label>
+                                <input 
+                                    type="text" 
+                                    value={signerDocumentId}
+                                    onChange={(e) => setSignerDocumentId(e.target.value)}
+                                    placeholder="Cédula / Documento"
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-xl transition-all outline-none font-bold text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl overflow-hidden touch-none relative group">
+                            <div className="absolute top-2 left-2 text-[10px] font-black text-slate-300 uppercase tracking-widest z-0 group-hover:text-slate-400 transition-colors">Área de Firma</div>
                             <SignaturePad 
                                 ref={sigPad}
                                 canvasProps={{
-                                    className: "w-full h-64 cursor-crosshair",
+                                    className: "w-full h-48 cursor-crosshair relative z-10",
                                     style: { background: 'transparent' }
                                 }}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             <button 
                                 onClick={() => sigPad.current?.clear()}
-                                className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors"
+                                className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-colors active:scale-95"
                             >
                                 Limpiar
                             </button>
                             <button 
                                 onClick={handleSaveSignature}
-                                className="py-4 bg-slate-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-900 transition-colors shadow-lg"
+                                className="py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 shadow-slate-900/20"
                             >
-                                Guardar Firma
+                                Confirmar Firma
                             </button>
                         </div>
                         <button 
-                            onClick={() => setCurrentSigningRole(null)}
-                            className="w-full py-2 text-slate-400 text-[10px] font-black uppercase tracking-widest"
+                            onClick={() => {
+                                setCurrentSigningRole(null);
+                                setSignerName('');
+                                setSignerDocumentId('');
+                            }}
+                            className="w-full py-2 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-colors"
                         >
-                            Cancelar
+                            Cancelar Operación
                         </button>
                     </div>
                 </div>
