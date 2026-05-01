@@ -94,7 +94,7 @@ service cloud.firestore {
     // --- Rules ---
 
     match /products/{productId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidProduct(incoming()) && isValidId(productId);
       allow update: if isSignedIn() && isValidProduct(incoming()) && (
         isAdmin() || 
@@ -104,7 +104,7 @@ service cloud.firestore {
     }
 
     match /sales/{saleId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidSale(incoming()) && isValidId(saleId);
       allow update: if isSignedIn() && isValidSale(incoming()) && (
         isAdmin() ||
@@ -114,7 +114,7 @@ service cloud.firestore {
     }
 
     match /purchases/{purchaseId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidPurchase(incoming()) && isValidId(purchaseId);
       allow update: if isSignedIn() && isValidPurchase(incoming()) && (
         isAdmin() ||
@@ -124,7 +124,7 @@ service cloud.firestore {
     }
 
     match /cashFlow/{movementId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidCashMovement(incoming()) && isValidId(movementId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -138,17 +138,17 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /attendance/{attendanceId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
     match /advances/{advanceId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
@@ -158,22 +158,22 @@ service cloud.firestore {
     }
 
     match /suppliers/{supplierId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
     match /customers/{customerId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
     match /shifts/{shiftId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
     match /processings/{processingId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
@@ -183,13 +183,13 @@ service cloud.firestore {
     }
 
     match /assets/{assetId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /config/{configId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /admins/{adminId} {

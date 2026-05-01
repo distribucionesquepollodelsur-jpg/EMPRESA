@@ -97,30 +97,9 @@ const Login: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all transform active:scale-95 border border-slate-700"
+                        className="w-full py-4 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-black rounded-xl transition-all transform active:scale-95 shadow-lg shadow-orange-500/20"
                     >
-                        {loading ? 'Verificando...' : 'Acceso por Usuario/PIN'}
-                    </button>
-
-                    <div className="relative flex items-center justify-center my-6">
-                        <div className="border-t border-slate-800 w-full"></div>
-                        <span className="bg-slate-900 px-4 text-xs font-black text-red-500 uppercase tracking-widest whitespace-nowrap animate-pulse">Acceso Recomendado</span>
-                        <div className="border-t border-slate-800 w-full"></div>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 font-bold uppercase text-center mb-4 leading-relaxed">
-                        Si vas a trabajar desde tu celular o tablet nueva, <br />
-                        usa el botón de abajo para sincronizar correctamente.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full py-5 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-900 font-black rounded-[24px] transition-all transform active:scale-95 shadow-2xl flex items-center justify-center gap-3 ring-4 ring-slate-800"
-                    >
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-                        ENTRAR CON GOOGLE
+                        {loading ? 'Verificando...' : 'Iniciar Sesión'}
                     </button>
                 </form>
 

@@ -15,7 +15,6 @@ interface AuthContextType {
     isAuthenticated: boolean;
     user: AuthUser | null;
     login: (email: string, pass: string) => Promise<boolean>;
-    loginWithGoogle: () => Promise<void>;
     logout: () => void;
     hasEnteredBase: boolean;
     setHasEnteredBase: (val: boolean) => void;
@@ -68,10 +67,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
                 }
             } else {
-                // Si no hay sesión en Firebase pero hay local, intentamos reconectar
+                // Si no hay sesión en Firebase pero hay local, intentamos reconectar anónimamente para Firestore
                 const savedSession = localStorage.getItem(AUTH_STORAGE_KEY);
                 if (savedSession && !auth.currentUser) {
-                    signInAnonymously(auth).catch(console.error);
+                    signInAnonymously(auth).catch(err => {
+                        if (err.code === 'auth/admin-restricted-operation') {
+                            console.warn("Anonymous login disabled in Firebase Console. Please enable it for better security.");
+                        }
+                    });
                 } else if (!savedSession) {
                     setUser(null);
                 }
@@ -113,7 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (isAdminLogin || emp) {
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                // Intentamos firmar anónimamente para tener acceso a Firestore si es posible
+                if (!auth.currentUser) {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.warn("Auth Firebase no disponible. Acceso local habilitado.");
+                    }
+                }
                 
                 const userData: AuthUser = isAdminLogin ? {
                     email: cleanEmail,
@@ -147,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, user, login, loginWithGoogle, logout, hasEnteredBase, setHasEnteredBase, loading }}>
+        <AuthContext.Provider value={{ isAuthenticated, user, login, logout, hasEnteredBase, setHasEnteredBase, loading }}>
             {children}
         </AuthContext.Provider>
     );
