@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 interface AuthUser {
     email: string;
@@ -15,9 +15,11 @@ interface AuthContextType {
     isAuthenticated: boolean;
     user: AuthUser | null;
     login: (email: string, pass: string) => boolean;
+    loginWithGoogle: () => Promise<void>;
     logout: () => void;
     hasEnteredBase: boolean;
     setHasEnteredBase: (val: boolean) => void;
+    loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,20 +28,66 @@ const AUTH_STORAGE_KEY = 'que_pollo_auth_session';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { employees, cashFlow } = useData();
-    const [user, setUser] = useState<AuthUser | null>(() => {
-        const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-        return saved ? JSON.parse(saved) : null;
-    });
-
+    const [user, setUser] = useState<AuthUser | null>(null);
+    const [loading, setLoading] = useState(true);
     const [hasEnteredBase, setHasEnteredBase] = useState(false);
 
     const isAuthenticated = !!user;
 
     useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                const email = firebaseUser.email?.toLowerCase();
+                
+                // Admin check
+                const hardcodedAdmins = [
+                    'alex.b19h@gmail.com',
+                    'distribucionesquepollodelsur@gmail.com',
+                    'alex@quepollo.com',
+                    'admin@quepollo.com',
+                    'quepollo@admin.com',
+                    'alex.quepollo@gmail.com'
+                ];
+
+                if (email && hardcodedAdmins.includes(email)) {
+                    setUser({
+                        email: email,
+                        name: firebaseUser.displayName || 'Administrador',
+                        role: 'admin',
+                        photo: firebaseUser.photoURL
+                    });
+                } else if (email) {
+                    // Employee check
+                    const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
+                    if (emp) {
+                        setUser({
+                            email: email,
+                            name: emp.name || firebaseUser.displayName || 'Empleado',
+                            role: emp.role || 'employee',
+                            employeeId: emp.id,
+                            photo: emp.photo || firebaseUser.photoURL
+                        });
+                    } else {
+                        // Not registered employee but logged in? 
+                        // We might want to allow them but with limited access or just logout
+                        setUser({
+                            email: email,
+                            name: firebaseUser.displayName || 'Usuario',
+                            role: 'employee'
+                        });
+                    }
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [employees]);
+
+    useEffect(() => {
         if (user) {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-            
-            // Auto check if base exists today for this user
             const today = new Date().toISOString().split('T')[0];
             const baseExists = user.role === 'admin' || cashFlow.some(m => 
                 m.date && m.date.startsWith(today) && 
@@ -48,71 +96,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
             setHasEnteredBase(baseExists);
         } else {
-            localStorage.removeItem(AUTH_STORAGE_KEY);
             setHasEnteredBase(false);
         }
     }, [user, cashFlow]);
 
+    const loginWithGoogle = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Google login error:", error);
+            throw error;
+        }
+    };
+
     const login = (email: string, pass: string) => {
+        // This is the legacy internal login. 
+        // WARNING: This won't satisfy Firestore rules unless we also sign in to Firebase.
+        // For simplicity, we'll encourage Google Login.
         const cleanEmail = (email || '').trim().toLowerCase();
         const cleanPass = (pass || '').trim();
 
-        const employeesList = (employees || []);
-        console.log(`Intentando login para: ${cleanEmail}`);
-        
-        // 1. HARDCODED ADMIN CHECK FIRST
-        const hardcodedAdmins = [
-            'alex.b19h@gmail.com',
-            'distribucionesquepollodelsur@gmail.com',
-            'alex@quepollo.com',
-            'admin@quepollo.com',
-            'quepollo@admin.com',
-            'alex.quepollo@gmail.com'
-        ];
-
-        const hardcodedPass = ['060224Jc!', 'quepollo2024', 'admin123'];
+        const hardcodedAdmins = ['distribucionesquepollodelsur@gmail.com'];
+        const hardcodedPass = ['060224Jc!'];
 
         if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
-            setUser({
-                email: cleanEmail,
-                name: 'Administrador Principal',
-                role: 'admin'
-            });
+            setUser({ email: cleanEmail, name: 'Admin', role: 'admin' });
             return true;
         }
 
-        // 2. REGISTERED USERS CHECK (Employees)
-        const emp = employeesList.find(e => 
-            e && e.email && e.email.toString().trim().toLowerCase() === cleanEmail
-        );
-
-        if (emp) {
-            const storedPass = (emp.password || '').toString().trim();
-            if (storedPass === cleanPass) {
-                if (emp.active === false) {
-                    return false;
-                }
-                
-                setUser({
-                    email: emp.email || cleanEmail,
-                    name: emp.name,
-                    role: emp.role || 'employee',
-                    employeeId: emp.id,
-                    photo: emp.photo
-                });
-                return true;
-            }
+        const emp = (employees || []).find(e => e.email?.toLowerCase() === cleanEmail);
+        if (emp && emp.password === cleanPass) {
+            setUser({
+                email: cleanEmail,
+                name: emp.name,
+                role: emp.role || 'employee',
+                employeeId: emp.id
+            });
+            return true;
         }
-
         return false;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        await signOut(auth);
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, user, login, logout, hasEnteredBase, setHasEnteredBase }}>
+        <AuthContext.Provider value={{ isAuthenticated, user, login, loginWithGoogle, logout, hasEnteredBase, setHasEnteredBase, loading }}>
             {children}
         </AuthContext.Provider>
     );

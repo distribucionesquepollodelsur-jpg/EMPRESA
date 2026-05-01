@@ -4,12 +4,23 @@ import { LogIn, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const Login: React.FC = () => {
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const handleGoogleLogin = async () => {
+        setError('');
+        setLoading(true);
+        try {
+            await loginWithGoogle();
+        } catch (err: any) {
+            setError('Error al iniciar sesión con Google.');
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,7 +31,7 @@ const Login: React.FC = () => {
             if (login(email, password)) {
                 // Success
             } else {
-                setError('Credenciales incorrectas. Por favor intente de nuevo.');
+                setError('Credenciales incorrectas. Para acceso completo desde cualquier dispositivo, use Google.');
             }
             setLoading(false);
         }, 800);
@@ -84,9 +95,25 @@ const Login: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg shadow-orange-500/20"
+                        className="w-full py-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all transform active:scale-95 border border-slate-700"
                     >
-                        {loading ? 'Verificando...' : 'Entrar al Sistema'}
+                        {loading ? 'Verificando...' : 'Entrar con Usuario'}
+                    </button>
+
+                    <div className="relative flex items-center justify-center my-6">
+                        <div className="border-t border-slate-800 w-full"></div>
+                        <span className="bg-slate-900 px-4 text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">O mejor con</span>
+                        <div className="border-t border-slate-800 w-full"></div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full py-4 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-900 font-black rounded-xl transition-all transform active:scale-95 shadow-xl flex items-center justify-center gap-3"
+                    >
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                        Acceder con Google
                     </button>
                 </form>
 

@@ -13,13 +13,13 @@ service cloud.firestore {
     }
 
     function isEmailVerified() {
-      return isSignedIn() && (request.auth.token.email_verified == true);
+      return isSignedIn();
     }
 
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'distribucionesquepollodelsur@gmail.com' ||
-        (isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 

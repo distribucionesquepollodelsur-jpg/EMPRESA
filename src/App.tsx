@@ -30,13 +30,13 @@ import { Loader2 } from 'lucide-react';
 import InventoryBlocker from './components/InventoryBlocker';
 
 const MainContent: React.FC = () => {
-  const { isAuthenticated, user, hasEnteredBase } = useAuth();
-  const { loading, isInventoryRequired } = useData();
+  const { isAuthenticated, user, hasEnteredBase, loading: authLoading } = useAuth();
+  const { loading: dataLoading, isInventoryRequired } = useData();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
 
   const showInventoryBlocker = isInventoryRequired() && isAuthenticated;
 
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
