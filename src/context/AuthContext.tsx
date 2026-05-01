@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 
 interface AuthUser {
     email: string;
@@ -14,7 +14,7 @@ interface AuthUser {
 interface AuthContextType {
     isAuthenticated: boolean;
     user: AuthUser | null;
-    login: (email: string, pass: string) => boolean;
+    login: (email: string, pass: string) => Promise<boolean>;
     loginWithGoogle: () => Promise<void>;
     logout: () => void;
     hasEnteredBase: boolean;
@@ -57,8 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         photo: firebaseUser.photoURL
                     });
                 } else if (email) {
-                    // Employee check - if list is empty, we might still allow them as a generic employee
-                    // until data arrives.
+                    // Employee check
                     const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
                     if (emp) {
                         setUser({
@@ -69,13 +68,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             photo: emp.photo || firebaseUser.photoURL
                         });
                     } else {
-                        // Allow basic access if logged in with Google, even if not explicitly in list yet (will update when list loads)
                         setUser({
                             email: email,
                             name: firebaseUser.displayName || 'Usuario',
                             role: 'employee'
                         });
                     }
+                } else {
+                    // Anonymous or no email
+                    setUser({
+                        email: 'anon@quepollo.com',
+                        name: 'Colaborador',
+                        role: 'employee'
+                    });
                 }
             } else {
                 setUser(null);
@@ -110,23 +115,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const login = (email: string, pass: string) => {
-        // This is the legacy internal login. 
-        // WARNING: This won't satisfy Firestore rules unless we also sign in to Firebase.
-        // For simplicity, we'll encourage Google Login.
+    const login = async (email: string, pass: string) => {
         const cleanEmail = (email || '').trim().toLowerCase();
         const cleanPass = (pass || '').trim();
 
-        const hardcodedAdmins = ['distribucionesquepollodelsur@gmail.com'];
-        const hardcodedPass = ['060224Jc!'];
+        const hardcodedAdmins = ['distribucionesquepollodelsur@gmail.com', 'alex.b19h@gmail.com'];
+        const hardcodedPass = ['060224Jc!', 'quepollo2024'];
 
         if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
+            // Sign in anonymously to Firebase to gain read access if not already signed in
+            if (!auth.currentUser) await signInAnonymously(auth);
             setUser({ email: cleanEmail, name: 'Admin', role: 'admin' });
             return true;
         }
 
         const emp = (employees || []).find(e => e.email?.toLowerCase() === cleanEmail);
         if (emp && emp.password === cleanPass) {
+            if (!auth.currentUser) await signInAnonymously(auth);
             setUser({
                 email: cleanEmail,
                 name: emp.name,

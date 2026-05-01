@@ -22,19 +22,21 @@ const Login: React.FC = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        setTimeout(() => {
-            if (login(email, password)) {
-                // Success
-            } else {
+        try {
+            const success = await login(email, password);
+            if (!success) {
                 setError('Credenciales incorrectas. Para acceso completo desde cualquier dispositivo, use Google.');
+                setLoading(false);
             }
+        } catch (err) {
+            setError('Error al iniciar sesión. Intente con Google.');
             setLoading(false);
-        }, 800);
+        }
     };
 
     return (

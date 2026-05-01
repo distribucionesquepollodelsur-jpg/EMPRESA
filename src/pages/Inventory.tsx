@@ -118,9 +118,14 @@ const Inventory: React.FC = () => {
                         </div>
                     </div>
                     <button 
-                        onClick={() => {
+                        onClick={async () => {
                             if (window.confirm('¿Confirmas que has verificado el stock físico de todos los productos?')) {
-                                verifyInventory();
+                                try {
+                                    await verifyInventory();
+                                    alert('Inventario verificado exitosamente.');
+                                } catch (e) {
+                                    alert('Error al verificar inventario. Verifique su conexión y permisos.');
+                                }
                             }
                         }}
                         className="w-full md:w-auto px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-700 transition-all shadow-lg flex items-center justify-center gap-2"

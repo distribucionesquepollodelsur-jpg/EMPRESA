@@ -1035,13 +1035,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const isInventoryRequired = () => {
+        if (loading) return false;
         const now = new Date();
         const day = now.getDate();
         const todayStr = format(now, 'yyyy-MM-dd');
         
-        // Mandatory on 15th and 30th (or last day of Feb if 28th/29th?)
-        // The user said 15 and 30.
-        const isTargetDay = day === 1 || day === 15 || day === 30; // user also mentioned today (May 1st) in prompt
+        // Mandatory on 1st, 15th and 30th
+        const isTargetDay = day === 1 || day === 15 || day === 30;
         
         if (isTargetDay) {
             return config.lastInventoryCheckDate !== todayStr;
