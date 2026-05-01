@@ -85,6 +85,7 @@ export interface Employee {
     role: 'admin' | 'employee';
     salary: number;
     active: boolean;
+    documentId?: string;
     photo?: string | null;
     restDay?: number; // 0-6 (0=Domingo, 1=Lunes, etc.)
 }

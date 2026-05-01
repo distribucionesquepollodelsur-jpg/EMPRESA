@@ -156,7 +156,23 @@ const LaborContracts: React.FC = () => {
         }
     };
 
+    const handleStartSigning = (role: keyof SignatureData) => {
+        setCurrentSigningRole(role);
+        if (role === 'worker' && selectedContract) {
+            setSignerName(selectedContract.employeeName);
+            // Optionally fetch worker document ID if available in employee data
+            const employee = employees.find(e => e.id === selectedContract.employeeId);
+            if (employee && employee.documentId) {
+                setSignerDocumentId(employee.documentId);
+            }
+        } else {
+            setSignerName('');
+            setSignerDocumentId('');
+        }
+    };
+
     const handleDigitalize = async (file: File, type: 'contract' | 'regulations' | 'dotation') => {
+        if (!file) return;
         setLoading(true);
         try {
             const reader = new FileReader();
@@ -167,16 +183,13 @@ const LaborContracts: React.FC = () => {
                 try {
                     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de mantener las cláusulas intactas.";
+                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de extraer el texto COMPLETO y exacto sin omitir cláusulas ni párrafos.";
                     const result = await ai.models.generateContent({
                         model: "gemini-2.0-flash",
-                        contents: [{
-                            role: "user",
-                            parts: [
-                                { text: prompt },
-                                { inlineData: { data: base64, mimeType: file.type } }
-                            ]
-                        }]
+                        contents: [
+                            { text: prompt },
+                            { inlineData: { data: base64, mimeType: file.type } }
+                        ]
                     });
                     
                     const text = result.text;
@@ -190,7 +203,7 @@ const LaborContracts: React.FC = () => {
                     if (apiError.message?.includes('429') || apiError.message?.includes('RESOURCE_EXHAUSTED')) {
                         alert("La cuota del servicio de inteligencia artificial se ha agotado temporalmente. Por favor, intente de nuevo en unos minutos o ingrese el texto manualmente.");
                     } else {
-                        alert("Error al procesar el documento con inteligencia artificial. Por favor, intente de nuevo.");
+                        alert("Error al procesar el documento con inteligencia artificial. Por favor, compruebe su conexión e intente de nuevo.");
                     }
                 } finally {
                     setLoading(false);
@@ -255,16 +268,43 @@ const LaborContracts: React.FC = () => {
         if (!contractRef.current || !contractToDownload) return;
         setLoading(true);
         try {
+            // Ensure images are loaded
+            const images = Array.from(contractRef.current.querySelectorAll('img')) as HTMLImageElement[];
+            await Promise.all(images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            }));
+
             const canvas = await html2canvas(contractRef.current, {
                 scale: 2,
                 logging: false,
-                useCORS: true
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
             });
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/png', 1.0);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            
+            // Handle multi-page if needed
+            let heightLeft = pdfHeight;
+            let position = 0;
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+            }
+
             pdf.save(`Contrato_${contractToDownload.employeeName}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
@@ -298,10 +338,7 @@ const LaborContracts: React.FC = () => {
 
             const result = await ai.models.generateContent({
                 model: "gemini-2.0-flash",
-                contents: [{
-                    role: "user",
-                    parts: [{ text: prompt }]
-                }]
+                contents: [{ text: prompt }]
             });
             
             const explanation = result.text;
@@ -522,9 +559,15 @@ const LaborContracts: React.FC = () => {
 
                             <button 
                                 disabled={loading || !employeeId || !contractText}
-                                className="w-full py-5 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-600/20 active:scale-95 transition-all disabled:opacity-50"
+                                type="submit"
+                                className="w-full py-5 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
                             >
-                                {loading ? 'Digitalizando/Procesando...' : 'Guardar Draft para Socialización'}
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Procesando...</span>
+                                    </>
+                                ) : 'Guardar Draft para Socialización'}
                             </button>
                         </form>
                     </div>
@@ -680,7 +723,7 @@ const LaborContracts: React.FC = () => {
                                 {['worker', 'employer', 'boss', 'hr', 'legalRep'].map((role) => (
                                     <button
                                         key={role}
-                                        onClick={() => setCurrentSigningRole(role as keyof SignatureData)}
+                                        onClick={() => handleStartSigning(role as keyof SignatureData)}
                                         className={cn(
                                             "w-full flex items-center justify-between p-5 rounded-2xl border-2 transition-all group",
                                             selectedContract.signatures?.[role as keyof SignatureData]
