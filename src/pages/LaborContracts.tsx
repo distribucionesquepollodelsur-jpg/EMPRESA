@@ -127,6 +127,17 @@ const LaborContracts: React.FC = () => {
         }
     };
 
+    const handleDeleteContract = async (id: string) => {
+        if (!window.confirm("¿Estás seguro de que deseas eliminar este contrato? Esta acción no se puede deshacer.")) return;
+        
+        try {
+            await deleteDoc(doc(db, 'contracts', id));
+        } catch (error) {
+            console.error("Error deleting contract:", error);
+            alert("Error al eliminar el contrato.");
+        }
+    };
+
     const handleDigitalize = async (file: File, type: 'contract' | 'regulations' | 'dotation') => {
         setLoading(true);
         try {
@@ -295,13 +306,22 @@ const LaborContracts: React.FC = () => {
                             </div>
                         </div>
 
-                        <button 
-                            onClick={() => setSelectedContract(contract)}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all active:scale-95"
-                        >
-                            <Eye size={16} />
-                            Ver y Gestionar
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setSelectedContract(contract)}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all active:scale-95"
+                            >
+                                <Eye size={16} />
+                                Ver y Gestionar
+                            </button>
+                            <button 
+                                onClick={() => handleDeleteContract(contract.id)}
+                                className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all active:scale-95 border border-red-100"
+                                title="Eliminar Contrato"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>
