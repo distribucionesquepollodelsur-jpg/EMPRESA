@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     };
 
     const menuItems = [
-        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: true },
+        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: false },
         { id: 'inventory', label: 'Inventario', icon: Package, adminOnly: false }, // Employees need to see stock to sell
         { id: 'suppliers', label: 'Proveedores', icon: Truck, adminOnly: true },
         { id: 'customers', label: 'Clientes', icon: Users, adminOnly: false },
@@ -133,20 +133,26 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         );
                     })}
                     
-                    {deferredPrompt && (
-                        <div className="pt-4 mt-4 border-t border-slate-800/50">
-                            <button
-                                onClick={handleInstall}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-orange-500 hover:bg-slate-800 transition-all active:scale-[0.98]"
-                            >
-                                <Download size={18} />
-                                <div className="flex flex-col items-start leading-none">
-                                    <span>Descargar App</span>
-                                    <span className="text-[10px] font-normal opacity-60">Versión Escritorio</span>
-                                </div>
-                            </button>
-                        </div>
-                    )}
+                    <div className="pt-4 mt-4 border-t border-slate-800/50">
+                        <button
+                            onClick={handleInstall}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all active:scale-[0.98]",
+                                deferredPrompt 
+                                    ? "text-orange-500 hover:bg-slate-800 animate-pulse" 
+                                    : "text-slate-500 opacity-50 cursor-not-allowed"
+                            )}
+                            title={!deferredPrompt ? "Usa Chrome o Edge para instalar como app" : ""}
+                        >
+                            <Download size={18} />
+                            <div className="flex flex-col items-start leading-none">
+                                <span>Descargar App</span>
+                                <span className="text-[10px] font-normal opacity-60">
+                                    {deferredPrompt ? 'Disponible ahora' : 'Solo en Chrome/Edge'}
+                                </span>
+                            </div>
+                        </button>
+                    </div>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800">

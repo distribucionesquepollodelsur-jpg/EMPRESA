@@ -106,25 +106,43 @@ const Dashboard: React.FC = () => {
                 <StatsCard title="Stock Crítico" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-orange-600" />
             </div>
 
-            {deferredPrompt && (
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-8 rounded-3xl text-white shadow-xl shadow-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                            <Download size={32} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black uppercase tracking-tight">¡Instala la versión de Escritorio!</h3>
-                            <p className="text-orange-100 font-medium">Usa la aplicación sin depender del navegador y con acceso directo.</p>
-                        </div>
+            <div className={cn(
+                "p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all",
+                deferredPrompt 
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20" 
+                    : "bg-slate-800 border border-slate-700 opacity-80"
+            )}>
+                <div className="flex items-center gap-6 text-center md:text-left">
+                    <div className={cn(
+                        "w-16 h-16 rounded-2xl flex items-center justify-center",
+                        deferredPrompt ? "bg-white/20 backdrop-blur-md" : "bg-slate-700"
+                    )}>
+                        <Download size={32} className="text-white" />
                     </div>
-                    <button 
-                        onClick={handleInstall}
-                        className="px-8 py-4 bg-white text-orange-600 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-orange-50 transition-all shadow-lg active:scale-95"
-                    >
-                        Descargar Ahora
-                    </button>
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight">
+                            {deferredPrompt ? '¡Instala la versión de Escritorio!' : 'Versión Instalable (PWA)'}
+                        </h3>
+                        <p className={cn("font-medium", deferredPrompt ? "text-orange-100" : "text-slate-400")}>
+                            {deferredPrompt 
+                                ? 'Usa la aplicación sin depender del navegador y con acceso directo.' 
+                                : 'Asegúrate de usar Chrome o Edge en tu PC para activar la descarga.'}
+                        </p>
+                    </div>
                 </div>
-            )}
+                <button 
+                    onClick={handleInstall}
+                    disabled={!deferredPrompt}
+                    className={cn(
+                        "px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95",
+                        deferredPrompt 
+                            ? "bg-white text-orange-600 hover:bg-orange-50" 
+                            : "bg-slate-700 text-slate-500 cursor-not-allowed"
+                    )}
+                >
+                    {deferredPrompt ? 'Descargar Ahora' : 'No Disponible'}
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">

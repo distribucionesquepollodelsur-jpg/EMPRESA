@@ -32,7 +32,7 @@ import InventoryBlocker from './components/InventoryBlocker';
 const MainContent: React.FC = () => {
   const { isAuthenticated, user, hasEnteredBase, loading: authLoading } = useAuth();
   const { loading: dataLoading, isInventoryRequired } = useData();
-  const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const showInventoryBlocker = isInventoryRequired() && isAuthenticated && activeTab !== 'inventory';
 
