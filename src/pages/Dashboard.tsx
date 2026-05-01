@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -10,7 +10,8 @@ import {
     ShoppingBag,
     Users,
     ShieldCheck,
-    Calendar
+    Calendar,
+    Download
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -20,8 +21,27 @@ import DailyReportModal from '../components/DailyReportModal';
 const Dashboard: React.FC = () => {
     const { sales, purchases, products, cashFlow, employees } = useData();
     const { user } = useAuth();
-    const [isBalanceModalOpen, setIsBalanceModalOpen] = React.useState(false);
-    const [isDailyReportOpen, setIsDailyReportOpen] = React.useState(false);
+    const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+    const [isDailyReportOpen, setIsDailyReportOpen] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+    useEffect(() => {
+        const handler = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleInstall = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+        }
+    };
 
     const totalSalesAmount = sales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchasesAmount = purchases.reduce((sum, p) => sum + p.total, 0);
@@ -69,12 +89,24 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-10">
-            <header className="flex flex-col gap-1">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                    Buenas tardes, {user?.name.split(' ')[0]}
-                    <span className="text-slate-300 font-normal">👋</span>
-                </h1>
-                <p className="text-slate-500 font-medium tracking-tight italic">Aquí tienes un resumen de la operación hoy.</p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm mb-6">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                        Buenas tardes, {user?.name.split(' ')[0]}
+                        <span className="text-slate-300 font-normal">👋</span>
+                    </h1>
+                    <p className="text-slate-500 font-medium tracking-tight italic">Aquí tienes un resumen de la operación hoy.</p>
+                </div>
+                
+                {deferredPrompt && (
+                    <button
+                        onClick={handleInstall}
+                        className="flex items-center gap-3 px-6 py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20 active:scale-95 animate-bounce-subtle"
+                    >
+                        <Download size={20} />
+                        Instalar App (PC/Escritorio)
+                    </button>
+                )}
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
