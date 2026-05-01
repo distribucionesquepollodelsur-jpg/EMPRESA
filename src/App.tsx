@@ -34,7 +34,7 @@ const MainContent: React.FC = () => {
   const { loading: dataLoading, isInventoryRequired } = useData();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
 
-  const showInventoryBlocker = isInventoryRequired() && isAuthenticated;
+  const showInventoryBlocker = isInventoryRequired() && isAuthenticated && activeTab !== 'inventory';
 
   if (authLoading || dataLoading) {
     return (
