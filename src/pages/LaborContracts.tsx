@@ -222,7 +222,7 @@ const LaborContracts: React.FC = () => {
                     const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas o itálicas. Solo devuelve el texto plano limpio.";
                     
                     let result;
-                    const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
+                    const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
                     let success = false;
 
                     for (const modelName of models) {
@@ -245,15 +245,15 @@ const LaborContracts: React.FC = () => {
                                 
                                 if (retries > 1 && isQuotaError) {
                                     await sleep(delay);
-                                    delay *= 2; // Exponential backoff
+                                    delay *= 2; 
                                     retries--;
                                     continue;
                                 }
-                                if (isNotFoundError) {
-                                    break; // Skip to next model
+                                if (isNotFoundError && modelName !== models[models.length - 1]) {
+                                    break; 
                                 }
                                 if (modelName === models[models.length - 1]) throw err;
-                                break; // Try next model
+                                break; 
                             }
                         }
                         if (success) break;
@@ -408,7 +408,7 @@ const LaborContracts: React.FC = () => {
             ${selectedContract.dotationText}`;
 
             let result;
-            const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
+            const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
             let success = false;
 
             for (const modelName of models) {
@@ -428,15 +428,15 @@ const LaborContracts: React.FC = () => {
                         
                         if (retries > 1 && isQuotaError) {
                             await sleep(delay);
-                            delay *= 2; // Exponential backoff
+                            delay *= 2; 
                             retries--;
                             continue;
                         }
-                        if (isNotFoundError) {
-                            break; // Skip to next model
+                        if (isNotFoundError && modelName !== models[models.length - 1]) {
+                            break; 
                         }
                         if (modelName === models[models.length - 1]) throw err;
-                        break; // Try next model
+                        break; 
                     }
                 }
                 if (success) break;

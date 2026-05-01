@@ -190,11 +190,8 @@ service cloud.firestore {
 
     match /config/{configId} {
       allow read: if true;
-      allow update: if isSignedIn() && (
-        isAdmin() || 
-        incoming().diff(existing()).affectedKeys().hasOnly(['lastInventoryCheckDate', 'logo'])
-      );
-      allow write: if isAdmin();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
     match /contracts/{contractId} {
