@@ -258,6 +258,42 @@
         "description": { "type": "string" }
       },
       "required": ["name", "category", "value", "purchaseDate"]
+    },
+    "LaborContract": {
+      "title": "LaborContract",
+      "description": "Digital labor contracts and employment agreements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "type": { "type": "string", "enum": ["termino_fijo", "termino_indefinido", "obra_labor", "aprendizaje"] },
+        "status": { "type": "string", "enum": ["draft", "socializing", "signed", "archived"] },
+        "contractText": { "type": "string" },
+        "regulationsText": { "type": "string" },
+        "dotationText": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "signedAt": { "type": ["string", "null"], "format": "date-time" },
+        "signatures": {
+          "type": "object",
+          "properties": {
+            "worker": { "type": ["string", "null"] },
+            "employer": { "type": ["string", "null"] },
+            "boss": { "type": ["string", "null"] },
+            "hr": { "type": ["string", "null"] },
+            "legalRep": { "type": ["string", "null"] }
+          }
+        },
+        "attachments": {
+          "type": "object",
+          "properties": {
+            "workerId": { "type": ["string", "null"] },
+            "legalRepId": { "type": ["string", "null"] },
+            "originalPdf": { "type": ["string", "null"] }
+          }
+        }
+      },
+      "required": ["employeeId", "employeeName", "type", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -276,6 +312,7 @@
     "dotations": { "schema": "Dotation", "description": "Equipment allotments" },
     "assets": { "schema": "Asset", "description": "Company fixed assets" },
     "inventoryLogs": { "schema": "InventoryAdjustment", "description": "Manual inventory adjustments" },
+    "contracts": { "schema": "LaborContract", "description": "Employee labor contracts" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
