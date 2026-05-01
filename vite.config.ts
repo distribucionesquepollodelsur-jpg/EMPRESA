@@ -13,13 +13,21 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
+        },
         manifest: {
-          name: 'Que Pollo - Distribuciones',
+          name: 'Distribuciones Que Pollo del Sur',
           short_name: 'Que Pollo',
-          description: 'Sistema de Gestión de Inventario y Ventas - Que Pollo',
+          description: 'Sistema Integral para el Control de Ventas e Inventario de Distribuciones Que Pollo del Sur.',
           theme_color: '#ea580c',
           background_color: '#ffffff',
           display: 'standalone',
+          orientation: 'portrait-primary',
+          categories: ['business', 'finance'],
           icons: [
             {
               src: 'icon.svg',
