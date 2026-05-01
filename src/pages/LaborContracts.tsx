@@ -120,7 +120,7 @@ const LaborContracts: React.FC = () => {
         });
 
         // Fetch company settings (logo)
-        const unsubSettings = onSnapshot(doc(db, 'settings', 'company_info'), (docSnapshot) => {
+        const unsubSettings = onSnapshot(doc(db, 'config', 'company_info'), (docSnapshot) => {
             if (docSnapshot.exists()) {
                 setCompanyLogo(docSnapshot.data().logo);
             }
@@ -141,7 +141,7 @@ const LaborContracts: React.FC = () => {
             const reader = new FileReader();
             reader.onload = async () => {
                 const base64 = reader.result as string;
-                await setDoc(doc(db, 'settings', 'company_info'), { logo: base64 }, { merge: true });
+                await setDoc(doc(db, 'config', 'company_info'), { logo: base64 }, { merge: true });
                 setCompanyLogo(base64);
                 setIsSavingLogo(false);
             };
@@ -222,7 +222,7 @@ const LaborContracts: React.FC = () => {
                     const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas o itálicas. Solo devuelve el texto plano limpio.";
                     
                     let result;
-                    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+                    const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
                     let success = false;
 
                     for (const modelName of models) {
@@ -241,11 +241,16 @@ const LaborContracts: React.FC = () => {
                                 success = true;
                             } catch (err: any) {
                                 const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
+                                const isNotFoundError = err.message?.includes('404') || err.message?.includes('NOT_FOUND');
+                                
                                 if (retries > 1 && isQuotaError) {
                                     await sleep(delay);
                                     delay *= 2; // Exponential backoff
                                     retries--;
                                     continue;
+                                }
+                                if (isNotFoundError) {
+                                    break; // Skip to next model
                                 }
                                 if (modelName === models[models.length - 1]) throw err;
                                 break; // Try next model
@@ -363,7 +368,7 @@ const LaborContracts: React.FC = () => {
             pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
             heightLeft -= pageHeight;
 
-            while (heightLeft >= 0) {
+            while (heightLeft > 0) {
                 position = heightLeft - pdfHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
@@ -403,7 +408,7 @@ const LaborContracts: React.FC = () => {
             ${selectedContract.dotationText}`;
 
             let result;
-            const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+            const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash"];
             let success = false;
 
             for (const modelName of models) {
@@ -419,11 +424,16 @@ const LaborContracts: React.FC = () => {
                         success = true;
                     } catch (err: any) {
                         const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
+                        const isNotFoundError = err.message?.includes('404') || err.message?.includes('NOT_FOUND');
+                        
                         if (retries > 1 && isQuotaError) {
                             await sleep(delay);
                             delay *= 2; // Exponential backoff
                             retries--;
                             continue;
+                        }
+                        if (isNotFoundError) {
+                            break; // Skip to next model
                         }
                         if (modelName === models[models.length - 1]) throw err;
                         break; // Try next model

@@ -192,7 +192,7 @@ service cloud.firestore {
       allow read: if true;
       allow update: if isSignedIn() && (
         isAdmin() || 
-        incoming().diff(existing()).affectedKeys().hasOnly(['lastInventoryCheckDate'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastInventoryCheckDate', 'logo'])
       );
       allow write: if isAdmin();
     }
