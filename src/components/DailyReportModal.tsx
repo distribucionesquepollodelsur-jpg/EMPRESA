@@ -270,6 +270,64 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                             </div>
                         </div>
                     </div>
+
+                    {/* Detalle Cronológico de Ingresos */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
+                                    <TrendingUp size={12} /> Detalle de Recaudos (Peso por Peso)
+                                </h5>
+                                <h3 className="text-xl font-black text-slate-900 tracking-tighter">Cronología de Ingresos</h3>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-slate-400 uppercase">Total Recaudado</p>
+                                <p className="text-lg font-black text-green-600">{formatCurrency(cashEntries)}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-slate-50 rounded-[32px] border border-slate-100 overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-100/50">
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Hora</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Descripción / Concepto</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 font-medium">
+                                    {[...todayCashFlow]
+                                        .filter(m => m.type === 'entry')
+                                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                        .map((m, idx) => (
+                                            <tr key={m.id} className="hover:bg-white transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <span className="text-[10px] font-black text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                                                        {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-black text-slate-900 uppercase leading-tight">{m.description}</span>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{m.category === 'sale' ? 'Ingreso por Venta' : 'Otro Ingreso'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className="text-sm font-black text-green-600">{formatCurrency(m.amount)}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    {todayCashFlow.filter(m => m.type === 'entry').length === 0 && (
+                                        <tr>
+                                            <td colSpan={3} className="px-6 py-12 text-center">
+                                                <p className="text-xs text-slate-400 italic uppercase font-bold tracking-widest">No se registraron recaudos hoy</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Footer */}
