@@ -111,7 +111,7 @@ const Employees: React.FC = () => {
         }
     };
 
-    const handleAddEmployee = (e: React.FormEvent) => {
+    const handleAddEmployee = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !email || !password) {
             alert("Por favor completa todos los campos (Nombre, Email y Contraseña)");
@@ -126,13 +126,19 @@ const Employees: React.FC = () => {
             photo,
             restDay
         };
-        addEmployee(employeeData);
-        alert(`Empleado ${employeeData.name} registrado con éxito. Ya puede ingresar al sistema con su correo y contraseña.`);
-        resetForm();
-        setIsAddModalOpen(false);
+        
+        try {
+            await addEmployee(employeeData);
+            alert(`Empleado ${employeeData.name} registrado con éxito. Ya puede ingresar al sistema con su correo y contraseña.`);
+            resetForm();
+            setIsAddModalOpen(false);
+        } catch (error) {
+            console.error(error);
+            alert("Error al registrar el empleado. Por favor verifica los permisos.");
+        }
     };
 
-    const handleUpdateEmployee = (e: React.FormEvent) => {
+    const handleUpdateEmployee = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedEmployee) return;
 
@@ -146,10 +152,15 @@ const Employees: React.FC = () => {
             restDay
         };
 
-        updateEmployee(selectedEmployee.id, updates);
-        alert("Información del empleado actualizada correctamente.");
-        setIsEditModalOpen(false);
-        resetForm();
+        try {
+            await updateEmployee(selectedEmployee.id, updates);
+            alert("Información del empleado actualizada correctamente.");
+            setIsEditModalOpen(false);
+            resetForm();
+        } catch (error) {
+            console.error(error);
+            alert("Error al actualizar el empleado.");
+        }
     };
 
     const resetForm = () => {
@@ -968,7 +979,7 @@ const Employees: React.FC = () => {
                             
                             <div className="flex flex-col gap-3 pt-6">
                                 <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
-                                    Registrar con Éxito
+                                    Finalizar Registro
                                 </button>
                                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
                                     Cancelar
