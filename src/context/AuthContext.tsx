@@ -35,55 +35,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAuthenticated = !!user;
 
     useEffect(() => {
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (saved) {
+            setUser(JSON.parse(saved));
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
-                const email = firebaseUser.email?.toLowerCase();
-                
-                // Admin check
-                const hardcodedAdmins = [
-                    'alex.b19h@gmail.com',
-                    'distribucionesquepollodelsur@gmail.com',
-                    'alex@quepollo.com',
-                    'admin@quepollo.com',
-                    'quepollo@admin.com',
-                    'alex.quepollo@gmail.com'
-                ];
-
-                if (email && hardcodedAdmins.includes(email)) {
-                    setUser({
-                        email: email,
-                        name: firebaseUser.displayName || 'Administrador',
-                        role: 'admin',
-                        photo: firebaseUser.photoURL
-                    });
-                } else if (email) {
-                    // Employee check
-                    const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
-                    if (emp) {
-                        setUser({
-                            email: email,
-                            name: emp.name || firebaseUser.displayName || 'Empleado',
-                            role: emp.role || 'employee',
-                            employeeId: emp.id,
-                            photo: emp.photo || firebaseUser.photoURL
-                        });
+                // Si hay un usuario de Google/Email (legacy) lo manejamos
+                if (firebaseUser.email) {
+                    const email = firebaseUser.email.toLowerCase();
+                    const hardcodedAdmins = ['alex.b19h@gmail.com', 'distribucionesquepollodelsur@gmail.com'];
+                    
+                    if (hardcodedAdmins.includes(email)) {
+                        setUser({ email, name: 'Admin', role: 'admin' });
                     } else {
-                        setUser({
-                            email: email,
-                            name: firebaseUser.displayName || 'Usuario',
-                            role: 'employee'
-                        });
+                        const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
+                        if (emp) {
+                            setUser({
+                                email,
+                                name: emp.name,
+                                role: emp.role || 'employee',
+                                employeeId: emp.id
+                            });
+                        }
                     }
                 } else {
-                    // Anonymous or no email
-                    setUser({
-                        email: 'anon@quepollo.com',
-                        name: 'Colaborador',
-                        role: 'employee'
-                    });
+                    // Si es usuario anónimo, respetamos el usuario local si existe
+                    const savedSession = localStorage.getItem(AUTH_STORAGE_KEY);
+                    if (savedSession) {
+                        setUser(JSON.parse(savedSession));
+                    }
                 }
             } else {
-                setUser(null);
+                // Si no hay sesión en Firebase pero hay local, intentamos reconectar
+                const savedSession = localStorage.getItem(AUTH_STORAGE_KEY);
+                if (savedSession && !auth.currentUser) {
+                    signInAnonymously(auth).catch(console.error);
+                } else if (!savedSession) {
+                    setUser(null);
+                }
             }
             setLoading(false);
         });
@@ -106,13 +97,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user, cashFlow]);
 
     const loginWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Google login error:", error);
-            throw error;
-        }
+        // Deshabilitado por solicitud del usuario
+        alert("El acceso con Google ha sido deshabilitado.");
     };
 
     const login = async (email: string, pass: string) => {
@@ -120,31 +106,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cleanPass = (pass || '').trim();
 
         const hardcodedAdmins = ['distribucionesquepollodelsur@gmail.com', 'alex.b19h@gmail.com'];
-        const hardcodedPass = ['060224Jc!', 'quepollo2024'];
+        const adminPass = ['060224Jc!', 'quepollo2024'];
 
-        if (hardcodedAdmins.includes(cleanEmail) && hardcodedPass.includes(cleanPass)) {
-            // Sign in anonymously to Firebase to gain read access if not already signed in
-            if (!auth.currentUser) await signInAnonymously(auth);
-            setUser({ email: cleanEmail, name: 'Admin', role: 'admin' });
-            return true;
-        }
+        const isAdminLogin = hardcodedAdmins.includes(cleanEmail) && adminPass.includes(cleanPass);
+        const emp = (employees || []).find(e => e.email?.toLowerCase() === cleanEmail && e.password === cleanPass);
 
-        const emp = (employees || []).find(e => e.email?.toLowerCase() === cleanEmail);
-        if (emp && emp.password === cleanPass) {
-            if (!auth.currentUser) await signInAnonymously(auth);
-            setUser({
-                email: cleanEmail,
-                name: emp.name,
-                role: emp.role || 'employee',
-                employeeId: emp.id
-            });
-            return true;
+        if (isAdminLogin || emp) {
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                
+                const userData: AuthUser = isAdminLogin ? {
+                    email: cleanEmail,
+                    name: 'Admin',
+                    role: 'admin'
+                } : {
+                    email: cleanEmail,
+                    name: emp!.name,
+                    role: emp!.role || 'employee',
+                    employeeId: emp!.id,
+                    photo: emp!.photo
+                };
+
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+                setUser(userData);
+                return true;
+            } catch (err) {
+                console.error("Auth error:", err);
+                throw err;
+            }
         }
         return false;
     };
 
     const logout = async () => {
-        await signOut(auth);
+        try {
+            await signOut(auth);
+        } catch (e) {}
+        localStorage.removeItem(AUTH_STORAGE_KEY);
         setUser(null);
     };
 

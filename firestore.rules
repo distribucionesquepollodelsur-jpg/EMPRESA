@@ -88,15 +88,15 @@ service cloud.firestore {
              data.oldStock is number &&
              data.newStock is number &&
              data.reason is string && data.reason.size() <= 1000 &&
-             (data.userName == request.auth.token.email || data.userName == 'Sistema');
+             (request.auth.token.email == null || data.userName == request.auth.token.email || data.userName == 'Sistema');
     }
 
     // --- Rules ---
 
     match /products/{productId} {
       allow read: if isSignedIn();
-      allow create: if isEmailVerified() && isValidProduct(incoming()) && isValidId(productId);
-      allow update: if isEmailVerified() && isValidProduct(incoming()) && (
+      allow create: if isSignedIn() && isValidProduct(incoming()) && isValidId(productId);
+      allow update: if isSignedIn() && isValidProduct(incoming()) && (
         isAdmin() || 
         (incoming().diff(existing()).affectedKeys().hasOnly(['stock']))
       );
@@ -105,8 +105,8 @@ service cloud.firestore {
 
     match /sales/{saleId} {
       allow read: if isSignedIn();
-      allow create: if isEmailVerified() && isValidSale(incoming()) && isValidId(saleId);
-      allow update: if isEmailVerified() && isValidSale(incoming()) && (
+      allow create: if isSignedIn() && isValidSale(incoming()) && isValidId(saleId);
+      allow update: if isSignedIn() && isValidSale(incoming()) && (
         isAdmin() ||
         incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'payments', 'paymentStatus'])
       );
@@ -115,8 +115,8 @@ service cloud.firestore {
 
     match /purchases/{purchaseId} {
       allow read: if isSignedIn();
-      allow create: if isEmailVerified() && isValidPurchase(incoming()) && isValidId(purchaseId);
-      allow update: if isEmailVerified() && isValidPurchase(incoming()) && (
+      allow create: if isSignedIn() && isValidPurchase(incoming()) && isValidId(purchaseId);
+      allow update: if isSignedIn() && isValidPurchase(incoming()) && (
         isAdmin() ||
         incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'payments', 'paymentStatus'])
       );
@@ -125,14 +125,14 @@ service cloud.firestore {
 
     match /cashFlow/{movementId} {
       allow read: if isSignedIn();
-      allow create: if isEmailVerified() && isValidCashMovement(incoming()) && isValidId(movementId);
+      allow create: if isSignedIn() && isValidCashMovement(incoming()) && isValidId(movementId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     match /inventoryLogs/{logId} {
       allow read: if isSignedIn();
-      allow create: if isEmailVerified() && isValidInventoryLog(incoming()) && isValidId(logId);
+      allow create: if isSignedIn() && isValidInventoryLog(incoming()) && isValidId(logId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
