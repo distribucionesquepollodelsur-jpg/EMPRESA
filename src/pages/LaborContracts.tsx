@@ -15,6 +15,10 @@ import {
     ChevronRight,
     AlertCircle,
     Info,
+    Volume2,
+    Bot,
+    Pause,
+    Play,
     Signature,
     X
 } from 'lucide-react';
@@ -74,6 +78,12 @@ const LaborContracts: React.FC = () => {
     const [isSigningMode, setIsSigningMode] = useState(false);
     const [currentSigningRole, setCurrentSigningRole] = useState<keyof SignatureData | null>(null);
     const [loading, setLoading] = useState(false);
+    
+    // AI Explanation state
+    const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+    const [isExplaining, setIsExplaining] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
     
     // Form state
     const [employeeId, setEmployeeId] = useState('');
@@ -243,6 +253,69 @@ const LaborContracts: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleExplainContract = async () => {
+        if (!selectedContract) return;
+        
+        setIsExplaining(true);
+        setAiExplanation(null);
+        
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+            
+            const prompt = `Como un asistente legal experto de Distribuciones Que Pollo del Sur, explica de forma muy sencilla y clara este contrato de trabajo para el trabajador ${selectedContract.employeeName}. 
+            Resume los puntos clave: tipo de contrato (${selectedContract.type}), obligaciones principales, reglamento interno y dotación. 
+            Habla directamente al trabajador con un tono amable y profesional. Máximo 200 palabras.
+            
+            TEXTO DEL CONTRATO:
+            ${selectedContract.contractText}
+            
+            REGLAMENTO:
+            ${selectedContract.regulationsText}
+            
+            DOTACIÓN:
+            ${selectedContract.dotationText}`;
+
+            const result = await ai.models.generateContent({
+                model: "gemini-3-flash-preview",
+                contents: [{ text: prompt }]
+            });
+            
+            const explanation = result.text;
+            if (explanation) {
+                setAiExplanation(explanation);
+            }
+        } catch (error) {
+            console.error("Error generating AI explanation:", error);
+            alert("No se pudo generar la explicación con IA en este momento.");
+        } finally {
+            setIsExplaining(false);
+        }
+    };
+
+    const handleSpeak = () => {
+        if (!aiExplanation) return;
+        
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(aiExplanation);
+        utterance.lang = 'es-ES';
+        utterance.onend = () => setIsSpeaking(false);
+        speechRef.current = utterance;
+        
+        setIsSpeaking(true);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    useEffect(() => {
+        return () => {
+            window.speechSynthesis.cancel();
+        };
+    }, []);
 
     const resetForm = () => {
         setEmployeeId('');
@@ -502,11 +575,61 @@ const LaborContracts: React.FC = () => {
                             <div className="flex flex-col gap-2">
                                 <div className="flex justify-between items-start">
                                     <h3 className="text-2xl font-black text-slate-900 tracking-tight">Gestión de Firmas</h3>
-                                    <button onClick={() => setSelectedContract(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                    <button onClick={() => {
+                                        setSelectedContract(null);
+                                        setAiExplanation(null);
+                                        window.speechSynthesis.cancel();
+                                        setIsSpeaking(false);
+                                    }} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
                                         <X size={20} />
                                     </button>
                                 </div>
                                 <p className="text-sm text-slate-500 font-medium italic">Selecciona el rol para autorizar con firma digital.</p>
+                            </div>
+
+                            {/* AI Socialization Assistant */}
+                            <div className="bg-slate-900 text-white p-6 rounded-3xl space-y-4 shadow-xl">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white">
+                                        <Bot size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-sm uppercase tracking-tight">Asistente de Socialización</h4>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Powered by Gemini AI</p>
+                                    </div>
+                                </div>
+                                
+                                {aiExplanation ? (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="text-xs text-slate-300 leading-relaxed font-medium italic line-clamp-6 hover:line-clamp-none transition-all cursor-pointer">
+                                            "{aiExplanation}"
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={handleSpeak}
+                                                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
+                                            >
+                                                {isSpeaking ? <Pause size={16} /> : <Volume2 size={16} />}
+                                                {isSpeaking ? 'Pausar Lectura' : 'Leer Contrato'}
+                                            </button>
+                                            <button 
+                                                onClick={handleExplainContract}
+                                                className="p-3 bg-slate-800 text-slate-400 rounded-xl hover:text-white transition-all"
+                                                title="Regenerar explicación"
+                                            >
+                                                <Plus size={16} className="rotate-45" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={handleExplainContract}
+                                        disabled={isExplaining}
+                                        className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                    >
+                                        {isExplaining ? 'Procesando contrato...' : 'Explicar Contrato (IA)'}
+                                    </button>
+                                )}
                             </div>
 
                             <div className="space-y-3">
