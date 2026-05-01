@@ -151,105 +151,93 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubAuth = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                // If not logged in to Firebase, we might want to clear data or just wait
-                setLoading(false);
-                return;
-            }
+        // Start listeners immediately. Since rules are public-read, this works without Firebase Auth.
+        const unsubInventory = onSnapshot(collection(db, 'inventoryLogs'), (s) => {
+            setInventoryLogs(s.docs.map(d => ({ id: d.id, ...d.data() } as InventoryAdjustment)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'inventoryLogs'));
 
-            // Essential listeners for login and basic app data
-            const unsubInventory = onSnapshot(collection(db, 'inventoryLogs'), (s) => {
-                setInventoryLogs(s.docs.map(d => ({ id: d.id, ...d.data() } as InventoryAdjustment)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'inventoryLogs'));
+        const unsubEmployees = onSnapshot(collection(db, 'employees'), (s) => {
+            setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'employees'));
 
-            const unsubEmployees = onSnapshot(collection(db, 'employees'), (s) => {
-                setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'employees'));
-
-            const unsubConfig = onSnapshot(doc(db, 'config', 'main'), (d) => {
-                if (d.exists()) setConfig(d.data() as AppConfig);
-                setLoading(false);
-            }, (e) => {
-                handleFirestoreError(e, OperationType.GET, 'config/main');
-                setLoading(false);
-            });
-
-            // Other listeners
-            const unsubProducts = onSnapshot(collection(db, 'products'), (s) => {
-                setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'products'));
-
-            const unsubPurchases = onSnapshot(collection(db, 'purchases'), (s) => {
-                setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'purchases'));
-
-            const unsubSales = onSnapshot(collection(db, 'sales'), (s) => {
-                setSales(s.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'sales'));
-
-            const unsubCash = onSnapshot(collection(db, 'cashFlow'), (s) => {
-                setCashFlow(s.docs.map(d => ({ id: d.id, ...d.data() } as CashMovement)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'cashFlow'));
-
-            const unsubAttendance = onSnapshot(collection(db, 'attendance'), (s) => {
-                setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() } as Attendance)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'attendance'));
-
-            const unsubAdvances = onSnapshot(collection(db, 'advances'), (s) => {
-                setAdvances(s.docs.map(d => ({ id: d.id, ...d.data() } as Advance)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'advances'));
-
-            const unsubSuppliers = onSnapshot(collection(db, 'suppliers'), (s) => {
-                setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'suppliers'));
-
-            const unsubCustomers = onSnapshot(collection(db, 'customers'), (s) => {
-                setCustomers(s.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'customers'));
-
-            const unsubShifts = onSnapshot(collection(db, 'shifts'), (s) => {
-                setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts'));
-
-            const unsubReprimands = onSnapshot(collection(db, 'reprimands'), (s) => {
-                setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands'));
-
-            const unsubDotations = onSnapshot(collection(db, 'dotations'), (s) => {
-                setDotations(s.docs.map(d => ({ id: d.id, ...d.data() } as Dotation)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'dotations'));
-
-            const unsubProcessings = onSnapshot(collection(db, 'processings'), (s) => {
-                setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'processings'));
-
-            const unsubAssets = onSnapshot(collection(db, 'assets'), (s) => {
-                setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
-            }, (e) => handleFirestoreError(e, OperationType.GET, 'assets'));
-
-            // Cleanup function for the inner listeners
-            return () => {
-                unsubEmployees();
-                unsubInventory();
-                unsubConfig();
-                unsubProducts();
-                unsubPurchases();
-                unsubSales();
-                unsubCash();
-                unsubAttendance();
-                unsubAdvances();
-                unsubSuppliers();
-                unsubCustomers();
-                unsubShifts();
-                unsubReprimands();
-                unsubDotations();
-                unsubProcessings();
-                unsubAssets();
-            };
+        const unsubConfig = onSnapshot(doc(db, 'config', 'main'), (d) => {
+            if (d.exists()) setConfig(d.data() as AppConfig);
+            setLoading(false);
+        }, (e) => {
+            handleFirestoreError(e, OperationType.GET, 'config/main');
+            setLoading(false);
         });
 
-        return () => unsubAuth();
+        const unsubProducts = onSnapshot(collection(db, 'products'), (s) => {
+            setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'products'));
+
+        const unsubPurchases = onSnapshot(collection(db, 'purchases'), (s) => {
+            setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'purchases'));
+
+        const unsubSales = onSnapshot(collection(db, 'sales'), (s) => {
+            setSales(s.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'sales'));
+
+        const unsubCash = onSnapshot(collection(db, 'cashFlow'), (s) => {
+            setCashFlow(s.docs.map(d => ({ id: d.id, ...d.data() } as CashMovement)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'cashFlow'));
+
+        const unsubAttendance = onSnapshot(collection(db, 'attendance'), (s) => {
+            setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() } as Attendance)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'attendance'));
+
+        const unsubAdvances = onSnapshot(collection(db, 'advances'), (s) => {
+            setAdvances(s.docs.map(d => ({ id: d.id, ...d.data() } as Advance)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'advances'));
+
+        const unsubSuppliers = onSnapshot(collection(db, 'suppliers'), (s) => {
+            setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'suppliers'));
+
+        const unsubCustomers = onSnapshot(collection(db, 'customers'), (s) => {
+            setCustomers(s.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'customers'));
+
+        const unsubShifts = onSnapshot(collection(db, 'shifts'), (s) => {
+            setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts'));
+
+        const unsubReprimands = onSnapshot(collection(db, 'reprimands'), (s) => {
+            setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands'));
+
+        const unsubDotations = onSnapshot(collection(db, 'dotations'), (s) => {
+            setDotations(s.docs.map(d => ({ id: d.id, ...d.data() } as Dotation)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'dotations'));
+
+        const unsubProcessings = onSnapshot(collection(db, 'processings'), (s) => {
+            setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'processings'));
+
+        const unsubAssets = onSnapshot(collection(db, 'assets'), (s) => {
+            setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'assets'));
+
+        return () => {
+            unsubEmployees();
+            unsubInventory();
+            unsubConfig();
+            unsubProducts();
+            unsubPurchases();
+            unsubSales();
+            unsubCash();
+            unsubAttendance();
+            unsubAdvances();
+            unsubSuppliers();
+            unsubCustomers();
+            unsubShifts();
+            unsubReprimands();
+            unsubDotations();
+            unsubProcessings();
+            unsubAssets();
+        };
     }, []);
 
     const addProduct = async (product: Omit<Product, 'id'>) => {

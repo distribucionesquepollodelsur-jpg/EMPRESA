@@ -88,7 +88,7 @@ service cloud.firestore {
              data.oldStock is number &&
              data.newStock is number &&
              data.reason is string && data.reason.size() <= 1000 &&
-             (request.auth.token.email == null || data.userName == request.auth.token.email || data.userName == 'Sistema');
+             (!isSignedIn() || data.userName == request.auth.token.email || data.userName == 'Sistema');
     }
 
     // --- Rules ---
@@ -131,7 +131,7 @@ service cloud.firestore {
     }
 
     match /inventoryLogs/{logId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidInventoryLog(incoming()) && isValidId(logId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -153,7 +153,7 @@ service cloud.firestore {
     }
 
     match /reprimands/{reprimandId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
@@ -178,7 +178,7 @@ service cloud.firestore {
     }
 
     match /dotations/{dotationId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
@@ -193,7 +193,7 @@ service cloud.firestore {
     }
 
     match /admins/{adminId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
   }
