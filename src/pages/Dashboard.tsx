@@ -106,25 +106,23 @@ const Dashboard: React.FC = () => {
                 <StatsCard title="Stock Crítico" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-orange-600" />
             </div>
 
-            {!window.matchMedia('(display-mode: standalone)').matches && deferredPrompt && (
-                <div className="p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20">
-                    <div className="flex items-center gap-6 text-center md:text-left">
-                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-md">
-                            <Download size={32} className="text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black uppercase tracking-tight">¡Descarga la App de Escritorio!</h3>
-                            <p className="text-orange-100 font-medium">Usa la aplicación de forma rápida y segura desde tu pantalla de inicio.</p>
-                        </div>
+            <div className="p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20">
+                <div className="flex items-center gap-6 text-center md:text-left">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-md">
+                        <Download size={32} className="text-white" />
                     </div>
-                    <button 
-                        onClick={handleInstall}
-                        className="px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95 bg-white text-orange-600 hover:bg-orange-50"
-                    >
-                        Descargar e Instalar
-                    </button>
+                    <div>
+                        <h3 className="text-xl font-black uppercase tracking-tight">¡Descargar APK Escritorio!</h3>
+                        <p className="text-orange-100 font-medium">Usa la aplicación de forma rápida y segura fuera del navegador.</p>
+                    </div>
                 </div>
-            )}
+                <button 
+                    onClick={handleInstall}
+                    className="px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95 bg-white text-orange-600 hover:bg-orange-50"
+                >
+                    Iniciar Descarga/Instalación
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">

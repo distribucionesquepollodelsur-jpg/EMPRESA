@@ -133,20 +133,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         );
                     })}
                     
-                    {deferredPrompt && (
-                        <div className="pt-4 mt-4 border-t border-slate-800/50">
-                            <button
-                                onClick={handleInstall}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-orange-500 hover:bg-slate-800 transition-all active:scale-[0.98] animate-pulse"
-                            >
-                                <Download size={18} />
-                                <div className="flex flex-col items-start leading-none">
-                                    <span>Instalar App</span>
-                                    <span className="text-[10px] font-normal opacity-60">Versión Escritorio</span>
-                                </div>
-                            </button>
-                        </div>
-                    )}
+                    <div className="pt-4 mt-4 border-t border-slate-800/50">
+                        <button
+                            onClick={handleInstall}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-orange-500 hover:bg-slate-800 transition-all active:scale-[0.98] animate-pulse"
+                        >
+                            <Download size={18} />
+                            <div className="flex flex-col items-start leading-none">
+                                <span>Descargar APK Escritorio</span>
+                                <span className="text-[10px] font-normal opacity-60">Versión para PC/Móvil</span>
+                            </div>
+                        </button>
+                    </div>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800">
