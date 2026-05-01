@@ -97,16 +97,6 @@ const Dashboard: React.FC = () => {
                     </h1>
                     <p className="text-slate-500 font-medium tracking-tight italic">Aquí tienes un resumen de la operación hoy.</p>
                 </div>
-                
-                {deferredPrompt && (
-                    <button
-                        onClick={handleInstall}
-                        className="flex items-center gap-3 px-6 py-4 bg-orange-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-700 transition-all shadow-xl shadow-orange-600/20 active:scale-95 animate-bounce-subtle"
-                    >
-                        <Download size={20} />
-                        Instalar App (PC/Escritorio)
-                    </button>
-                )}
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -115,6 +105,26 @@ const Dashboard: React.FC = () => {
                 <StatsCard title="Balance Neto" value={formatCurrency(balance)} icon={DollarSign} color="text-blue-600" />
                 <StatsCard title="Stock Crítico" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-orange-600" />
             </div>
+
+            {deferredPrompt && (
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-8 rounded-3xl text-white shadow-xl shadow-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                            <Download size={32} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black uppercase tracking-tight">¡Instala la versión de Escritorio!</h3>
+                            <p className="text-orange-100 font-medium">Usa la aplicación sin depender del navegador y con acceso directo.</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleInstall}
+                        className="px-8 py-4 bg-white text-orange-600 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-orange-50 transition-all shadow-lg active:scale-95"
+                    >
+                        Descargar Ahora
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">

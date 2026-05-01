@@ -111,18 +111,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-                    {deferredPrompt && (
-                            <button
-                                onClick={handleInstall}
-                                className="w-full flex flex-col items-start gap-1 px-4 py-3 rounded-lg text-sm font-black bg-slate-800 text-orange-500 border border-slate-700 mb-4 hover:bg-slate-700 transition-all shadow-lg shadow-orange-500/10"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Download size={18} />
-                                    Instalar App (Escritorio)
-                                </div>
-                                <span className="text-[9px] font-bold text-slate-500 lowercase opacity-70">Para usar sin navegador</span>
-                            </button>
-                    )}
                     {filteredMenuItems.map((item) => {
                         const Icon = item.icon;
                         return (
@@ -144,6 +132,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                             </button>
                         );
                     })}
+                    
+                    {deferredPrompt && (
+                        <div className="pt-4 mt-4 border-t border-slate-800/50">
+                            <button
+                                onClick={handleInstall}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-orange-500 hover:bg-slate-800 transition-all active:scale-[0.98]"
+                            >
+                                <Download size={18} />
+                                <div className="flex flex-col items-start leading-none">
+                                    <span>Descargar App</span>
+                                    <span className="text-[10px] font-normal opacity-60">Versión Escritorio</span>
+                                </div>
+                            </button>
+                        </div>
+                    )}
                 </nav>
 
                 <div className="p-4 border-t border-slate-800">
