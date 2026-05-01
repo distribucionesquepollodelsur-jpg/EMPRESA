@@ -94,6 +94,8 @@ interface DataContextType extends AppState {
     deleteCustomer: (id: string) => Promise<void>;
     addPurchasePayment: (purchaseId: string, amount: number, method: string) => Promise<void>;
     addSalePayment: (saleId: string, amount: number, method: string) => Promise<void>;
+    addCustomerDebtAbono: (customerId: string, amount: number) => Promise<void>;
+    addSupplierDebtAbono: (supplierId: string, amount: number) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
@@ -290,6 +292,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     type: 'exit',
                     amount: purchase.total,
                     reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                    category: 'purchase'
+                });
+            } else if (purchase.paidAmount > 0) {
+                await addCashMovement({
+                    type: 'exit',
+                    amount: purchase.paidAmount,
+                    reason: `Abono Inicial Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
                     category: 'purchase'
                 });
             }
@@ -853,6 +862,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
 
+    const addCustomerDebtAbono = async (customerId: string, amount: number) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        try {
+            await updateDoc(doc(db, 'customers', customerId), {
+                initialDebt: (customer.initialDebt || 0) - amount
+            });
+
+            await addCashMovement({
+                type: 'entry',
+                amount: amount,
+                reason: `Recaudo Saldo Antiguo: ${customer.name}`,
+                category: 'sale'
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
+    };
+
+    const addSupplierDebtAbono = async (supplierId: string, amount: number) => {
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier) return;
+
+        try {
+            await updateDoc(doc(db, 'suppliers', supplierId), {
+                initialDebt: (supplier.initialDebt || 0) - amount
+            });
+
+            await addCashMovement({
+                type: 'exit',
+                amount: amount,
+                reason: `Abono a Saldo Antiguo Proveedor: ${supplier.name}`,
+                category: 'purchase'
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${supplierId}`); }
+    };
+
     const updateConfig = async (updates: Partial<AppConfig>) => {
         try {
             await setDoc(doc(db, 'config', 'main'), { ...config, ...updates }, { merge: true });
@@ -908,6 +953,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateShift,
             addPurchasePayment,
             addSalePayment,
+            addCustomerDebtAbono,
+            addSupplierDebtAbono,
             updateConfig,
             resetData
         }}>

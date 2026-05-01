@@ -55,6 +55,18 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
     const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchases = todayPurchases.reduce((sum, p) => sum + p.total, 0);
     
+    const salesCashTotal = todaySales
+        .filter(s => s.paymentMethod === 'cash')
+        .reduce((sum, s) => sum + s.total, 0);
+
+    const receivedAbonos = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && !m.reason.includes('Venta #')) // Manual abonos
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    const totalCashFromSales = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale')
+        .reduce((sum, m) => sum + m.amount, 0);
+    
     const cashEntries = todayCashFlow
         .filter(m => m.type === 'entry')
         .reduce((sum, m) => sum + m.amount, 0);
@@ -64,6 +76,10 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         .reduce((sum, m) => sum + m.amount, 0);
 
     const netCash = cashEntries - cashExits;
+
+    const paidAbonosSuppliers = todayCashFlow
+        .filter(m => m.type === 'exit' && m.category === 'purchase' && !m.reason.includes('Compra #')) // Manual abonos or initial payment?
+        .reduce((sum, m) => sum + m.amount, 0);
 
     const StatCard = ({ icon: Icon, label, value, subValue, color }: any) => (
         <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 flex flex-col justify-between">
@@ -138,21 +154,43 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
 
                     {/* Resumen de Flujo */}
                     <div className="bg-slate-900 rounded-[32px] p-8 text-white">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resultado Neto del Día</p>
-                                <h3 className={cn("text-4xl font-black tracking-tighter", netCash >= 0 ? "text-green-400" : "text-red-400")}>
-                                    {formatCurrency(netCash)}
-                                </h3>
-                            </div>
-                            <div className="flex gap-8">
-                                <div className="text-center">
-                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tickets de Venta</p>
-                                    <p className="text-xl font-black">{todaySales.length}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div className="space-y-6">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Efectivo Total en Caja (Hoy)</p>
+                                    <h3 className={cn("text-4xl font-black tracking-tighter", netCash >= 0 ? "text-green-400" : "text-red-400")}>
+                                        {formatCurrency(netCash)}
+                                    </h3>
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Despresajes Hoy</p>
-                                    <p className="text-xl font-black">{todayProcessings.length}</p>
+                                
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Ventas de Contado</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(salesCashTotal)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Recaudos / Abonos</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(receivedAbonos)}</p>
+                                    </div>
+                                    <div className="col-span-2 pt-2 border-t border-slate-800/50">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Abonos a Compras (Salida)</p>
+                                        <p className="text-lg font-black text-orange-400">{formatCurrency(paidAbonosSuppliers)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700/50">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <TrendingUp size={12} /> Dinero de Ventas a Recibir
+                                </p>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm font-bold text-slate-300">
+                                        <span className="uppercase tracking-tight">Total Efectivo Ventas</span>
+                                        <span className="text-white">{formatCurrency(totalCashFromSales)}</span>
+                                    </div>
+                                    <p className="text-[9px] text-slate-500 italic">
+                                        * Este valor es la suma de todas las ventas marcadas como "Efectivo" y los abonos recibidos de ventas a crédito hoy.
+                                    </p>
                                 </div>
                             </div>
                         </div>

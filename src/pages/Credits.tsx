@@ -16,7 +16,20 @@ import {
 } from 'lucide-react';
 
 const Credits: React.FC = () => {
-    const { purchases, sales, addPurchasePayment, addSalePayment, updatePurchase, updateSale } = useData();
+    const { 
+        purchases, 
+        sales, 
+        addPurchasePayment, 
+        addSalePayment, 
+        updatePurchase, 
+        updateSale,
+        customers,
+        suppliers,
+        addCustomerDebtAbono,
+        addSupplierDebtAbono,
+        updateCustomer,
+        updateSupplier
+    } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
     const [activeTab, setActiveTab] = useState<'toPay' | 'toCollect'>('toPay');
@@ -27,26 +40,58 @@ const Credits: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('Efectivo');
 
-    const pendingPurchases = useMemo(() => 
-        purchases.filter(p => p.total > p.paidAmount)
-    , [purchases]);
+    const pendingPurchases = useMemo(() => {
+        const items = purchases.filter(p => p.total > p.paidAmount).map(p => ({ ...p, isInitial: false }));
+        const initials = suppliers
+            .filter(s => (s.initialDebt || 0) > 0)
+            .map(s => ({
+                id: `init-sup-${s.id}`,
+                supplierId: s.id,
+                supplierName: s.name,
+                total: s.initialDebt || 0,
+                paidAmount: 0,
+                date: s.initialDebtDate || new Date().toISOString(),
+                isInitial: true
+            }));
+        return [...items, ...initials];
+    }, [purchases, suppliers]);
 
-    const pendingSales = useMemo(() => 
-        sales.filter(s => s.total > (s.paidAmount || 0))
-    , [sales]);
+    const pendingSales = useMemo(() => {
+        const items = sales.filter(s => s.total > (s.paidAmount || 0)).map(s => ({ ...s, isInitial: false }));
+        const initials = customers
+            .filter(c => (c.initialDebt || 0) > 0)
+            .map(c => ({
+                id: `init-cus-${c.id}`,
+                customerId: c.id,
+                customerName: c.name,
+                total: c.initialDebt || 0,
+                paidAmount: 0,
+                date: c.initialDebtDate || new Date().toISOString(),
+                isInitial: true
+            }));
+        return [...items, ...initials];
+    }, [sales, customers]);
 
     const filteredItems = activeTab === 'toPay' 
         ? pendingPurchases.filter(p => p.supplierName.toLowerCase().includes(searchTerm.toLowerCase()))
         : pendingSales.filter(s => (s.customerName || 'Cliente').toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const handleAddPayment = (e: React.FormEvent) => {
+    const handleAddPayment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedItem || paymentAmount <= 0) return;
 
         if (activeTab === 'toPay') {
-            addPurchasePayment(selectedItem.id, paymentAmount, paymentMethod);
+            if (selectedItem.isInitial) {
+                await addSupplierDebtAbono(selectedItem.supplierId, paymentAmount);
+            } else {
+                addPurchasePayment(selectedItem.id, paymentAmount, paymentMethod);
+            }
         } else {
-            addSalePayment(selectedItem.id, paymentAmount, paymentMethod);
+            if (selectedItem.isInitial) {
+                await addCustomerDebtAbono(selectedItem.customerId, paymentAmount);
+            } else {
+                addSalePayment(selectedItem.id, paymentAmount, paymentMethod);
+            }
         }
 
         setSelectedItem(null);
@@ -58,9 +103,17 @@ const Credits: React.FC = () => {
         if (!selectedItem) return;
 
         if (activeTab === 'toPay') {
-            updatePurchase(selectedItem.id, { total: newTotal });
+            if (selectedItem.isInitial) {
+                updateSupplier(selectedItem.supplierId, { initialDebt: newTotal });
+            } else {
+                updatePurchase(selectedItem.id, { total: newTotal });
+            }
         } else {
-            updateSale(selectedItem.id, { total: newTotal });
+            if (selectedItem.isInitial) {
+                updateCustomer(selectedItem.customerId, { initialDebt: newTotal });
+            } else {
+                updateSale(selectedItem.id, { total: newTotal });
+            }
         }
 
         setSelectedItem(null);
@@ -124,7 +177,11 @@ const Credits: React.FC = () => {
                                         {activeTab === 'toPay' ? item.supplierName : (item.customerName || 'Venta de Mostrador')}
                                     </h3>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        Fecha: {formatDate(item.date)} • Ref: {item.id.slice(0, 8)}
+                                        {item.isInitial ? (
+                                            <span className="text-orange-600 font-black">SALDO INICIAL / ANTIGUO</span>
+                                        ) : (
+                                            `Fecha: ${formatDate(item.date)} • Ref: ${item.id.slice(0, 8)}`
+                                        )}
                                     </p>
                                 </div>
                             </div>
