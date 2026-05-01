@@ -364,6 +364,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const docRef = await addDoc(collection(db, 'sales'), clean(sale));
+            const saleId = docRef.id;
+
             await updateConfig({ 
                 saleCounter: nextNumber,
                 lastSequenceDate: today
@@ -377,8 +379,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
-            // Sync cash - only if it's cash or has paid amount
-            // Handle Balance Payment
+            // Sync cash / Balance
             if (sale.paymentMethod === 'balance' && sale.customerId) {
                 const customer = customers.find(c => c.id === sale.customerId);
                 if (customer) {
@@ -387,12 +388,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
-            if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
+            // If there are detailed payments, process them
+            if (sale.payments && sale.payments.length > 0) {
+                const updatedPayments = [];
+                for (const pmt of sale.payments) {
+                    // Transfer payments are recorded but don't always go into the same "Cash" bucket if we want to distinguish
+                    // For now, satisfy the "Entry" requirement
+                    const moveRef = await addDoc(collection(db, 'cashFlow'), clean({
+                        date: new Date().toISOString(),
+                        type: 'entry',
+                        amount: pmt.method === 'Balance' ? 0 : pmt.amount,
+                        reason: `Venta #${saleId.slice(0, 8)} (${pmt.method})${sale.customerName ? ` - ${sale.customerName}` : ''}`,
+                        category: 'sale'
+                    }));
+                    updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
+                }
+                // Update sale with movement IDs
+                await updateDoc(doc(db, 'sales', saleId), { payments: updatedPayments });
+            } else if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
                 const isBalancePayment = sale.paymentMethod === 'balance';
                 await addCashMovement({
                     type: 'entry',
                     amount: isBalancePayment ? 0 : sale.paidAmount,
-                    reason: `Venta #${docRef.id.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
+                    reason: `Venta #${saleId.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
                     category: 'sale'
                 });
             }

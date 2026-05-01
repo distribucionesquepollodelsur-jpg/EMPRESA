@@ -73,12 +73,17 @@ const Sales: React.FC = () => {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paidAmount, setPaidAmount] = useState<number>(0);
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
+    const [paidCash, setPaidCash] = useState<number>(0);
+    const [paidTransfer, setPaidTransfer] = useState<number>(0);
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'balance' | 'transfer' | 'mixed'>('cash');
 
     // Payment/Edit management
     const [paymentValue, setPaymentValue] = useState<number>(0);
+    const [paymentValueCash, setPaymentValueCash] = useState<number>(0);
+    const [paymentValueTransfer, setPaymentValueTransfer] = useState<number>(0);
+    const [paymentSubMethod, setPaymentSubMethod] = useState<'Efectivo' | 'Transferencia' | 'Mixto'>('Efectivo');
     const [editCustomerName, setEditCustomerName] = useState('');
-    const [editPaymentMethod, setEditPaymentMethod] = useState<'cash' | 'credit'>('cash');
+    const [editPaymentMethod, setEditPaymentMethod] = useState<'cash' | 'credit' | 'balance' | 'transfer' | 'mixed'>('cash');
 
     const addToCart = (product: Product, quantity: number, price: number) => {
         if (quantity <= 0) return;
@@ -259,6 +264,20 @@ const Sales: React.FC = () => {
             const sName = sellerName;
             const sNum = nextSaleNumber;
 
+            const payments = [];
+            const now = new Date().toISOString();
+            
+            if (paymentMethod === 'mixed') {
+                if (paidCash > 0) payments.push({ date: now, amount: paidCash, method: 'Efectivo' });
+                if (paidTransfer > 0) payments.push({ date: now, amount: paidTransfer, method: 'Transferencia' });
+            } else if (paymentMethod === 'transfer') {
+                payments.push({ date: now, amount: paidAmount, method: 'Transferencia' });
+            } else if (paymentMethod === 'cash') {
+                payments.push({ date: now, amount: paidAmount, method: 'Efectivo' });
+            } else if (paymentMethod === 'balance') {
+                payments.push({ date: now, amount: paidAmount, method: 'Balance' });
+            }
+
             await addSale({ 
                 items: saleItems, 
                 total: saleTotal, 
@@ -266,8 +285,9 @@ const Sales: React.FC = () => {
                 customerName: cName,
                 customerPhone: cPhone,
                 sellerName: sName,
-                paidAmount: paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' ? saleTotal : 0),
-                paymentMethod
+                paidAmount: paymentMethod === 'mixed' ? (paidCash + paidTransfer) : (paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' || paymentMethod === 'transfer' ? saleTotal : 0)),
+                paymentMethod,
+                payments: payments.length > 0 ? payments : undefined
             });
             
             setLastSaleData({
@@ -284,6 +304,8 @@ const Sales: React.FC = () => {
             setCustomerName('');
             setCustomerPhone('');
             setPaidAmount(0);
+            setPaidCash(0);
+            setPaidTransfer(0);
             setPaymentMethod('cash');
             setIsModalOpen(false);
             setShowSuccessBanner(true);
@@ -300,10 +322,20 @@ const Sales: React.FC = () => {
 
     const handleAddPayment = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedSale || paymentValue <= 0) return;
-        addSalePayment(selectedSale.id, paymentValue, 'Efectivo');
+        if (!selectedSale) return;
+        
+        if (paymentSubMethod === 'Mixto') {
+            if (paymentValueCash > 0) addSalePayment(selectedSale.id, paymentValueCash, 'Efectivo');
+            if (paymentValueTransfer > 0) addSalePayment(selectedSale.id, paymentValueTransfer, 'Transferencia');
+        } else {
+            if (paymentValue <= 0) return;
+            addSalePayment(selectedSale.id, paymentValue, paymentSubMethod);
+        }
+        
         setIsPaymentModalOpen(false);
         setPaymentValue(0);
+        setPaymentValueCash(0);
+        setPaymentValueTransfer(0);
         setSelectedSale(null);
     };
 
@@ -505,7 +537,10 @@ const Sales: React.FC = () => {
                                 <div className="space-y-4">
                                     <div className="flex gap-2">
                                         <button 
-                                            onClick={() => setPaymentMethod('cash')}
+                                            onClick={() => {
+                                                setPaymentMethod('cash');
+                                                setPaidAmount(total);
+                                            }}
                                             className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
                                                 paymentMethod === 'cash' 
                                                 ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20' 
@@ -513,14 +548,46 @@ const Sales: React.FC = () => {
                                             }`}
                                         >
                                             <DollarSign size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Contado</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Efectivo</span>
                                         </button>
                                         <button 
-                                            onClick={() => setPaymentMethod('credit')}
+                                            onClick={() => {
+                                                setPaymentMethod('transfer');
+                                                setPaidAmount(total);
+                                            }}
                                             className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
-                                                paymentMethod === 'credit' 
+                                                paymentMethod === 'transfer' 
                                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20' 
                                                 : 'bg-white border-slate-100 text-slate-400 hover:border-blue-500/30'
+                                            }`}
+                                        >
+                                            <ShoppingCart size={20} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Transf.</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setPaymentMethod('mixed');
+                                                setPaidCash(0);
+                                                setPaidTransfer(0);
+                                            }}
+                                            className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
+                                                paymentMethod === 'mixed' 
+                                                ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-600/20' 
+                                                : 'bg-white border-slate-100 text-slate-400 hover:border-purple-500/30'
+                                            }`}
+                                        >
+                                            <Plus size={20} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Mixto</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setPaymentMethod('credit');
+                                                setPaidAmount(0);
+                                            }}
+                                            className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
+                                                paymentMethod === 'credit' 
+                                                ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20' 
+                                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-500/30'
                                             }`}
                                         >
                                             <CreditCard size={20} />
@@ -602,25 +669,48 @@ const Sales: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            {paymentMethod === 'cash' ? 'Monto Recibido' : (paymentMethod === 'balance' ? 'Monto de Saldo a Usar' : 'Cuota Inicial')}
-                                        </label>
-                                        <input 
-                                            type="number" 
-                                            placeholder="Monto..."
-                                            value={paidAmount || ''}
-                                            onChange={e => {
-                                                const val = parseFloat(e.target.value);
-                                                if (paymentMethod === 'balance') {
-                                                    setPaidAmount(Math.min(val, customerBalance, total));
-                                                } else {
-                                                    setPaidAmount(val);
-                                                }
-                                            }}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-black text-sm text-green-600"
-                                        />
-                                    </div>
+                                    {paymentMethod === 'mixed' ? (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pago Efectivo</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={paidCash || ''}
+                                                    onChange={e => setPaidCash(parseFloat(e.target.value))}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none font-black text-sm text-slate-900"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pago Transferencia</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={paidTransfer || ''}
+                                                    onChange={e => setPaidTransfer(parseFloat(e.target.value))}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-sm text-slate-900"
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                                {paymentMethod === 'cash' ? 'Monto en Efectivo' : (paymentMethod === 'transfer' ? 'Monto Transferencia' : (paymentMethod === 'balance' ? 'Monto de Saldo a Usar' : 'Cuota Inicial'))}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                placeholder="Monto..."
+                                                value={paidAmount || ''}
+                                                onChange={e => {
+                                                    const val = parseFloat(e.target.value);
+                                                    if (paymentMethod === 'balance') {
+                                                        setPaidAmount(Math.min(val, customerBalance, total));
+                                                    } else {
+                                                        setPaidAmount(val);
+                                                    }
+                                                }}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-black text-sm text-green-600"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto space-y-3">
@@ -716,18 +806,70 @@ const Sales: React.FC = () => {
 
                         <form onSubmit={handleAddPayment} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
-                                <input 
-                                    type="number" 
-                                    required 
-                                    min="1"
-                                    max={selectedSale.total - selectedSale.paidAmount}
-                                    value={paymentValue || ''}
-                                    onChange={e => setPaymentValue(parseFloat(e.target.value))}
-                                    className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-black text-green-600 text-lg"
-                                    placeholder="0.00"
-                                />
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Método de Abono</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setPaymentSubMethod('Efectivo')}
+                                        className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${paymentSubMethod === 'Efectivo' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
+                                    >
+                                        Efectivo
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setPaymentSubMethod('Transferencia')}
+                                        className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${paymentSubMethod === 'Transferencia' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
+                                    >
+                                        Transf.
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setPaymentSubMethod('Mixto')}
+                                        className={`py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${paymentSubMethod === 'Mixto' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
+                                    >
+                                        Mixto
+                                    </button>
+                                </div>
                             </div>
+
+                            {paymentSubMethod === 'Mixto' ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Efectivo</label>
+                                        <input 
+                                            type="number" 
+                                            value={paymentValueCash || ''}
+                                            onChange={e => setPaymentValueCash(parseFloat(e.target.value))}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none font-bold text-slate-900"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Transferencia</label>
+                                        <input 
+                                            type="number" 
+                                            value={paymentValueTransfer || ''}
+                                            onChange={e => setPaymentValueTransfer(parseFloat(e.target.value))}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-900"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
+                                    <input 
+                                        type="number" 
+                                        required 
+                                        min="1"
+                                        max={selectedSale.total - selectedSale.paidAmount}
+                                        value={paymentValue || ''}
+                                        onChange={e => setPaymentValue(parseFloat(e.target.value))}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none transition-all font-black text-green-600 text-lg"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            )}
                             
                             <div className="flex flex-col gap-3">
                                 <button className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-600/20 active:scale-95 transition-all">
@@ -767,7 +909,7 @@ const Sales: React.FC = () => {
 
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Método de Pago</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-2">
                                     <button 
                                         type="button"
                                         onClick={() => setEditPaymentMethod('cash')}
@@ -775,13 +917,22 @@ const Sales: React.FC = () => {
                                             editPaymentMethod === 'cash' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-slate-100 text-slate-400'
                                         }`}
                                     >
-                                        Contado
+                                        Efectivo
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setEditPaymentMethod('transfer')}
+                                        className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${
+                                            editPaymentMethod === 'transfer' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-100 text-slate-400'
+                                        }`}
+                                    >
+                                        Transf.
                                     </button>
                                     <button 
                                         type="button"
                                         onClick={() => setEditPaymentMethod('credit')}
                                         className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all ${
-                                            editPaymentMethod === 'credit' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-100 text-slate-400'
+                                            editPaymentMethod === 'credit' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-100 text-slate-400'
                                         }`}
                                     >
                                         Crédito

@@ -52,7 +52,7 @@ export interface Sale {
     items: SaleItem[];
     total: number;
     paidAmount: number;
-    paymentMethod: 'cash' | 'credit' | 'balance';
+    paymentMethod: 'cash' | 'credit' | 'balance' | 'transfer' | 'mixed';
     payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
 }
 
