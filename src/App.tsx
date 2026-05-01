@@ -27,11 +27,14 @@ import Config from './pages/Config';
 
 import { useData } from './context/DataContext';
 import { Loader2 } from 'lucide-react';
+import InventoryBlocker from './components/InventoryBlocker';
 
 const MainContent: React.FC = () => {
   const { isAuthenticated, user, hasEnteredBase } = useAuth();
-  const { loading } = useData();
+  const { loading, isInventoryRequired } = useData();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'dashboard' : 'sales');
+
+  const showInventoryBlocker = isInventoryRequired() && isAuthenticated;
 
   if (loading) {
     return (
@@ -73,6 +76,7 @@ const MainContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {showInventoryBlocker && <InventoryBlocker onGoToInventory={() => setActiveTab('inventory')} />}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="flex-1 lg:ml-64 p-6 lg:p-10">
         <div className="max-w-7xl mx-auto">

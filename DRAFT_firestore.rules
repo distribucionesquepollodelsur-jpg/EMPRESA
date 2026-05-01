@@ -13,18 +13,18 @@ service cloud.firestore {
     }
 
     function isEmailVerified() {
-      return isSignedIn() && (request.auth.token.email_verified == true);
+      return isSignedIn() && request.auth.token.email_verified == true;
     }
 
     function isAdmin() {
-      return isSignedIn() && (
+      return isEmailVerified() && (
         request.auth.token.email == 'distribucionesquepollodelsur@gmail.com' ||
-        (isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
     function isOwner(email) {
-      return isSignedIn() && request.auth.token.email == email;
+      return isEmailVerified() && request.auth.token.email == email;
     }
 
     function isValidId(id) {
@@ -93,7 +93,7 @@ service cloud.firestore {
     // --- Rules ---
 
     match /products/{productId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow create: if isEmailVerified() && isValidProduct(incoming()) && isValidId(productId);
       allow update: if isEmailVerified() && isValidProduct(incoming()) && (
         isAdmin() || 
@@ -103,7 +103,7 @@ service cloud.firestore {
     }
 
     match /sales/{saleId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow create: if isEmailVerified() && isValidSale(incoming()) && isValidId(saleId);
       allow update: if isEmailVerified() && isValidSale(incoming()) && (
         isAdmin() ||
@@ -113,7 +113,7 @@ service cloud.firestore {
     }
 
     match /purchases/{purchaseId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow create: if isEmailVerified() && isValidPurchase(incoming()) && isValidId(purchaseId);
       allow update: if isEmailVerified() && isValidPurchase(incoming()) && (
         isAdmin() ||
@@ -123,14 +123,14 @@ service cloud.firestore {
     }
 
     match /cashFlow/{movementId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow create: if isEmailVerified() && isValidCashMovement(incoming()) && isValidId(movementId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     match /inventoryLogs/{logId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow create: if isEmailVerified() && isValidInventoryLog(incoming()) && isValidId(logId);
       allow update: if isAdmin();
       allow delete: if isAdmin();
@@ -142,57 +142,57 @@ service cloud.firestore {
     }
 
     match /attendance/{attendanceId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /advances/{advanceId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow write: if isAdmin();
     }
 
     match /reprimands/{reprimandId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow write: if isAdmin();
     }
 
     match /suppliers/{supplierId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /customers/{customerId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /shifts/{shiftId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /processings/{processingId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /dotations/{dotationId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /assets/{assetId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow write: if isAdmin();
     }
 
     match /config/{configId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isEmailVerified();
+      allow write: if isEmailVerified();
     }
 
     match /admins/{adminId} {
-      allow read: if isSignedIn();
+      allow read: if isEmailVerified();
       allow write: if isAdmin();
     }
   }

@@ -144,6 +144,18 @@ export interface AppConfig {
     saleCounter: number;
     purchaseCounter: number;
     lastSequenceDate: string;
+    lastInventoryCheckDate?: string;
+}
+
+export interface InventoryAdjustment {
+    id: string;
+    productId: string;
+    productName: string;
+    date: string;
+    oldStock: number;
+    newStock: number;
+    reason: string;
+    userName?: string;
 }
 
 export interface Supplier {
@@ -202,5 +214,6 @@ export interface AppState {
     dotations: Dotation[];
     assets: Asset[];
     processings: Processing[];
+    inventoryLogs: InventoryAdjustment[];
     config: AppConfig;
 }

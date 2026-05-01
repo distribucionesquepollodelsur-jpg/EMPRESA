@@ -139,7 +139,8 @@
         "nit": { "type": "string" },
         "category": { "type": "string" },
         "initialDebt": { "type": "number" },
-        "initialDebtDate": { "type": "string" }
+        "initialDebtDate": { "type": "string" },
+        "initialDebtPayments": { "type": "array" }
       },
       "required": ["name", "phone"]
     },
@@ -155,6 +156,7 @@
         "nit": { "type": "string" },
         "initialDebt": { "type": "number" },
         "initialDebtDate": { "type": "string" },
+        "initialDebtPayments": { "type": "array" },
         "balance": { "type": "number", "description": "What the company owes to the customer (Credit)" }
       },
       "required": ["name", "phone"]
@@ -208,7 +210,8 @@
         "manager": { "type": "string" },
         "saleCounter": { "type": "number" },
         "purchaseCounter": { "type": "number" },
-        "lastSequenceDate": { "type": "string" }
+        "lastSequenceDate": { "type": "string" },
+        "lastInventoryCheckDate": { "type": "string" }
       },
       "required": ["companyName", "nit"]
     },
@@ -225,6 +228,22 @@
         "details": { "type": "string" }
       },
       "required": ["employeeId", "date", "item", "quantity"]
+    },
+    "InventoryAdjustment": {
+      "title": "InventoryAdjustment",
+      "description": "Manual inventory stock adjustments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "oldStock": { "type": "number" },
+        "newStock": { "type": "number" },
+        "reason": { "type": "string" },
+        "userName": { "type": "string" }
+      },
+      "required": ["productId", "productName", "date", "oldStock", "newStock", "reason"]
     },
     "Asset": {
       "title": "Asset",
@@ -256,6 +275,7 @@
     "shifts": { "schema": "Shift", "description": "Work shifts" },
     "dotations": { "schema": "Dotation", "description": "Equipment allotments" },
     "assets": { "schema": "Asset", "description": "Company fixed assets" },
+    "inventoryLogs": { "schema": "InventoryAdjustment", "description": "Manual inventory adjustments" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
