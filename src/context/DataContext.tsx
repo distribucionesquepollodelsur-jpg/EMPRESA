@@ -68,6 +68,8 @@ interface DataContextType extends AppState {
     deleteSale: (id: string) => Promise<void>;
     deletePurchase: (id: string) => Promise<void>;
     addProcessing: (processing: Omit<Processing, 'id' | 'date'>) => Promise<void>;
+    updateProcessing: (id: string, processing: Partial<Processing>) => Promise<void>;
+    deleteProcessing: (id: string) => Promise<void>;
     addCashMovement: (movement: Omit<CashMovement, 'id' | 'date'>) => Promise<string | null>;
     updateCashMovement: (id: string, movement: Partial<CashMovement>) => Promise<void>;
     deleteCashMovement: (id: string) => Promise<void>;
@@ -436,14 +438,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 for (const input of processing.inputItems) {
                     const prod = products.find(p => p.id === input.productId);
                     if (prod) {
-                        await updateProduct(prod.id, { stock: prod.stock - input.quantity });
+                        await updateProduct(prod.id, { stock: prod.stock - (input.quantity || 0) });
                     }
                 }
             } else if (processing.inputProductId && processing.inputQuantity) {
                 // Legacy single input support
                 const whole = products.find(p => p.id === processing.inputProductId);
                 if (whole) {
-                    await updateProduct(whole.id, { stock: whole.stock - processing.inputQuantity });
+                    await updateProduct(whole.id, { stock: whole.stock - (processing.inputQuantity || 0) });
                 }
             }
 
@@ -451,10 +453,79 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             for (const d of processing.outputItems) {
                 const prod = products.find(p => p.id === d.productId);
                 if (prod) {
-                    await updateProduct(prod.id, { stock: prod.stock + d.quantity });
+                    await updateProduct(prod.id, { stock: prod.stock + (d.quantity || 0) });
                 }
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'processings'); }
+    };
+
+    const updateProcessing = async (id: string, updates: Partial<Processing>) => {
+        const existing = processings.find(p => p.id === id);
+        if (!existing) return;
+
+        try {
+            // 1. Revert previous stock changes
+            if (existing.inputItems && existing.inputItems.length > 0) {
+                for (const input of existing.inputItems) {
+                    const prod = products.find(p => p.id === input.productId);
+                    if (prod) await updateProduct(prod.id, { stock: prod.stock + (input.quantity || 0) });
+                }
+            } else if (existing.inputProductId && existing.inputQuantity) {
+                const whole = products.find(p => p.id === existing.inputProductId);
+                if (whole) await updateProduct(whole.id, { stock: whole.stock + (existing.inputQuantity || 0) });
+            }
+
+            for (const d of existing.outputItems) {
+                const prod = products.find(p => p.id === d.productId);
+                if (prod) await updateProduct(prod.id, { stock: prod.stock - (d.quantity || 0) });
+            }
+
+            // 2. Apply new processing data
+            const merging = { ...existing, ...updates };
+            
+            // Apply new stock changes
+            if (merging.inputItems && merging.inputItems.length > 0) {
+                for (const input of merging.inputItems) {
+                    const prod = products.find(p => p.id === input.productId);
+                    if (prod) await updateProduct(prod.id, { stock: prod.stock - (input.quantity || 0) });
+                }
+            } else if (merging.inputProductId && merging.inputQuantity) {
+                const whole = products.find(p => p.id === merging.inputProductId);
+                if (whole) await updateProduct(whole.id, { stock: whole.stock - (merging.inputQuantity || 0) });
+            }
+
+            for (const d of merging.outputItems) {
+                const prod = products.find(p => p.id === d.productId);
+                if (prod) await updateProduct(prod.id, { stock: prod.stock + (d.quantity || 0) });
+            }
+
+            await updateDoc(doc(db, 'processings', id), clean(updates));
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `processings/${id}`); }
+    };
+
+    const deleteProcessing = async (id: string) => {
+        const existing = processings.find(p => p.id === id);
+        if (!existing) return;
+
+        try {
+            // Revert stock changes
+            if (existing.inputItems && existing.inputItems.length > 0) {
+                for (const input of existing.inputItems) {
+                    const prod = products.find(p => p.id === input.productId);
+                    if (prod) await updateProduct(prod.id, { stock: prod.stock + (input.quantity || 0) });
+                }
+            } else if (existing.inputProductId && existing.inputQuantity) {
+                const whole = products.find(p => p.id === existing.inputProductId);
+                if (whole) await updateProduct(whole.id, { stock: whole.stock + (existing.inputQuantity || 0) });
+            }
+
+            for (const d of existing.outputItems) {
+                const prod = products.find(p => p.id === d.productId);
+                if (prod) await updateProduct(prod.id, { stock: prod.stock - (d.quantity || 0) });
+            }
+
+            await deleteDoc(doc(db, 'processings', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `processings/${id}`); }
     };
 
     const addCashMovement = async (movementData: Omit<CashMovement, 'id' | 'date'>) => {
@@ -809,6 +880,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteSale,
             deletePurchase,
             addProcessing,
+            updateProcessing,
+            deleteProcessing,
             addCashMovement,
             updateCashMovement,
             deleteCashMovement,

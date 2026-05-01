@@ -6,7 +6,7 @@ import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { format } from 'date-fns';
 
 const Despresaje: React.FC = () => {
-    const { products, purchases, processings, addProcessing } = useData();
+    const { products, purchases, processings, addProcessing, updateProcessing, deleteProcessing } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -16,6 +16,7 @@ const Despresaje: React.FC = () => {
     ].includes(user?.email || '');
     
     const [mode, setMode] = useState<'purchase' | 'manual'>('purchase');
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [purchaseId, setPurchaseId] = useState('');
     const [wholeChickenId, setWholeChickenId] = useState('');
     const [bulkQuantity, setBulkQuantity] = useState(0);
@@ -86,34 +87,67 @@ const Despresaje: React.FC = () => {
         const totalOut = derivations.reduce((sum, d) => sum + (d.quantity || 0), 0);
         
         try {
-            if (mode === 'purchase') {
-                if (!purchaseId || !wholeChickenId || bulkQuantity <= 0 || derivations.length === 0) return;
-                await addProcessing({
+            const data = mode === 'purchase' 
+                ? {
                     purchaseId,
                     inputProductId: wholeChickenId,
                     inputQuantity: bulkQuantity,
                     outputItems: derivations,
                     totalOutputWeight: totalOut
-                });
-            } else {
-                if (inputItems.length === 0 || derivations.length === 0) return;
-                await addProcessing({
+                }
+                : {
                     inputItems: inputItems,
                     outputItems: derivations,
                     totalOutputWeight: totalOut
-                });
+                };
+
+            if (editingId) {
+                await updateProcessing(editingId, data);
+                alert('Registro de despresaje actualizado exitosamente.');
+            } else {
+                await addProcessing(data);
+                alert('Proceso de despresaje completado exitosamente.');
             }
             
             // Reset
+            setEditingId(null);
             setPurchaseId('');
             setWholeChickenId('');
             setBulkQuantity(0);
             setInputItems([]);
             setDerivations([]);
-            alert('Proceso de despresaje completado exitosamente.');
         } catch (error) {
             console.error("Processing failed:", error);
             alert("Error al procesar el despresaje.");
+        }
+    };
+
+    const handleEdit = (p: any) => {
+        setEditingId(p.id);
+        setDerivations(p.outputItems || []);
+        
+        if (p.purchaseId) {
+            setMode('purchase');
+            setPurchaseId(p.purchaseId);
+            setWholeChickenId(p.inputProductId);
+            setBulkQuantity(p.inputQuantity);
+            setInputItems([]);
+        } else {
+            setMode('manual');
+            setInputItems(p.inputItems || []);
+            setPurchaseId('');
+            setWholeChickenId('');
+            setBulkQuantity(0);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('¿Estás seguro de eliminar este registro? Esto revertirá los cambios en el inventario.')) return;
+        try {
+            await deleteProcessing(id);
+        } catch (error) {
+            alert('Error al eliminar el registro.');
         }
     };
 
@@ -121,23 +155,46 @@ const Despresaje: React.FC = () => {
         <div className="max-w-6xl mx-auto space-y-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Módulo de Despresaje</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+                        {editingId ? 'Editando Despresaje' : 'Módulo de Despresaje'}
+                    </h1>
                     <p className="text-slate-500 font-medium tracking-tight italic">Transformación de productos y control de rendimiento.</p>
                 </div>
                 
-                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                    <button 
-                        onClick={() => setMode('purchase')}
-                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'purchase' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                        Por Factura
-                    </button>
-                    <button 
-                        onClick={() => setMode('manual')}
-                        className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'manual' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                        Multiproducto / Manual
-                    </button>
+                <div className="flex items-center gap-4">
+                    {editingId && (
+                        <button 
+                            onClick={() => {
+                                setEditingId(null);
+                                setPurchaseId('');
+                                setWholeChickenId('');
+                                setBulkQuantity(0);
+                                setInputItems([]);
+                                setDerivations([]);
+                            }}
+                            className="px-6 py-2 bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-300 transition-all"
+                        >
+                            Cancelar Edición
+                        </button>
+                    )}
+                    <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                        <button 
+                            onClick={() => setMode('purchase')}
+                            disabled={!!editingId}
+                            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'purchase' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 cursor-not-allowed opacity-50'}`}
+                            style={{ opacity: editingId ? 0.5 : 1 }}
+                        >
+                            Por Factura
+                        </button>
+                        <button 
+                            onClick={() => setMode('manual')}
+                            disabled={!!editingId}
+                            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'manual' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 cursor-not-allowed opacity-50'}`}
+                            style={{ opacity: editingId ? 0.5 : 1 }}
+                        >
+                            Multiproducto / Manual
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -433,6 +490,7 @@ const Despresaje: React.FC = () => {
                                     <th className="px-8 py-5">Bruto Usado</th>
                                     <th className="px-8 py-5">Rendimiento (Presas)</th>
                                     <th className="px-8 py-5">Merma / Pérdida</th>
+                                    {isAdmin && <th className="px-8 py-5 text-right whitespace-nowrap">Acciones</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 text-sm">
@@ -486,6 +544,24 @@ const Despresaje: React.FC = () => {
                                                     {merma.toFixed(2)} Kg
                                                 </span>
                                             </td>
+                                            {isAdmin && (
+                                                <td className="px-8 py-5 text-right whitespace-nowrap">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => handleEdit(p)}
+                                                            className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-all"
+                                                        >
+                                                            <RefreshCw size={14} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDelete(p.id)}
+                                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                        >
+                                                            <Scissors size={14} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     );
                                 })}
