@@ -183,7 +183,7 @@ const LaborContracts: React.FC = () => {
                 try {
                     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Si es un contrato, reglamento o acta de dotación, asegúrate de extraer el texto COMPLETO y exacto sin omitir cláusulas ni párrafos.";
+                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas. Solo devuelve el texto plano limpio.";
                     const result = await ai.models.generateContent({
                         model: "gemini-2.0-flash",
                         contents: [
@@ -192,8 +192,11 @@ const LaborContracts: React.FC = () => {
                         ]
                     });
                     
-                    const text = result.text;
+                    let text = result.text;
                     if (!text) throw new Error("No se pudo extraer el texto del documento.");
+
+                    // Clean any residual asterisks
+                    text = text.replace(/\*/g, '');
 
                     if (type === 'contract') setContractText(text);
                     if (type === 'regulations') setRegulationsText(text);
@@ -326,6 +329,7 @@ const LaborContracts: React.FC = () => {
             const prompt = `Como un asistente legal experto de Distribuciones Que Pollo del Sur, explica de forma muy sencilla y clara este contrato de trabajo para el trabajador ${selectedContract.employeeName}. 
             Resume los puntos clave: tipo de contrato (${selectedContract.type}), obligaciones principales, reglamento interno y dotación. 
             Habla directamente al trabajador con un tono amable y profesional. Máximo 200 palabras.
+            IMPORTANTE: NO USES ASTERISCOS (*) NI NINGÚN FORMATO MARKDOWN. SOLO TEXTO PLANO.
             
             TEXTO DEL CONTRATO:
             ${selectedContract.contractText}
@@ -341,8 +345,10 @@ const LaborContracts: React.FC = () => {
                 contents: [{ text: prompt }]
             });
             
-            const explanation = result.text;
+            let explanation = result.text;
             if (explanation) {
+                // Final safety cleanup of any Markdown bold markers
+                explanation = explanation.replace(/\*/g, '');
                 setAiExplanation(explanation);
             }
         } catch (error) {
