@@ -57,7 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         photo: firebaseUser.photoURL
                     });
                 } else if (email) {
-                    // Employee check
+                    // Employee check - if list is empty, we might still allow them as a generic employee
+                    // until data arrives.
                     const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
                     if (emp) {
                         setUser({
@@ -68,8 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             photo: emp.photo || firebaseUser.photoURL
                         });
                     } else {
-                        // Not registered employee but logged in? 
-                        // We might want to allow them but with limited access or just logout
+                        // Allow basic access if logged in with Google, even if not explicitly in list yet (will update when list loads)
                         setUser({
                             email: email,
                             name: firebaseUser.displayName || 'Usuario',

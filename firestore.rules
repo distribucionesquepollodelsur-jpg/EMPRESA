@@ -137,7 +137,7 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read: if isOwner(resource.data.email) || isAdmin();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
