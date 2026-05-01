@@ -55,12 +55,24 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
     const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchases = todayPurchases.reduce((sum, p) => sum + p.total, 0);
     
-    const salesCashTotal = todaySales
+    // Ventas de hoy pagadas en efectivo
+    const salesCashToday = todaySales
         .filter(s => s.paymentMethod === 'cash')
         .reduce((sum, s) => sum + s.total, 0);
 
-    const receivedAbonos = todayCashFlow
-        .filter(m => m.type === 'entry' && m.category === 'sale' && !m.reason.includes('Venta #')) // Manual abonos
+    // Abonos recibidos hoy para ventas a crédito de hoy o días anteriores
+    const saleAbonos = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Abono a Venta #'))
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    // Recaudos de saldos antiguos (saldos iniciales)
+    const oldBalanceCollections = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Recaudo Saldo Antiguo'))
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    // Otros ingresos de ventas (ajustes, etc)
+    const otherSaleEntries = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && !m.reason.includes('Venta #') && !m.reason.includes('Abono a Venta #') && !m.reason.includes('Recaudo Saldo Antiguo'))
         .reduce((sum, m) => sum + m.amount, 0);
 
     const totalCashFromSales = todayCashFlow
@@ -77,8 +89,12 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
 
     const netCash = cashEntries - cashExits;
 
-    const paidAbonosSuppliers = todayCashFlow
-        .filter(m => m.type === 'exit' && m.category === 'purchase' && !m.reason.includes('Compra #')) // Manual abonos or initial payment?
+    const oldBalanceSupplierAbonos = todayCashFlow
+        .filter(m => m.type === 'exit' && m.category === 'purchase' && m.reason.includes('Abono a Saldo Antiguo'))
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    const purchaseAbonos = todayCashFlow
+        .filter(m => m.type === 'exit' && m.category === 'purchase' && m.reason.includes('Abono a Compra #'))
         .reduce((sum, m) => sum + m.amount, 0);
 
     const StatCard = ({ icon: Icon, label, value, subValue, color }: any) => (
@@ -165,16 +181,24 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                                 
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
                                     <div>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Ventas de Contado</p>
-                                        <p className="text-lg font-black text-white">{formatCurrency(salesCashTotal)}</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Ventas Contado (Hoy)</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(salesCashToday)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Recaudos / Abonos</p>
-                                        <p className="text-lg font-black text-white">{formatCurrency(receivedAbonos)}</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Abonos a Créditos</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(saleAbonos)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Recaudos Saldos Antiguos</p>
+                                        <p className="text-lg font-black text-blue-400">{formatCurrency(oldBalanceCollections)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Otros Ingresos Vtas</p>
+                                        <p className="text-lg font-black text-white">{formatCurrency(otherSaleEntries)}</p>
                                     </div>
                                     <div className="col-span-2 pt-2 border-t border-slate-800/50">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Abonos a Compras (Salida)</p>
-                                        <p className="text-lg font-black text-orange-400">{formatCurrency(paidAbonosSuppliers)}</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Abonos a Proveedores (Salida)</p>
+                                        <p className="text-lg font-black text-orange-400">{formatCurrency(purchaseAbonos + oldBalanceSupplierAbonos)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -189,7 +213,7 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                                         <span className="text-white">{formatCurrency(totalCashFromSales)}</span>
                                     </div>
                                     <p className="text-[9px] text-slate-500 italic">
-                                        * Este valor es la suma de todas las ventas marcadas como "Efectivo" y los abonos recibidos de ventas a crédito hoy.
+                                        * Este valor es la suma de todas las ventas marcadas como "Efectivo", abonos a créditos y recaudos de saldos antiguos hoy.
                                     </p>
                                 </div>
                             </div>
