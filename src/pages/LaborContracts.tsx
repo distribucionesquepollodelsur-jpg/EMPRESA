@@ -10,6 +10,7 @@ import {
     User, 
     Shield, 
     Upload,
+    Building2,
     Calendar,
     Briefcase,
     ChevronRight,
@@ -32,6 +33,7 @@ import {
     updateDoc, 
     doc, 
     deleteDoc,
+    setDoc,
     serverTimestamp,
     orderBy
 } from 'firebase/firestore';
@@ -86,6 +88,8 @@ const LaborContracts: React.FC = () => {
     const [signerName, setSignerName] = useState('');
     const [signerDocumentId, setSignerDocumentId] = useState('');
     const [loading, setLoading] = useState(false);
+    const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+    const [isSavingLogo, setIsSavingLogo] = useState(false);
     
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     
@@ -115,8 +119,39 @@ const LaborContracts: React.FC = () => {
             setContracts(contractsData);
         });
 
-        return () => unsubscribe();
+        // Fetch company settings (logo)
+        const unsubSettings = onSnapshot(doc(db, 'settings', 'company_info'), (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                setCompanyLogo(docSnapshot.data().logo);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+            unsubSettings();
+        };
     }, []);
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsSavingLogo(true);
+        try {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64 = reader.result as string;
+                await setDoc(doc(db, 'settings', 'company_info'), { logo: base64 }, { merge: true });
+                setCompanyLogo(base64);
+                setIsSavingLogo(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("Error uploading logo:", error);
+            alert("Error al subir el logo.");
+            setIsSavingLogo(false);
+        }
+    };
 
     const handleCreateContract = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -458,12 +493,33 @@ const LaborContracts: React.FC = () => {
     return (
         <div className="space-y-8 pb-20">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                        Contratos Laborales
-                        <FileText className="text-orange-500" />
-                    </h1>
-                    <p className="text-slate-500 font-medium italic">Gestión digital de vinculaciones y firmas.</p>
+                <div className="flex items-center gap-6">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            Contratos Laborales
+                            <FileText className="text-orange-500" />
+                        </h1>
+                        <p className="text-slate-500 font-medium italic">Gestión digital de vinculaciones y firmas.</p>
+                    </div>
+
+                    {/* Logo Management */}
+                    <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center gap-3 shadow-sm">
+                        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center overflow-hidden border border-slate-100">
+                            {companyLogo ? (
+                                <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                            ) : (
+                                <Building2 className="text-slate-300" size={20} />
+                            )}
+                        </div>
+                        <div className="space-y-0.5">
+                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">Logo Empresa</p>
+                            <label className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold uppercase tracking-widest cursor-pointer hover:bg-slate-200 transition-all">
+                                <Plus size={10} />
+                                {companyLogo ? 'Cambiar' : 'Subir'}
+                                <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={isSavingLogo} />
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <button 
                     onClick={() => setIsAddModalOpen(true)}
@@ -644,8 +700,12 @@ const LaborContracts: React.FC = () => {
                         <div className="lg:w-2/3 bg-white p-6 lg:p-12 overflow-y-auto" ref={contractRef}>
                             <div className="max-w-prose mx-auto space-y-12">
                                 <div className="text-center space-y-4 pb-8 border-b-4 border-slate-900 flex flex-col items-center">
-                                    <div className="w-24 h-24 bg-orange-500 rounded-3xl flex items-center justify-center p-4">
-                                        <img src="/icon.svg" alt="Que Pollo del Sur Logo" className="w-full h-full invert brightness-0" />
+                                    <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center p-2 border-2 border-slate-100 overflow-hidden">
+                                        {companyLogo ? (
+                                            <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                                        ) : (
+                                            <img src="/icon.svg" alt="Logo" className="w-full h-full" />
+                                        )}
                                     </div>
                                     <div>
                                         <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Contrato de Trabajo</h2>
