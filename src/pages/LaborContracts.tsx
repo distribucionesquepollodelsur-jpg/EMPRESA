@@ -87,6 +87,8 @@ const LaborContracts: React.FC = () => {
     const [signerDocumentId, setSignerDocumentId] = useState('');
     const [loading, setLoading] = useState(false);
     
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    
     // AI Explanation state
     const [aiExplanation, setAiExplanation] = useState<string | null>(null);
     const [isExplaining, setIsExplaining] = useState(false);
@@ -182,21 +184,46 @@ const LaborContracts: React.FC = () => {
                 
                 try {
                     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
-                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas. Solo devuelve el texto plano limpio.";
-                    const result = await ai.models.generateContent({
-                        model: "gemini-2.0-flash",
-                        contents: [
-                            { text: prompt },
-                            { inlineData: { data: base64, mimeType: file.type } }
-                        ]
-                    });
+                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas o itálicas. Solo devuelve el texto plano limpio.";
                     
-                    let text = result.text;
+                    let result;
+                    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+                    let success = false;
+
+                    for (const modelName of models) {
+                        let retries = 3;
+                        let delay = 1000;
+                        
+                        while (retries > 0 && !success) {
+                            try {
+                                result = await ai.models.generateContent({
+                                    model: modelName,
+                                    contents: [
+                                        { text: prompt },
+                                        { inlineData: { data: base64, mimeType: file.type } }
+                                    ]
+                                });
+                                success = true;
+                            } catch (err: any) {
+                                const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
+                                if (retries > 1 && isQuotaError) {
+                                    await sleep(delay);
+                                    delay *= 2; // Exponential backoff
+                                    retries--;
+                                    continue;
+                                }
+                                if (modelName === models[models.length - 1]) throw err;
+                                break; // Try next model
+                            }
+                        }
+                        if (success) break;
+                    }
+                    
+                    let text = result?.text;
                     if (!text) throw new Error("No se pudo extraer el texto del documento.");
 
                     // Clean any residual asterisks
-                    text = text.replace(/\*/g, '');
+                    text = text.replace(/\*/g, '').replace(/__/g, '');
 
                     if (type === 'contract') setContractText(text);
                     if (type === 'regulations') setRegulationsText(text);
@@ -204,7 +231,7 @@ const LaborContracts: React.FC = () => {
                 } catch (apiError: any) {
                     console.error("Gemini API Error:", apiError);
                     if (apiError.message?.includes('429') || apiError.message?.includes('RESOURCE_EXHAUSTED')) {
-                        alert("La cuota del servicio de inteligencia artificial se ha agotado temporalmente. Por favor, intente de nuevo en unos minutos o ingrese el texto manualmente.");
+                        alert("El servicio de IA está saturado en este momento debido a alta demanda global de Google. Por favor, intente de nuevo en un minuto o ingrese el texto manualmente.");
                     } else {
                         alert("Error al procesar el documento con inteligencia artificial. Por favor, compruebe su conexión e intente de nuevo.");
                     }
@@ -340,20 +367,49 @@ const LaborContracts: React.FC = () => {
             DOTACIÓN:
             ${selectedContract.dotationText}`;
 
-            const result = await ai.models.generateContent({
-                model: "gemini-2.0-flash",
-                contents: [{ text: prompt }]
-            });
+            let result;
+            const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+            let success = false;
+
+            for (const modelName of models) {
+                let retries = 3;
+                let delay = 1000;
+                
+                while (retries > 0 && !success) {
+                    try {
+                        result = await ai.models.generateContent({
+                            model: modelName,
+                            contents: [{ text: prompt }]
+                        });
+                        success = true;
+                    } catch (err: any) {
+                        const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
+                        if (retries > 1 && isQuotaError) {
+                            await sleep(delay);
+                            delay *= 2; // Exponential backoff
+                            retries--;
+                            continue;
+                        }
+                        if (modelName === models[models.length - 1]) throw err;
+                        break; // Try next model
+                    }
+                }
+                if (success) break;
+            }
             
-            let explanation = result.text;
+            let explanation = result?.text;
             if (explanation) {
-                // Final safety cleanup of any Markdown bold markers
-                explanation = explanation.replace(/\*/g, '');
+                // Final safety cleanup of any Markdown markers
+                explanation = explanation.replace(/\*/g, '').replace(/__/g, '');
                 setAiExplanation(explanation);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error generating AI explanation:", error);
-            alert("No se pudo generar la explicación con IA en este momento.");
+            if (error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+                alert("El asistente de IA está muy ocupado en este momento. Por favor, intenta de nuevo en unos segundos.");
+            } else {
+                alert("No se pudo generar la explicación con IA en este momento.");
+            }
         } finally {
             setIsExplaining(false);
         }
