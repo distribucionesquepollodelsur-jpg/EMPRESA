@@ -14,7 +14,8 @@ import {
     Truck,
     BarChart3,
     History,
-    ShieldCheck
+    ShieldCheck,
+    Download
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +28,25 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     const { logout, user } = useAuth();
     const [isOpen, setIsOpen] = React.useState(false);
+    const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        const handler = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleInstall = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+        }
+    };
 
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: true },
@@ -44,7 +64,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         { id: 'config', label: 'Configuración', icon: Settings, adminOnly: true },
     ];
 
-    const filteredMenuItems = menuItems.filter(item => !item.adminOnly || user?.role === 'admin');
+    const filteredMenuItems = menuItems.filter(item => {
+        if (!item.adminOnly) return true;
+        if (user?.role === 'admin') return true;
+        
+        // Special case for Martha Quintero who can manage employees/attendance
+        if (item.id === 'employees' && user?.name.toLowerCase().includes('martha quintero')) {
+            return true;
+        }
+        
+        return false;
+    });
 
     return (
         <>
@@ -81,6 +111,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                    {deferredPrompt && (
+                        <button
+                            onClick={handleInstall}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-black bg-slate-800 text-orange-500 border border-slate-700 mb-4 animate-pulse shadow-lg shadow-orange-500/10"
+                        >
+                            <Download size={18} />
+                            Instalar Versión PC
+                        </button>
+                    )}
                     {filteredMenuItems.map((item) => {
                         const Icon = item.icon;
                         return (

@@ -38,6 +38,9 @@ const Employees: React.FC = () => {
         'alex@quepollo.com',
         'admin@quepollo.com'
     ].includes(user?.email || '');
+    
+    const canManageAttendance = isAdmin || user?.name.toLowerCase().includes('martha quintero');
+    
     const [activeView, setActiveView] = useState<'roster' | 'attendance' | 'dotation'>('roster');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -311,7 +314,7 @@ const Employees: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                {activeView === 'roster' && (
+                {activeView === 'roster' && isAdmin && (
                     <button 
                         onClick={() => setIsAddModalOpen(true)}
                         className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 active:scale-95"
@@ -349,12 +352,14 @@ const Employees: React.FC = () => {
                                             >
                                                 Ver Contraseña
                                             </button>
-                                            <button 
-                                                onClick={() => openEditModal(emp)}
-                                                className="text-[10px] font-black text-orange-500 uppercase tracking-widest text-left hover:underline flex items-center gap-1"
-                                            >
-                                                <Plus size={10} /> Editar
-                                            </button>
+                                            {isAdmin && (
+                                                <button 
+                                                    onClick={() => openEditModal(emp)}
+                                                    className="text-[10px] font-black text-orange-500 uppercase tracking-widest text-left hover:underline flex items-center gap-1"
+                                                >
+                                                    <Plus size={10} /> Editar
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -402,42 +407,50 @@ const Employees: React.FC = () => {
                         </div>
 
                         <div className="p-4 bg-white border-t border-slate-50 grid grid-cols-2 lg:grid-cols-3 gap-3">
-                            <button 
-                                onClick={() => {
-                                    markAttendance(emp.id, 'present');
-                                    alert(`Asistencia marcada para ${emp.name}`);
-                                }}
-                                className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <UserCheck size={16} /> Pasar Lista
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    setSelectedEmployee(emp);
-                                    setIsReprimandModalOpen(true);
-                                }}
-                                className="py-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-100 border border-red-100 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <ShieldAlert size={16} /> Amonestar
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    setSelectedEmployee(emp);
-                                    setIsAdvanceModalOpen(true);
-                                }}
-                                className="py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10"
-                            >
-                                <Plus size={16} /> Adelanto
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    setSelectedEmployee(emp);
-                                    setIsDotationModalOpen(true);
-                                }}
-                                className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
-                            >
-                                <Wrench size={16} /> Dotación
-                            </button>
+                            {canManageAttendance && (
+                                <button 
+                                    onClick={() => {
+                                        markAttendance(emp.id, 'present');
+                                        alert(`Asistencia marcada para ${emp.name}`);
+                                    }}
+                                    className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <UserCheck size={16} /> Pasar Lista
+                                </button>
+                            )}
+                            {isAdmin && (
+                                <>
+                                    <button 
+                                        onClick={() => {
+                                            setSelectedEmployee(emp);
+                                            setIsReprimandModalOpen(true);
+                                        }}
+                                        className="py-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-100 border border-red-100 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <ShieldAlert size={16} /> Amonestar
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setSelectedEmployee(emp);
+                                            setIsAdvanceModalOpen(true);
+                                        }}
+                                        className="py-3 bg-orange-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10"
+                                    >
+                                        <Plus size={16} /> Adelanto
+                                    </button>
+                                </>
+                            )}
+                            {isAdmin && (
+                                <button 
+                                    onClick={() => {
+                                        setSelectedEmployee(emp);
+                                        setIsDotationModalOpen(true);
+                                    }}
+                                    className="py-3 bg-slate-100 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                                >
+                                    <Wrench size={16} /> Dotación
+                                </button>
+                            )}
                         </div>
                         
                         {/* Pending reprimands display */}
@@ -518,39 +531,42 @@ const Employees: React.FC = () => {
                                             icon={<Clock size={14}/>} 
                                             time={shift?.clockIn} 
                                             onClick={() => handleShiftUpdate(emp.id, 'clockIn')}
+                                            disabled={!canManageAttendance && emp.id !== user?.employeeId}
                                         />
                                         <TimeButton 
                                             label="Desayuno" 
                                             icon={<Coffee size={14}/>} 
                                             time={shift?.breakfastStart} 
                                             onClick={() => handleShiftUpdate(emp.id, 'breakfastStart')}
+                                            disabled={!canManageAttendance && emp.id !== user?.employeeId}
                                         />
                                         <TimeButton 
                                             label="Fin Des." 
                                             icon={<CheckCircle2 size={14}/>} 
                                             time={shift?.breakfastEnd} 
                                             onClick={() => handleShiftUpdate(emp.id, 'breakfastEnd')}
-                                            disabled={!shift?.breakfastStart}
+                                            disabled={(!canManageAttendance && emp.id !== user?.employeeId) || !shift?.breakfastStart}
                                         />
                                         <TimeButton 
                                             label="Almuerzo" 
                                             icon={<Utensils size={14}/>} 
                                             time={shift?.lunchStart} 
                                             onClick={() => handleShiftUpdate(emp.id, 'lunchStart')}
+                                            disabled={!canManageAttendance && emp.id !== user?.employeeId}
                                         />
                                         <TimeButton 
                                             label="Fin Alm." 
                                             icon={<CheckCircle2 size={14}/>} 
                                             time={shift?.lunchEnd} 
                                             onClick={() => handleShiftUpdate(emp.id, 'lunchEnd')}
-                                            disabled={!shift?.lunchStart}
+                                            disabled={(!canManageAttendance && emp.id !== user?.employeeId) || !shift?.lunchStart}
                                         />
                                         <TimeButton 
                                             label="Salida" 
                                             icon={<LogOut size={14}/>} 
                                             time={shift?.clockOut} 
                                             onClick={() => handleShiftUpdate(emp.id, 'clockOut')}
-                                            disabled={!shift?.clockIn}
+                                            disabled={(!canManageAttendance && emp.id !== user?.employeeId) || !shift?.clockIn}
                                         />
                                     </div>
 
