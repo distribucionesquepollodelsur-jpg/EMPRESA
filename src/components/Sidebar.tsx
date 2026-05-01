@@ -40,7 +40,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     }, []);
 
     const handleInstall = async () => {
-        if (!deferredPrompt) return;
+        if (!deferredPrompt) {
+            alert("Para instalar la aplicación:\n\n1. Asegúrate de usar Chrome o Edge en tu PC/Celular.\n2. Haz clic en los tres puntos (Menú) del navegador.\n3. Selecciona 'Instalar Distribuciones Que Pollo...' o 'Guardar como App'.");
+            return;
+        }
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
@@ -140,15 +143,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                                 "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all active:scale-[0.98]",
                                 deferredPrompt 
                                     ? "text-orange-500 hover:bg-slate-800 animate-pulse" 
-                                    : "text-slate-500 opacity-50 cursor-not-allowed"
+                                    : "text-slate-400 hover:bg-slate-800"
                             )}
-                            title={!deferredPrompt ? "Usa Chrome o Edge para instalar como app" : ""}
                         >
                             <Download size={18} />
                             <div className="flex flex-col items-start leading-none">
                                 <span>Descargar App</span>
                                 <span className="text-[10px] font-normal opacity-60">
-                                    {deferredPrompt ? 'Disponible ahora' : 'Solo en Chrome/Edge'}
+                                    {deferredPrompt ? 'Instalar ahora' : 'Ver instrucciones'}
                                 </span>
                             </div>
                         </button>

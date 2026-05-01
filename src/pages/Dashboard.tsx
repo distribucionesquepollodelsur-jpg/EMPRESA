@@ -35,7 +35,10 @@ const Dashboard: React.FC = () => {
     }, []);
 
     const handleInstall = async () => {
-        if (!deferredPrompt) return;
+        if (!deferredPrompt) {
+            alert("Para instalar la aplicación:\n\n1. Asegúrate de usar Chrome o Edge en tu PC/Celular.\n2. Haz clic en los tres puntos (Menú) del navegador.\n3. Selecciona 'Instalar Distribuciones Que Pollo...' o 'Guardar como App'.");
+            return;
+        }
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
@@ -106,41 +109,25 @@ const Dashboard: React.FC = () => {
                 <StatsCard title="Stock Crítico" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-orange-600" />
             </div>
 
-            <div className={cn(
-                "p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all",
-                deferredPrompt 
-                    ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20" 
-                    : "bg-slate-800 border border-slate-700 opacity-80"
-            )}>
+            <div className="p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20">
                 <div className="flex items-center gap-6 text-center md:text-left">
-                    <div className={cn(
-                        "w-16 h-16 rounded-2xl flex items-center justify-center",
-                        deferredPrompt ? "bg-white/20 backdrop-blur-md" : "bg-slate-700"
-                    )}>
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-md">
                         <Download size={32} className="text-white" />
                     </div>
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tight">
-                            {deferredPrompt ? '¡Instala la versión de Escritorio!' : 'Versión Instalable (PWA)'}
+                            ¡Instala la versión de Escritorio!
                         </h3>
-                        <p className={cn("font-medium", deferredPrompt ? "text-orange-100" : "text-slate-400")}>
-                            {deferredPrompt 
-                                ? 'Usa la aplicación sin depender del navegador y con acceso directo.' 
-                                : 'Asegúrate de usar Chrome o Edge en tu PC para activar la descarga.'}
+                        <p className="font-medium text-orange-100">
+                            Usa la aplicación sin depender del navegador y con acceso directo desde tu PC.
                         </p>
                     </div>
                 </div>
                 <button 
                     onClick={handleInstall}
-                    disabled={!deferredPrompt}
-                    className={cn(
-                        "px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95",
-                        deferredPrompt 
-                            ? "bg-white text-orange-600 hover:bg-orange-50" 
-                            : "bg-slate-700 text-slate-500 cursor-not-allowed"
-                    )}
+                    className="px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95 bg-white text-orange-600 hover:bg-orange-50"
                 >
-                    {deferredPrompt ? 'Descargar Ahora' : 'No Disponible'}
+                    {deferredPrompt ? 'Descargar Ahora' : 'Cómo Instalar'}
                 </button>
             </div>
 
