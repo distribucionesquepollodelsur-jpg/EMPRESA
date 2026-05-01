@@ -387,7 +387,7 @@ const Sales: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {sales.slice().reverse().map(sale => {
+                            {[...sales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(sale => {
                                 const balance = sale.total - sale.paidAmount;
                                 const isPaid = balance <= 0;
 
