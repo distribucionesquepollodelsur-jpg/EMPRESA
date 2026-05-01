@@ -246,10 +246,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'products'); }
     };
 
-    const updateProduct = async (id: string, updates: Partial<Product>, adjustmentReason?: string) => {
+    const updateProduct = async (id: string, updates: Partial<Product>, adjustmentReason?: string, userName?: string) => {
         const product = products.find(p => p.id === id);
         if (!product) return;
-
+ 
         try {
             if (adjustmentReason && updates.stock !== undefined && updates.stock !== product.stock) {
                 await addDoc(collection(db, 'inventoryLogs'), {
@@ -259,7 +259,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     oldStock: product.stock,
                     newStock: updates.stock,
                     reason: adjustmentReason,
-                    userName: auth.currentUser?.email || 'Sistema'
+                    userName: userName || auth.currentUser?.email || 'Sistema'
                 });
             }
             await updateDoc(doc(db, 'products', id), updates);

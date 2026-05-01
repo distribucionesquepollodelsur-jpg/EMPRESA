@@ -88,7 +88,7 @@ service cloud.firestore {
              data.oldStock is number &&
              data.newStock is number &&
              data.reason is string && data.reason.size() <= 1000 &&
-             (!isSignedIn() || data.userName == request.auth.token.email || data.userName == 'Sistema');
+             (data.userName is string);
     }
 
     // --- Rules ---
@@ -96,9 +96,10 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create: if isSignedIn() && isValidProduct(incoming()) && isValidId(productId);
-      allow update: if isSignedIn() && isValidProduct(incoming()) && (
+      allow update: if isSignedIn() && (
         isAdmin() || 
-        (incoming().diff(existing()).affectedKeys().hasOnly(['stock']))
+        (incoming().diff(existing()).affectedKeys().hasOnly(['stock'])) ||
+        (existing().stock == incoming().stock && isValidProduct(incoming()))
       );
       allow delete: if isAdmin();
     }
@@ -189,6 +190,10 @@ service cloud.firestore {
 
     match /config/{configId} {
       allow read: if true;
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastInventoryCheckDate'])
+      );
       allow write: if isAdmin();
     }
 

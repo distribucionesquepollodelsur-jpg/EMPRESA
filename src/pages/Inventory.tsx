@@ -37,7 +37,7 @@ const Inventory: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingProduct) {
-            updateProduct(editingProduct.id, { name, unit, price, cost, stock }, adjustmentReason || 'Corrección manual de stock');
+            updateProduct(editingProduct.id, { name, unit, price, cost, stock }, adjustmentReason || 'Corrección manual de stock', user?.name);
         } else {
             addProduct({ name, unit, price, cost, stock: initialStock, initialStock });
         }
