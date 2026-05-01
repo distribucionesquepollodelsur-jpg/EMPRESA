@@ -29,7 +29,9 @@ const Credits: React.FC = () => {
         customers,
         suppliers,
         addCustomerDebtAbono,
+        deleteCustomerDebtAbono,
         addSupplierDebtAbono,
+        deleteSupplierDebtAbono,
         updateCustomer,
         updateSupplier
     } = useData();
@@ -51,10 +53,11 @@ const Credits: React.FC = () => {
                 id: `init-sup-${s.id}`,
                 supplierId: s.id,
                 supplierName: s.name,
-                total: s.initialDebt || 0,
-                paidAmount: 0,
+                total: (s.initialDebt || 0) + (s.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0),
+                paidAmount: s.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: s.initialDebtDate || new Date().toISOString(),
-                isInitial: true
+                isInitial: true,
+                payments: s.initialDebtPayments || []
             }));
         return [...items, ...initials];
     }, [purchases, suppliers]);
@@ -67,10 +70,11 @@ const Credits: React.FC = () => {
                 id: `init-cus-${c.id}`,
                 customerId: c.id,
                 customerName: c.name,
-                total: c.initialDebt || 0,
-                paidAmount: 0,
+                total: (c.initialDebt || 0) + (c.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0),
+                paidAmount: c.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: c.initialDebtDate || new Date().toISOString(),
-                isInitial: true
+                isInitial: true,
+                payments: c.initialDebtPayments || []
             }));
         return [...items, ...initials];
     }, [sales, customers]);
@@ -309,7 +313,7 @@ const Credits: React.FC = () => {
 
                         <form onSubmit={handleAddPayment} className="space-y-6">
                             {/* Historial de Abonos */}
-                            {!selectedItem.isInitial && selectedItem.payments && selectedItem.payments.length > 0 && (
+                            {selectedItem.payments && selectedItem.payments.length > 0 && (
                                 <div className="space-y-3 pt-4 border-t border-slate-100">
                                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <History size={12} /> Historial de Abonos
@@ -327,9 +331,17 @@ const Credits: React.FC = () => {
                                                         onClick={async () => {
                                                             if (window.confirm('¿Eliminar este abono? El dinero regresará o saldrá de caja según corresponda.')) {
                                                                 if (activeTab === 'toPay') {
-                                                                    await deletePurchasePayment(selectedItem.id, idx);
+                                                                    if (selectedItem.isInitial) {
+                                                                        await deleteSupplierDebtAbono(selectedItem.supplierId, idx);
+                                                                    } else {
+                                                                        await deletePurchasePayment(selectedItem.id, idx);
+                                                                    }
                                                                 } else {
-                                                                    await deleteSalePayment(selectedItem.id, idx);
+                                                                    if (selectedItem.isInitial) {
+                                                                        await deleteCustomerDebtAbono(selectedItem.customerId, idx);
+                                                                    } else {
+                                                                        await deleteSalePayment(selectedItem.id, idx);
+                                                                    }
                                                                 }
                                                                 setSelectedItem(null);
                                                             }

@@ -73,6 +73,7 @@ export interface Customer {
     nit?: string;
     initialDebt?: number;
     initialDebtDate?: string;
+    initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
     balance?: number;
 }
 
@@ -154,6 +155,7 @@ export interface Supplier {
     category?: string;
     initialDebt?: number;
     initialDebtDate?: string;
+    initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
 }
 
 export interface Shift {

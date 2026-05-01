@@ -97,7 +97,9 @@ interface DataContextType extends AppState {
     deletePurchasePayment: (purchaseId: string, paymentIndex: number) => Promise<void>;
     deleteSalePayment: (saleId: string, paymentIndex: number) => Promise<void>;
     addCustomerDebtAbono: (customerId: string, amount: number) => Promise<void>;
+    deleteCustomerDebtAbono: (customerId: string, paymentIndex: number) => Promise<void>;
     addSupplierDebtAbono: (supplierId: string, amount: number) => Promise<void>;
+    deleteSupplierDebtAbono: (supplierId: string, paymentIndex: number) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
@@ -915,15 +917,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!customer) return;
 
         try {
-            await updateDoc(doc(db, 'customers', customerId), {
-                initialDebt: (customer.initialDebt || 0) - amount
-            });
-
-            await addCashMovement({
+            const cashMovementId = await addCashMovement({
                 type: 'entry',
                 amount: amount,
                 reason: `Recaudo Saldo Antiguo: ${customer.name}`,
                 category: 'sale'
+            }) || undefined;
+
+            await updateDoc(doc(db, 'customers', customerId), {
+                initialDebt: (customer.initialDebt || 0) - amount,
+                initialDebtPayments: [...(customer.initialDebtPayments || []), { date: new Date().toISOString(), amount, method: 'Efectivo', cashMovementId }]
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
+    };
+
+    const deleteCustomerDebtAbono = async (customerId: string, paymentIndex: number) => {
+        const customer = customers.find(c => c.id === customerId);
+        if (!customer || !customer.initialDebtPayments || !customer.initialDebtPayments[paymentIndex]) return;
+
+        const payment = customer.initialDebtPayments[paymentIndex];
+
+        try {
+            if (payment.cashMovementId) {
+                await deleteCashMovement(payment.cashMovementId);
+            }
+
+            const updatedPayments = customer.initialDebtPayments.filter((_, i) => i !== paymentIndex);
+            await updateDoc(doc(db, 'customers', customerId), {
+                initialDebt: (customer.initialDebt || 0) + payment.amount,
+                initialDebtPayments: updatedPayments
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
@@ -933,15 +955,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!supplier) return;
 
         try {
-            await updateDoc(doc(db, 'suppliers', supplierId), {
-                initialDebt: (supplier.initialDebt || 0) - amount
-            });
-
-            await addCashMovement({
+            const cashMovementId = await addCashMovement({
                 type: 'exit',
                 amount: amount,
                 reason: `Abono a Saldo Antiguo Proveedor: ${supplier.name}`,
                 category: 'purchase'
+            }) || undefined;
+
+            await updateDoc(doc(db, 'suppliers', supplierId), {
+                initialDebt: (supplier.initialDebt || 0) - amount,
+                initialDebtPayments: [...(supplier.initialDebtPayments || []), { date: new Date().toISOString(), amount, method: 'Efectivo', cashMovementId }]
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${supplierId}`); }
+    };
+
+    const deleteSupplierDebtAbono = async (supplierId: string, paymentIndex: number) => {
+        const supplier = suppliers.find(s => s.id === supplierId);
+        if (!supplier || !supplier.initialDebtPayments || !supplier.initialDebtPayments[paymentIndex]) return;
+
+        const payment = supplier.initialDebtPayments[paymentIndex];
+
+        try {
+            if (payment.cashMovementId) {
+                await deleteCashMovement(payment.cashMovementId);
+            }
+
+            const updatedPayments = supplier.initialDebtPayments.filter((_, i) => i !== paymentIndex);
+            await updateDoc(doc(db, 'suppliers', supplierId), {
+                initialDebt: (supplier.initialDebt || 0) + payment.amount,
+                initialDebtPayments: updatedPayments
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${supplierId}`); }
     };
@@ -1004,7 +1046,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deletePurchasePayment,
             deleteSalePayment,
             addCustomerDebtAbono,
+            deleteCustomerDebtAbono,
             addSupplierDebtAbono,
+            deleteSupplierDebtAbono,
             updateConfig,
             resetData
         }}>
