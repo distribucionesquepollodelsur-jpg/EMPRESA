@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { format } from 'date-fns';
 import { Plus, HandCoins, Trash2, Search, Calendar, CreditCard, ChevronRight, X, History, DollarSign, User } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 
@@ -18,6 +19,7 @@ const Loans: React.FC = () => {
     const [borrowerName, setBorrowerName] = useState('');
     const [amount, setAmount] = useState<number>(0);
     const [term, setTerm] = useState('');
+    const [dueDate, setDueDate] = useState<string>('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -33,6 +35,7 @@ const Loans: React.FC = () => {
             borrowerName,
             amount,
             term,
+            dueDate,
             description,
             date: new Date(date).toISOString()
         });
@@ -41,6 +44,7 @@ const Loans: React.FC = () => {
         setBorrowerName('');
         setAmount(0);
         setTerm('');
+        setDueDate('');
         setDescription('');
     };
 
@@ -122,7 +126,7 @@ const Loans: React.FC = () => {
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-900 not-italic">{loan.borrowerName}</span>
-                                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{loan.description}</span>
+                                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{loan.description || 'Sin descripción'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -144,7 +148,14 @@ const Loans: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-8 py-5 text-right text-slate-900 font-black text-base tracking-tighter">
-                                            {formatCurrency(balance)}
+                                            <div className="flex flex-col items-end">
+                                                {formatCurrency(balance)}
+                                                {loan.dueDate && balance > 0 && (
+                                                    <span className="text-[9px] text-red-500 font-black uppercase tracking-tighter mt-1">
+                                                        Vence: {format(new Date(loan.dueDate + 'T12:00:00'), 'dd/MM/yyyy')}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-8 py-5 text-right">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -243,7 +254,16 @@ const Loans: React.FC = () => {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Límite</label>
+                                    <input 
+                                        type="date" 
+                                        value={dueDate}
+                                        onChange={e => setDueDate(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-xs"
+                                    />
+                                </div>
+                                <div className="space-y-1 col-span-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha del Préstamo</label>
                                     <input 
                                         type="date" 
                                         required

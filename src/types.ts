@@ -32,6 +32,7 @@ export interface Purchase {
     paymentMethod: 'cash' | 'transfer' | 'credit' | 'balance';
     paymentStatus?: 'paid' | 'pending' | 'partial';
     payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
+    notes?: string;
 }
 
 export interface SaleItem {
@@ -54,6 +55,7 @@ export interface Sale {
     paidAmount: number;
     paymentMethod: 'cash' | 'credit' | 'balance' | 'transfer' | 'mixed';
     payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
+    notes?: string;
 }
 
 export interface CashMovement {
@@ -73,6 +75,7 @@ export interface Customer {
     nit?: string;
     initialDebt?: number;
     initialDebtDate?: string;
+    initialDebtReason?: string;
     initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
     balance?: number;
 }
@@ -168,7 +171,21 @@ export interface Supplier {
     category?: string;
     initialDebt?: number;
     initialDebtDate?: string;
+    initialDebtReason?: string;
     initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
+}
+
+export interface Loan {
+    id: string;
+    borrowerName: string;
+    amount: number;
+    term: string;
+    description: string;
+    date: string;
+    dueDate?: string;
+    paidAmount: number;
+    payments: { date: string, amount: number, method: string }[];
+    status: 'pending' | 'paid';
 }
 
 export interface Shift {
@@ -216,5 +233,6 @@ export interface AppState {
     assets: Asset[];
     processings: Processing[];
     inventoryLogs: InventoryAdjustment[];
+    loans: Loan[];
     config: AppConfig;
 }

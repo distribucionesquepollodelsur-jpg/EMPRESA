@@ -63,6 +63,7 @@ const Credits: React.FC = () => {
                 paidAmount: s.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: s.initialDebtDate || new Date().toISOString(),
                 isInitial: true,
+                reason: s.initialDebtReason,
                 payments: s.initialDebtPayments || []
             }));
         return [...items, ...initials];
@@ -84,6 +85,7 @@ const Credits: React.FC = () => {
                 paidAmount: c.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: c.initialDebtDate || new Date().toISOString(),
                 isInitial: true,
+                reason: c.initialDebtReason,
                 payments: c.initialDebtPayments || []
             }));
         return [...items, ...initials];
@@ -211,7 +213,12 @@ const Credits: React.FC = () => {
                                     </h3>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                         {item.isInitial ? (
-                                            <span className="text-orange-600 font-black">SALDO INICIAL / ANTIGUO</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-orange-600 font-black">SALDO INICIAL / ANTIGUO</span>
+                                                {item.reason && (
+                                                    <span className="text-slate-500 normal-case mt-0.5 italic font-medium">Motivo: {item.reason}</span>
+                                                )}
+                                            </div>
                                         ) : (
                                             `Fecha: ${formatDate(item.date)} • Ref: ${item.id.slice(0, 8)}`
                                         )}

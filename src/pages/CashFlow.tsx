@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, FileText, ShieldAlert, HandCoins } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, FileText, CheckCircle2, HandCoins } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -349,10 +349,10 @@ const CashFlow: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex gap-4">
-                            <ShieldAlert className="text-amber-500 flex-shrink-0" size={24} />
-                            <p className="text-[10px] text-amber-800 font-black uppercase tracking-widest leading-relaxed">
-                                Control Horario: Movimientos después de las 7:00 PM se registrarán automáticamente al día siguiente a las 6:00 AM.
+                        <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 flex gap-4">
+                            <CheckCircle2 className="text-emerald-500 flex-shrink-0" size={24} />
+                            <p className="text-[10px] text-emerald-800 font-black uppercase tracking-widest leading-relaxed">
+                                Sistema Abierto: Operación 24/7 (12:00 AM - 11:59 PM). Los movimientos se registran en tiempo real.
                             </p>
                         </div>
 

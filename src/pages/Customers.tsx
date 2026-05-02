@@ -33,6 +33,7 @@ const Customers: React.FC = () => {
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
     const [initialDebt, setInitialDebt] = useState<number>(0);
+    const [initialDebtReason, setInitialDebtReason] = useState('');
 
     // Payment state
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -106,6 +107,7 @@ const Customers: React.FC = () => {
             phone,
             address,
             initialDebt: isAdmin ? initialDebt : (editingCustomer ? editingCustomer.initialDebt : initialDebt),
+            initialDebtReason: isAdmin ? initialDebtReason : (editingCustomer ? editingCustomer.initialDebtReason : initialDebtReason),
             initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString()
         };
 
@@ -171,12 +173,14 @@ const Customers: React.FC = () => {
             setPhone(customer.phone);
             setAddress(customer.address || '');
             setInitialDebt(customer.initialDebt || 0);
+            setInitialDebtReason(customer.initialDebtReason || '');
         } else {
             setEditingCustomer(null);
             setName('');
             setPhone('');
             setAddress('');
             setInitialDebt(0);
+            setInitialDebtReason('');
         }
         setIsModalOpen(true);
     };
@@ -188,6 +192,7 @@ const Customers: React.FC = () => {
         setPhone('');
         setAddress('');
         setInitialDebt(0);
+        setInitialDebtReason('');
     };
 
     const filteredCustomers = customers.filter(c => 
@@ -775,14 +780,26 @@ const Customers: React.FC = () => {
                                     <Wallet size={18} />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Saldo Inicial {editingCustomer ? '(Editar)' : '(Deuda Antigua)'}</span>
                                 </div>
-                                <div className="space-y-2">
-                                    <input 
-                                        type="number" 
-                                        value={initialDebt || ''}
-                                        onChange={e => setInitialDebt(parseFloat(e.target.value) || 0)}
-                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-black text-lg text-red-600"
-                                        placeholder="0.00"
-                                    />
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto de Deuda</label>
+                                        <input 
+                                            type="number" 
+                                            value={initialDebt || ''}
+                                            onChange={e => setInitialDebt(parseFloat(e.target.value) || 0)}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-black text-lg text-red-600"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">¿De qué es esta deuda? (Opcional)</label>
+                                        <textarea 
+                                            value={initialDebtReason}
+                                            onChange={e => setInitialDebtReason(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-sm h-20"
+                                            placeholder="Ej: Saldo de facturas mes pasado..."
+                                        />
+                                    </div>
                                     <p className="text-[8px] text-slate-400 font-bold uppercase">
                                         {editingCustomer ? 'Modifique este valor si desea corregir el saldo inicial registrado para este cliente.' : 'Se registrará como un saldo pendiente al crear el cliente.'}
                                     </p>

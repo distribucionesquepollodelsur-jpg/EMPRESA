@@ -120,6 +120,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{user?.role === 'admin' ? 'Administrador' : 'Empleado'}</span>
                         </div>
                     </div>
+
+                    <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sistema Abierto</span>
+                            <span className="text-[8px] font-bold text-emerald-400 opacity-80 uppercase tracking-tighter">12:00 AM - 11:59 PM</span>
+                        </div>
+                    </div>
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">

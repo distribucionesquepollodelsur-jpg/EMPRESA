@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -155,20 +155,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [processings, setProcessings] = useState<Processing[]>([]);
     const [inventoryLogs, setInventoryLogs] = useState<InventoryAdjustment[]>([]);
     const [expenses, setExpenses] = useState<any[]>([]);
-    const [loans, setLoans] = useState<any[]>([]);
+    const [loans, setLoans] = useState<Loan[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Start listeners immediately. Since rules are public-read, this works without Firebase Auth.
-        const unsubInventory = onSnapshot(collection(db, 'inventoryLogs'), (s) => {
-            setInventoryLogs(s.docs.map(d => ({ id: d.id, ...d.data() } as InventoryAdjustment)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'inventoryLogs'));
-
-        const unsubEmployees = onSnapshot(collection(db, 'employees'), (s) => {
-            setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'employees'));
-
+        // Essential public config
         const unsubConfig = onSnapshot(doc(db, 'config', 'main'), (d) => {
             if (d.exists()) setConfig(d.data() as AppConfig);
             setLoading(false);
@@ -177,85 +169,96 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
         });
 
-        const unsubProducts = onSnapshot(collection(db, 'products'), (s) => {
-            setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'products'));
+        // Protected listeners
+        let unsubscribes: (() => void)[] = [];
 
-        const unsubPurchases = onSnapshot(collection(db, 'purchases'), (s) => {
-            setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'purchases'));
+        const authUnsub = onAuthStateChanged(auth, (user) => {
+            // Clean up existing protected listeners if any
+            unsubscribes.forEach(unsub => unsub());
+            unsubscribes = [];
 
-        const unsubSales = onSnapshot(collection(db, 'sales'), (s) => {
-            setSales(s.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'sales'));
+            if (user) {
+                unsubscribes.push(onSnapshot(collection(db, 'inventoryLogs'), (s) => {
+                    setInventoryLogs(s.docs.map(d => ({ id: d.id, ...d.data() } as InventoryAdjustment)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'inventoryLogs')));
 
-        const unsubCash = onSnapshot(collection(db, 'cashFlow'), (s) => {
-            setCashFlow(s.docs.map(d => ({ id: d.id, ...d.data() } as CashMovement)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'cashFlow'));
+                unsubscribes.push(onSnapshot(collection(db, 'employees'), (s) => {
+                    setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'employees')));
 
-        const unsubAttendance = onSnapshot(collection(db, 'attendance'), (s) => {
-            setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() } as Attendance)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'attendance'));
+                unsubscribes.push(onSnapshot(collection(db, 'products'), (s) => {
+                    setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'products')));
 
-        const unsubAdvances = onSnapshot(collection(db, 'advances'), (s) => {
-            setAdvances(s.docs.map(d => ({ id: d.id, ...d.data() } as Advance)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'advances'));
+                unsubscribes.push(onSnapshot(collection(db, 'purchases'), (s) => {
+                    setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as Purchase)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'purchases')));
 
-        const unsubSuppliers = onSnapshot(collection(db, 'suppliers'), (s) => {
-            setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'suppliers'));
+                unsubscribes.push(onSnapshot(collection(db, 'sales'), (s) => {
+                    setSales(s.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'sales')));
 
-        const unsubCustomers = onSnapshot(collection(db, 'customers'), (s) => {
-            setCustomers(s.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'customers'));
+                unsubscribes.push(onSnapshot(collection(db, 'cashFlow'), (s) => {
+                    setCashFlow(s.docs.map(d => ({ id: d.id, ...d.data() } as CashMovement)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'cashFlow')));
 
-        const unsubShifts = onSnapshot(collection(db, 'shifts'), (s) => {
-            setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts'));
+                unsubscribes.push(onSnapshot(collection(db, 'attendance'), (s) => {
+                    setAttendance(s.docs.map(d => ({ id: d.id, ...d.data() } as Attendance)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'attendance')));
 
-        const unsubReprimands = onSnapshot(collection(db, 'reprimands'), (s) => {
-            setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands'));
+                unsubscribes.push(onSnapshot(collection(db, 'advances'), (s) => {
+                    setAdvances(s.docs.map(d => ({ id: d.id, ...d.data() } as Advance)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'advances')));
 
-        const unsubDotations = onSnapshot(collection(db, 'dotations'), (s) => {
-            setDotations(s.docs.map(d => ({ id: d.id, ...d.data() } as Dotation)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'dotations'));
+                unsubscribes.push(onSnapshot(collection(db, 'suppliers'), (s) => {
+                    setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'suppliers')));
 
-        const unsubProcessings = onSnapshot(collection(db, 'processings'), (s) => {
-            setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'processings'));
+                unsubscribes.push(onSnapshot(collection(db, 'customers'), (s) => {
+                    setCustomers(s.docs.map(d => ({ id: d.id, ...d.data() } as Customer)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'customers')));
 
-        const unsubAssets = onSnapshot(collection(db, 'assets'), (s) => {
-            setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'assets'));
+                unsubscribes.push(onSnapshot(collection(db, 'shifts'), (s) => {
+                    setShifts(s.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'shifts')));
 
-        const unsubExpenses = onSnapshot(collection(db, 'expenses'), (s) => {
-            setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'expenses'));
+                unsubscribes.push(onSnapshot(collection(db, 'reprimands'), (s) => {
+                    setReprimands(s.docs.map(d => ({ id: d.id, ...d.data() } as Reprimand)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'reprimands')));
 
-        const unsubLoans = onSnapshot(collection(db, 'loans'), (s) => {
-            setLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-        }, (e) => handleFirestoreError(e, OperationType.GET, 'loans'));
+                unsubscribes.push(onSnapshot(collection(db, 'dotations'), (s) => {
+                    setDotations(s.docs.map(d => ({ id: d.id, ...d.data() } as Dotation)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'dotations')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'processings'), (s) => {
+                    setProcessings(s.docs.map(d => ({ id: d.id, ...d.data() } as Processing)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'processings')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'assets'), (s) => {
+                    setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'assets')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'expenses'), (s) => {
+                    setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'expenses')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'loans'), (s) => {
+                    setLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'loans')));
+            } else {
+                // Clear state when no user
+                setEmployees([]);
+                setProducts([]);
+                setPurchases([]);
+                setSales([]);
+                setCashFlow([]);
+            }
+        });
 
         return () => {
-            unsubEmployees();
-            unsubInventory();
             unsubConfig();
-            unsubProducts();
-            unsubPurchases();
-            unsubSales();
-            unsubCash();
-            unsubAttendance();
-            unsubAdvances();
-            unsubSuppliers();
-            unsubCustomers();
-            unsubShifts();
-            unsubReprimands();
-            unsubDotations();
-            unsubProcessings();
-            unsubAssets();
-            unsubExpenses();
-            unsubLoans();
+            authUnsub();
+            unsubscribes.forEach(unsub => unsub());
         };
     }, []);
 
@@ -292,14 +295,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const getEffectiveCashDate = () => {
-        const now = new Date();
-        const end = setMinutes(setHours(now, 19), 0);
-
-        if (isAfter(now, end)) {
-            const nextDay = startOfDay(addDays(now, 1));
-            return setHours(nextDay, 6);
-        }
-        return now;
+        return new Date();
     };
 
     const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date' | 'purchaseNumber'>) => {
@@ -806,7 +802,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     total: supplierData.initialDebt,
                     paidAmount: 0,
                     paymentMethod: 'credit',
-                    payments: []
+                    payments: [],
+                    notes: supplierData.initialDebtReason || 'Saldo Inicial'
                 });
 
                 await updateConfig({ 
@@ -848,7 +845,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     paidAmount: 0,
                     paymentMethod: 'credit',
                     saleNumber: nextSaleNumber,
-                    payments: []
+                    payments: [],
+                    notes: customerData.initialDebtReason || 'Saldo Inicial'
                 });
                 
                 await updateConfig({ 
@@ -1110,11 +1108,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `expenses/${id}`); }
     };
 
-    const addLoan = async (loan: any) => {
+    const addLoan = async (loan: Omit<Loan, 'id' | 'paidAmount' | 'payments' | 'status'>) => {
         try {
             const loanWithId = { 
                 ...loan, 
                 date: loan.date || new Date().toISOString(),
+                dueDate: loan.dueDate || null,
                 paidAmount: 0,
                 payments: [],
                 status: 'pending'

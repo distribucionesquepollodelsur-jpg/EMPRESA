@@ -27,6 +27,7 @@ const Suppliers: React.FC = () => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [initialDebt, setInitialDebt] = useState<number>(0);
+    const [initialDebtReason, setInitialDebtReason] = useState('');
     const [initialDebtDate, setInitialDebtDate] = useState<string>(new Date().toISOString().split('T')[0]);
     
     // Payment form
@@ -48,14 +49,16 @@ const Suppliers: React.FC = () => {
                     name, 
                     phone,
                     initialDebt: isAdmin ? initialDebt : editingSupplier.initialDebt,
-                    initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate
+                    initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate,
+                    initialDebtReason: isAdmin ? initialDebtReason : editingSupplier.initialDebtReason
                 });
             } else {
                 await addSupplier({ 
                     name, 
                     phone, 
                     initialDebt: initialDebt > 0 ? initialDebt : undefined,
-                    initialDebtDate: initialDebt > 0 ? initialDebtDate : undefined
+                    initialDebtDate: initialDebt > 0 ? initialDebtDate : undefined,
+                    initialDebtReason: initialDebt > 0 ? initialDebtReason : undefined
                 });
             }
             resetForm();
@@ -110,6 +113,7 @@ const Suppliers: React.FC = () => {
         setName('');
         setPhone('');
         setInitialDebt(0);
+        setInitialDebtReason('');
         setInitialDebtDate(new Date().toISOString().split('T')[0]);
         setEditingSupplier(null);
         setIsModalOpen(false);
@@ -121,6 +125,7 @@ const Suppliers: React.FC = () => {
         setName(s.name);
         setPhone(s.phone);
         setInitialDebt(s.initialDebt || 0);
+        setInitialDebtReason(s.initialDebtReason || '');
         setInitialDebtDate(s.initialDebtDate ? s.initialDebtDate.split('T')[0] : new Date().toISOString().split('T')[0]);
         setIsModalOpen(true);
     };
@@ -600,6 +605,16 @@ const Suppliers: React.FC = () => {
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-xs"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">¿De qué es esta deuda? (Opcional)</label>
+                                <textarea 
+                                    value={initialDebtReason}
+                                    onChange={e => setInitialDebtReason(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm h-20"
+                                    placeholder="Ej: Facturas pendientes del mes..."
+                                />
                             </div>
                             
                             <div className="flex gap-3 pt-6">

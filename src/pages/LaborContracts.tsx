@@ -356,37 +356,57 @@ const LaborContracts: React.FC = () => {
                 });
             }));
 
+            // Force a specific width for rendering to ensure consistent PDF layout
+            const originalWidth = contractRef.current.style.width;
+            contractRef.current.style.width = '816px'; // Standard A4 width at 96 DPI
+
             const canvas = await html2canvas(contractRef.current, {
-                scale: 1.5, // Reduced scale for better performance and smaller pdf size
-                logging: false,
+                scale: 2, // High resolution for crisp text
                 useCORS: true,
                 allowTaint: false,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                windowWidth: 1200, // Large window width for full layout
+                onclone: (clonedDoc) => {
+                    // Optional: adjust cloned element for better PDF output
+                    const element = clonedDoc.querySelector('[ref="contractRef"]') as HTMLElement;
+                    if (element) {
+                        element.style.boxShadow = 'none';
+                        element.style.border = 'none';
+                    }
+                }
             });
-            const imgData = canvas.toDataURL('image/png', 0.8);
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            // Handle multi-page if needed
-            let heightLeft = pdfHeight;
-            let position = 0;
-            const pageHeight = pdf.internal.pageSize.getHeight();
 
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            // Restore width
+            contractRef.current.style.width = originalWidth;
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            // Calculate aspect ratio
+            const imgWidth = pageWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            // Add first page
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pageHeight;
 
+            // Add additional pages if needed
             while (heightLeft > 0) {
-                position = heightLeft - pdfHeight;
+                position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
                 heightLeft -= pageHeight;
             }
 
-            pdf.save(`Contrato_${contractToDownload.employeeName}.pdf`);
+            pdf.save(`CONTRATO_${contractToDownload.employeeName.toUpperCase().replace(/\s+/g, '_')}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
-            alert("Error al generar el PDF. Por favor, asegúrate de que el documento esté visible.");
+            alert("Error al generar el PDF de alta calidad. Intente nuevamente.");
         } finally {
             setLoading(false);
         }
@@ -737,22 +757,22 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div className="text-center space-y-12 pb-24 relative z-[1]">
-                                    <div className="flex justify-center mb-10">
-                                        <div className="w-32 h-32 p-3 bg-white flex items-center justify-center rounded-3xl border border-slate-100 shadow-sm ring-4 ring-slate-50/50">
+                                <div className="text-center space-y-8 pb-12 relative z-[1]">
+                                    <div className="flex justify-center mb-6">
+                                        <div className="w-20 h-20 p-2 bg-white flex items-center justify-center rounded-2xl border border-slate-100 shadow-sm ring-4 ring-slate-50/50">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <Building2 className="text-slate-200" size={56} />
+                                                <Building2 className="text-slate-200" size={32} />
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
-                                        <div className="flex items-center justify-center gap-4">
-                                            <div className="h-[1px] w-12 bg-slate-200"></div>
-                                            <p className="text-xs font-sans font-black text-slate-400 tracking-[0.3em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
-                                            <div className="h-[1px] w-12 bg-slate-200"></div>
+                                    <div className="space-y-3">
+                                        <h2 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="h-[1px] w-8 bg-slate-200"></div>
+                                            <p className="text-[10px] font-sans font-black text-slate-400 tracking-[0.2em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                            <div className="h-[1px] w-8 bg-slate-200"></div>
                                         </div>
                                     </div>
                                 </div>
