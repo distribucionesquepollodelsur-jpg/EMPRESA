@@ -12,6 +12,7 @@ import {
     deleteDoc, 
     doc, 
     setDoc,
+    writeBatch,
     query,
     where,
     getDocs,
@@ -310,22 +311,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             nextNumber = 1;
         }
 
-        const purchase = {
-            ...purchaseData,
-            purchaseNumber: nextNumber,
-            date: new Date().toISOString()
-        };
-
         try {
-            const docRef = await addDoc(collection(db, 'purchases'), clean(purchase));
-            await updateConfig({ 
-                purchaseCounter: nextNumber,
-                lastSequenceDate: today
-            });
+            const batch = writeBatch(db);
+            const purchaseRef = doc(collection(db, 'purchases'));
+            const purchaseId = purchaseRef.id;
+
+            const purchase = {
+                ...purchaseData,
+                purchaseNumber: nextNumber,
+                date: new Date().toISOString()
+            };
+
+            batch.set(purchaseRef, clean(purchase));
             
             // Sync inventory using atomic increment
             for (const item of purchase.items) {
-                await updateDoc(doc(db, 'products', item.productId), {
+                if (item.productId === 'saldo-inicial') continue;
+                batch.update(doc(db, 'products', item.productId), {
                     stock: increment(item.quantity)
                 });
             }
@@ -335,36 +337,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (purchase.payments && purchase.payments.length > 0) {
                 const updatedPayments = [];
                 for (const pmt of purchase.payments) {
-                    const moveRef = await addDoc(collection(db, 'cashFlow'), clean({
+                    const moveRef = doc(collection(db, 'cashFlow'));
+                    batch.set(moveRef, clean({
                         date: new Date().toISOString(),
                         type: 'exit',
                         amount: pmt.amount,
-                        reason: `Compra #${docRef.id.slice(0, 8)} (${pmt.method})${purchase.supplierName ? ` - ${purchase.supplierName}` : ''}`,
+                        reason: `Compra #${purchaseId.slice(0, 8)} (${pmt.method})${purchase.supplierName ? ` - ${purchase.supplierName}` : ''}`,
                         category: 'purchase'
                     }));
                     updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
                 }
-                await updateDoc(doc(db, 'purchases', docRef.id), { payments: updatedPayments });
+                batch.update(purchaseRef, { payments: updatedPayments });
                 processedCash = true;
             } 
             
             if (!processedCash) {
                 if (purchase.paymentMethod !== 'credit') {
-                    await addCashMovement({
+                    const moveRef = doc(collection(db, 'cashFlow'));
+                    batch.set(moveRef, clean({
+                        date: new Date().toISOString(),
                         type: 'exit',
                         amount: purchase.total,
-                        reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                        reason: `Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
                         category: 'purchase'
-                    });
+                    }));
                 } else if (purchase.paidAmount > 0) {
-                    await addCashMovement({
+                    const moveRef = doc(collection(db, 'cashFlow'));
+                    batch.set(moveRef, clean({
+                        date: new Date().toISOString(),
                         type: 'exit',
                         amount: purchase.paidAmount,
-                        reason: `Abono Inicial Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                        reason: `Abono Inicial Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
                         category: 'purchase'
-                    });
+                    }));
                 }
             }
+
+            // Update configuration
+            batch.update(doc(db, 'config', 'main'), { 
+                purchaseCounter: nextNumber,
+                lastSequenceDate: today
+            });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'purchases'); }
     };
 
@@ -391,45 +406,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             nextNumber = 1;
         }
 
-        const sale = {
-            ...saleData,
-            saleNumber: nextNumber,
-            date: new Date().toISOString()
-        };
-
         try {
-            const docRef = await addDoc(collection(db, 'sales'), clean(sale));
-            const saleId = docRef.id;
+            const batch = writeBatch(db);
+            const saleRef = doc(collection(db, 'sales'));
+            const saleId = saleRef.id;
 
-            await updateConfig({ 
-                saleCounter: nextNumber,
-                lastSequenceDate: today
-            });
-            
+            const sale = {
+                ...saleData,
+                saleNumber: nextNumber,
+                date: new Date().toISOString()
+            };
+
+            batch.set(saleRef, clean(sale));
+
             // Sync inventory using atomic increment
             for (const item of sale.items) {
-                await updateDoc(doc(db, 'products', item.productId), {
+                if (item.productId === 'saldo-inicial') continue;
+                batch.update(doc(db, 'products', item.productId), {
                     stock: increment(-item.quantity)
                 });
             }
 
             // Sync cash / Balance
             if (sale.paymentMethod === 'balance' && sale.customerId) {
-                const customer = customers.find(c => c.id === sale.customerId);
-                if (customer) {
-                    const balanceUsed = Math.min(customer.balance || 0, sale.paidAmount);
-                    await updateDoc(doc(db, 'customers', customer.id), {
-                        balance: increment(-balanceUsed)
-                    });
-                }
+                batch.update(doc(db, 'customers', sale.customerId), {
+                    balance: increment(-sale.paidAmount)
+                });
             }
 
-            // If there are detailed payments, process them
+            // Process payments
             let processedCash = false;
             if (sale.payments && sale.payments.length > 0) {
                 const updatedPayments = [];
                 for (const pmt of sale.payments) {
-                    const moveRef = await addDoc(collection(db, 'cashFlow'), clean({
+                    const moveRef = doc(collection(db, 'cashFlow'));
+                    batch.set(moveRef, clean({
                         date: new Date().toISOString(),
                         type: 'entry',
                         amount: pmt.method === 'Balance' ? 0 : pmt.amount,
@@ -438,22 +449,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }));
                     updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
                 }
-                // Update sale with movement IDs
-                await updateDoc(doc(db, 'sales', saleId), { payments: updatedPayments });
+                batch.update(saleRef, { payments: updatedPayments });
                 processedCash = true;
             } 
             
             if (!processedCash) {
                 if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
                     const isBalancePayment = sale.paymentMethod === 'balance';
-                    await addCashMovement({
+                    const moveRef = doc(collection(db, 'cashFlow'));
+                    batch.set(moveRef, clean({
+                        date: new Date().toISOString(),
                         type: 'entry',
                         amount: isBalancePayment ? 0 : sale.paidAmount,
                         reason: `Venta #${saleId.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
                         category: 'sale'
-                    });
+                    }));
                 }
             }
+
+            // Update configuration
+            batch.update(doc(db, 'config', 'main'), { 
+                saleCounter: nextNumber,
+                lastSequenceDate: today
+            });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'sales'); }
     };
 
@@ -474,17 +494,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sale) return;
 
         try {
+            const batch = writeBatch(db);
+
             // Restore inventory using atomic increment
             for (const item of sale.items) {
                 if (item.productId === 'saldo-inicial') continue;
-                await updateDoc(doc(db, 'products', item.productId), {
+                batch.update(doc(db, 'products', item.productId), {
                     stock: increment(item.quantity)
                 });
             }
 
             // Restore customer balance if applicable
             if (sale.paymentMethod === 'balance' && sale.customerId) {
-                await updateDoc(doc(db, 'customers', sale.customerId), {
+                batch.update(doc(db, 'customers', sale.customerId), {
                     balance: increment(sale.paidAmount)
                 });
             }
@@ -493,22 +515,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (sale.payments && sale.payments.length > 0) {
                 for (const pmt of sale.payments) {
                     if (pmt.cashMovementId) {
-                        try {
-                            await deleteCashMovement(pmt.cashMovementId);
-                        } catch (e) {
-                            console.warn("Could not delete payment movement", pmt.cashMovementId);
-                        }
+                        batch.delete(doc(db, 'cashFlow', pmt.cashMovementId));
                     }
                 }
             } else {
                 const saleSnippet = id.slice(0, 8);
                 const relatedMovements = cashFlow.filter(m => m.reason.includes(`Venta #${saleSnippet}`));
                 for (const m of relatedMovements) {
-                    await deleteCashMovement(m.id);
+                    batch.delete(doc(db, 'cashFlow', m.id));
                 }
             }
             
-            await deleteDoc(doc(db, 'sales', id));
+            batch.delete(doc(db, 'sales', id));
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `sales/${id}`); }
     };
 
@@ -517,10 +536,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!purchase) return;
 
         try {
+            const batch = writeBatch(db);
+
             // Restore inventory (subtract what was added) using atomic increment
             for (const item of purchase.items) {
                 if (item.productId === 'saldo-inicial') continue;
-                await updateDoc(doc(db, 'products', item.productId), {
+                batch.update(doc(db, 'products', item.productId), {
                     stock: increment(-item.quantity)
                 });
             }
@@ -529,54 +550,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (purchase.payments && purchase.payments.length > 0) {
                 for (const pmt of purchase.payments) {
                     if (pmt.cashMovementId) {
-                        try {
-                            await deleteCashMovement(pmt.cashMovementId);
-                        } catch (e) {
-                            console.warn("Could not delete payment movement", pmt.cashMovementId);
-                        }
+                        batch.delete(doc(db, 'cashFlow', pmt.cashMovementId));
                     }
                 }
             } else {
                 const purchaseSnippet = id.slice(0, 8);
                 const relatedMovements = cashFlow.filter(m => m.reason.includes(`Compra #${purchaseSnippet}`));
                 for (const m of relatedMovements) {
-                    await deleteCashMovement(m.id);
+                    batch.delete(doc(db, 'cashFlow', m.id));
                 }
             }
             
-            await deleteDoc(doc(db, 'purchases', id));
+            batch.delete(doc(db, 'purchases', id));
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `purchases/${id}`); }
     };
 
     const addProcessing = async (processingData: Omit<Processing, 'id' | 'date'>) => {
         try {
+            const batch = writeBatch(db);
+            const procRef = doc(collection(db, 'processings'));
+            
             const processing = {
                 ...processingData,
                 date: new Date().toISOString()
             };
 
-            await addDoc(collection(db, 'processings'), clean(processing));
+            batch.set(procRef, clean(processing));
 
             // Rest input from inventory using atomic increment
             if (processing.inputItems && processing.inputItems.length > 0) {
                 for (const input of processing.inputItems) {
-                    await updateDoc(doc(db, 'products', input.productId), {
+                    batch.update(doc(db, 'products', input.productId), {
                         stock: increment(-(input.quantity || 0))
                     });
                 }
             } else if (processing.inputProductId && processing.inputQuantity) {
-                // Legacy single input support
-                await updateDoc(doc(db, 'products', processing.inputProductId), {
+                batch.update(doc(db, 'products', processing.inputProductId), {
                     stock: increment(-(processing.inputQuantity || 0))
                 });
             }
 
             // Add derivations to inventory using atomic increment
             for (const d of processing.outputItems) {
-                await updateDoc(doc(db, 'products', d.productId), {
+                batch.update(doc(db, 'products', d.productId), {
                     stock: increment(d.quantity || 0)
                 });
             }
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'processings'); }
     };
 
@@ -635,26 +657,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!existing) return;
 
         try {
+            const batch = writeBatch(db);
+
             // Revert stock changes using atomic increment
             if (existing.inputItems && existing.inputItems.length > 0) {
                 for (const input of existing.inputItems) {
-                    await updateDoc(doc(db, 'products', input.productId), {
+                    batch.update(doc(db, 'products', input.productId), {
                         stock: increment(input.quantity || 0)
                     });
                 }
             } else if (existing.inputProductId && existing.inputQuantity) {
-                await updateDoc(doc(db, 'products', existing.inputProductId), {
+                batch.update(doc(db, 'products', existing.inputProductId), {
                     stock: increment(existing.inputQuantity || 0)
                 });
             }
 
             for (const d of existing.outputItems) {
-                await updateDoc(doc(db, 'products', d.productId), {
+                batch.update(doc(db, 'products', d.productId), {
                     stock: increment(-(d.quantity || 0))
                 });
             }
 
-            await deleteDoc(doc(db, 'processings', id));
+            batch.delete(doc(db, 'processings', id));
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `processings/${id}`); }
     };
 
@@ -831,7 +856,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
         try {
-            const docRef = await addDoc(collection(db, 'suppliers'), clean(supplierData));
+            const batch = writeBatch(db);
+            const supplierRef = doc(collection(db, 'suppliers'));
+            const supplierId = supplierRef.id;
+
+            batch.set(supplierRef, clean(supplierData));
             
             if (supplierData.initialDebt && supplierData.initialDebt > 0) {
                 const today = format(new Date(), 'yyyy-MM-dd');
@@ -841,11 +870,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     nextNumber = 1;
                 }
 
-                await addDoc(collection(db, 'purchases'), {
+                const purchaseRef = doc(collection(db, 'purchases'));
+                batch.set(purchaseRef, {
                     purchaseNumber: nextNumber,
                     date: supplierData.initialDebtDate || new Date().toISOString(),
                     supplierName: supplierData.name,
-                    supplierId: docRef.id,
+                    supplierId: supplierId,
                     supplierPhone: supplierData.phone,
                     items: [{ productId: 'saldo-inicial', quantity: 1, cost: supplierData.initialDebt, price: supplierData.initialDebt }],
                     total: supplierData.initialDebt,
@@ -855,11 +885,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     notes: supplierData.initialDebtReason || 'Saldo Inicial'
                 });
 
-                await updateConfig({ 
+                batch.update(doc(db, 'config', 'main'), { 
                     purchaseCounter: nextNumber,
                     lastSequenceDate: today
                 });
             }
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'suppliers'); }
     };
 
@@ -877,17 +908,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
         try {
-            const docRef = await addDoc(collection(db, 'customers'), clean(customerData));
+            const batch = writeBatch(db);
+            const customerRef = doc(collection(db, 'customers'));
+            const customerId = customerRef.id;
+
+            batch.set(customerRef, clean(customerData));
             
             if (customerData.initialDebt && customerData.initialDebt > 0) {
                 const today = format(new Date(), 'yyyy-MM-dd');
                 let nextSaleNumber = (config.saleCounter || 0) + 1;
                 if (config.lastSequenceDate !== today) nextSaleNumber = 1;
 
-                await addDoc(collection(db, 'sales'), {
+                const saleRef = doc(collection(db, 'sales'));
+                batch.set(saleRef, {
                     date: customerData.initialDebtDate || new Date().toISOString(),
                     customerName: customerData.name,
-                    customerId: docRef.id,
+                    customerId: customerId,
                     customerPhone: customerData.phone,
                     items: [{ productId: 'saldo-inicial', quantity: 1, cost: customerData.initialDebt, price: customerData.initialDebt }],
                     total: customerData.initialDebt,
@@ -898,11 +934,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     notes: customerData.initialDebtReason || 'Saldo Inicial'
                 });
                 
-                await updateConfig({ 
+                batch.update(doc(db, 'config', 'main'), { 
                     saleCounter: nextSaleNumber,
                     lastSequenceDate: today
                 });
             }
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'customers'); }
     };
 
@@ -945,17 +982,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!purchase) return;
         
         try {
-            const cashMovementId = await addCashMovement({
+            const batch = writeBatch(db);
+            const moveRef = doc(collection(db, 'cashFlow'));
+            const moveId = moveRef.id;
+
+            batch.set(moveRef, clean({
+                date: new Date().toISOString(),
                 type: 'exit',
                 amount: amount,
                 reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${method}) - ${purchase.supplierName}`,
                 category: 'purchase'
-            }) || undefined;
+            }));
 
-            await updateDoc(doc(db, 'purchases', purchaseId), {
+            batch.update(doc(db, 'purchases', purchaseId), {
                 paidAmount: purchase.paidAmount + amount,
-                payments: [...(purchase.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
+                payments: [...(purchase.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId: moveId }]
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${purchaseId}`); }
     };
 
@@ -966,15 +1010,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const payment = purchase.payments[paymentIndex];
 
         try {
+            const batch = writeBatch(db);
+
             if (payment.cashMovementId) {
-                await deleteCashMovement(payment.cashMovementId);
+                batch.delete(doc(db, 'cashFlow', payment.cashMovementId));
             }
 
             const updatedPayments = purchase.payments.filter((_, i) => i !== paymentIndex);
-            await updateDoc(doc(db, 'purchases', purchaseId), {
+            batch.update(doc(db, 'purchases', purchaseId), {
                 paidAmount: purchase.paidAmount - payment.amount,
                 payments: updatedPayments
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `purchases/${purchaseId}`); }
     };
 
@@ -983,25 +1031,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sale) return;
 
         try {
+            const batch = writeBatch(db);
+
             // Handle Balance adjustment if method is balance
             if (method === 'balance' && sale.customerId) {
-                const customer = customers.find(c => c.id === sale.customerId);
-                if (customer) {
-                    await updateCustomer(customer.id, { balance: (customer.balance || 0) - amount });
-                }
+                batch.update(doc(db, 'customers', sale.customerId), {
+                    balance: increment(-amount)
+                });
             }
 
-            const cashMovementId = await addCashMovement({
+            const moveRef = doc(collection(db, 'cashFlow'));
+            const moveId = moveRef.id;
+
+            batch.set(moveRef, clean({
+                date: new Date().toISOString(),
                 type: 'entry',
                 amount: method === 'balance' ? 0 : amount,
                 reason: `Abono a Venta #${saleId.slice(0, 8)} (${method})${method === 'balance' ? ' [SALDO]' : ''}${sale.customerName ? ` - ${sale.customerName}` : ''}`,
                 category: 'sale'
-            }) || undefined;
+            }));
 
-            await updateDoc(doc(db, 'sales', saleId), {
+            batch.update(doc(db, 'sales', saleId), {
                 paidAmount: sale.paidAmount + amount,
-                payments: [...(sale.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
+                payments: [...(sale.payments || []), { date: new Date().toISOString(), amount, method, cashMovementId: moveId }]
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
 
@@ -1012,23 +1067,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const payment = sale.payments[paymentIndex];
 
         try {
+            const batch = writeBatch(db);
+
             // Revert Balance adjustment if method was balance
             if (payment.method === 'balance' && sale.customerId) {
-                const customer = customers.find(c => c.id === sale.customerId);
-                if (customer) {
-                    await updateCustomer(customer.id, { balance: (customer.balance || 0) + payment.amount });
-                }
+                batch.update(doc(db, 'customers', sale.customerId), {
+                    balance: increment(payment.amount)
+                });
             }
 
             if (payment.cashMovementId) {
-                await deleteCashMovement(payment.cashMovementId);
+                batch.delete(doc(db, 'cashFlow', payment.cashMovementId));
             }
 
             const updatedPayments = sale.payments.filter((_, i) => i !== paymentIndex);
-            await updateDoc(doc(db, 'sales', saleId), {
+            batch.update(doc(db, 'sales', saleId), {
                 paidAmount: sale.paidAmount - payment.amount,
                 payments: updatedPayments
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
 
@@ -1037,18 +1095,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!customer) return;
 
         try {
-            const isTransfer = method.toLowerCase().includes('transfer');
-            const cashMovementId = await addCashMovement({
+            const batch = writeBatch(db);
+            const moveRef = doc(collection(db, 'cashFlow'));
+            const moveId = moveRef.id;
+
+            batch.set(moveRef, clean({
+                date: new Date().toISOString(),
                 type: 'entry',
                 amount: amount,
                 reason: `Recaudo Saldo Antiguo: ${customer.name} (${method})`,
                 category: 'sale'
-            }) || undefined;
+            }));
 
-            await updateDoc(doc(db, 'customers', customerId), {
+            batch.update(doc(db, 'customers', customerId), {
                 initialDebt: (customer.initialDebt || 0) - amount,
-                initialDebtPayments: [...(customer.initialDebtPayments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
+                initialDebtPayments: [...(customer.initialDebtPayments || []), { date: new Date().toISOString(), amount, method, cashMovementId: moveId }]
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
 
@@ -1059,15 +1123,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const payment = customer.initialDebtPayments[paymentIndex];
 
         try {
+            const batch = writeBatch(db);
             if (payment.cashMovementId) {
-                await deleteCashMovement(payment.cashMovementId);
+                batch.delete(doc(db, 'cashFlow', payment.cashMovementId));
             }
 
             const updatedPayments = customer.initialDebtPayments.filter((_, i) => i !== paymentIndex);
-            await updateDoc(doc(db, 'customers', customerId), {
+            batch.update(doc(db, 'customers', customerId), {
                 initialDebt: (customer.initialDebt || 0) + payment.amount,
                 initialDebtPayments: updatedPayments
             });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
 
