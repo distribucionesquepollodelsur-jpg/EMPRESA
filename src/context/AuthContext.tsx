@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface AuthUser {
     email: string;
@@ -116,13 +117,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (isAdminLogin || emp) {
             try {
-                // Intentamos firmar anónimamente para tener acceso a Firestore si es posible
-                if (!auth.currentUser) {
+                // Para admins hardcodeados o empleados con email, usamos Firebase Auth real para que las reglas de Firestore funcionen
+                if (cleanEmail) {
                     try {
-                        await signInAnonymously(auth);
+                        await signInWithPopup(auth, new GoogleAuthProvider()); // Intentamos Google si es el admin de Google
                     } catch (e) {
-                        console.warn("Auth Firebase no disponible. Acceso local habilitado.");
+                        // Si falla o no se usa Google, usamos email/pass si el usuario tiene una cuenta o la creamos
+                        // NOTA: Para simplificar y dado que el usuario usa su propio sistema, 
+                        // lo ideal es que el admin sea un usuario de Firebase real.
+                        // Como solución robusta para este entorno, seguimos con la sesión local pero 
+                        // vinculamos el UID anónimo a la colección de admins.
+                        const cred = await signInAnonymously(auth);
+                        if (isAdminLogin) {
+                            await setDoc(doc(db, 'admins', cred.user.uid), {
+                                email: cleanEmail,
+                                lastLogin: new Date().toISOString()
+                            }, { merge: true });
+                        }
                     }
+                } else if (!auth.currentUser) {
+                    await signInAnonymously(auth);
                 }
                 
                 const userData: AuthUser = isAdminLogin ? {

@@ -62,6 +62,8 @@ const Credits: React.FC = () => {
                 total: (s.initialDebt || 0) + (s.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0),
                 paidAmount: s.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: s.initialDebtDate || new Date().toISOString(),
+                initialDebtDate: s.initialDebtDate || new Date().toISOString(),
+                initialDebtDueDate: s.initialDebtDueDate,
                 isInitial: true,
                 reason: s.initialDebtReason,
                 payments: s.initialDebtPayments || []
@@ -84,6 +86,8 @@ const Credits: React.FC = () => {
                 total: (c.initialDebt || 0) + (c.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0),
                 paidAmount: c.initialDebtPayments?.reduce((sum, p) => sum + p.amount, 0) || 0,
                 date: c.initialDebtDate || new Date().toISOString(),
+                initialDebtDate: c.initialDebtDate || new Date().toISOString(),
+                initialDebtDueDate: c.initialDebtDueDate,
                 isInitial: true,
                 reason: c.initialDebtReason,
                 payments: c.initialDebtPayments || []
@@ -214,7 +218,11 @@ const Credits: React.FC = () => {
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                         {item.isInitial ? (
                                             <div className="flex flex-col">
-                                                <span className="text-orange-600 font-black">SALDO INICIAL / ANTIGUO</span>
+                                                <span className="text-orange-600 font-black text-xs">SALDO INICIAL / ANTIGUO</span>
+                                                <span className="text-slate-500 normal-case mt-0.5 font-bold">Registro: {formatDate(item.initialDebtDate)}</span>
+                                                {item.initialDebtDueDate && (
+                                                    <span className="text-red-500 normal-case mt-0.5 font-black uppercase tracking-tight">Vence: {formatDate(item.initialDebtDueDate)}</span>
+                                                )}
                                                 {item.reason && (
                                                     <span className="text-slate-500 normal-case mt-0.5 italic font-medium">Motivo: {item.reason}</span>
                                                 )}

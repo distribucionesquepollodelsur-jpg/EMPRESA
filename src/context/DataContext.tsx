@@ -16,7 +16,8 @@ import {
     where,
     getDocs,
     Timestamp,
-    getDoc
+    getDoc,
+    increment
 } from 'firebase/firestore';
 
 enum OperationType {
@@ -269,22 +270,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateProduct = async (id: string, updates: Partial<Product>, adjustmentReason?: string, userName?: string) => {
-        const product = products.find(p => p.id === id);
-        if (!product) return;
- 
         try {
-            if (adjustmentReason && updates.stock !== undefined && updates.stock !== product.stock) {
-                await addDoc(collection(db, 'inventoryLogs'), {
-                    productId: id,
-                    productName: product.name,
-                    date: new Date().toISOString(),
-                    oldStock: product.stock,
-                    newStock: updates.stock,
-                    reason: adjustmentReason,
-                    userName: userName || auth.currentUser?.email || 'Sistema'
-                });
+            const productRef = doc(db, 'products', id);
+            
+            if (adjustmentReason && updates.stock !== undefined) {
+                const productSnap = await getDoc(productRef);
+                const product = productSnap.data() as Product;
+                if (product && updates.stock !== product.stock) {
+                    await addDoc(collection(db, 'inventoryLogs'), {
+                        productId: id,
+                        productName: product.name,
+                        date: new Date().toISOString(),
+                        oldStock: product.stock,
+                        newStock: updates.stock,
+                        reason: adjustmentReason,
+                        userName: userName || auth.currentUser?.email || 'Sistema'
+                    });
+                }
             }
-            await updateDoc(doc(db, 'products', id), updates);
+            await updateDoc(productRef, updates);
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `products/${id}`); }
     };
 
@@ -319,15 +323,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 lastSequenceDate: today
             });
             
-            // Sync inventory
+            // Sync inventory using atomic increment
             for (const item of purchase.items) {
-                const p = products.find(prod => prod.id === item.productId);
-                if (p) {
-                    await updateProduct(p.id, { stock: p.stock + item.quantity });
-                }
+                await updateDoc(doc(db, 'products', item.productId), {
+                    stock: increment(item.quantity)
+                });
             }
 
             // Sync cash
+            let processedCash = false;
             if (purchase.payments && purchase.payments.length > 0) {
                 const updatedPayments = [];
                 for (const pmt of purchase.payments) {
@@ -341,37 +345,40 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
                 }
                 await updateDoc(doc(db, 'purchases', docRef.id), { payments: updatedPayments });
-            } else if (purchase.paymentMethod !== 'credit') {
-                await addCashMovement({
-                    type: 'exit',
-                    amount: purchase.total,
-                    reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
-                    category: 'purchase'
-                });
-            } else if (purchase.paidAmount > 0) {
-                await addCashMovement({
-                    type: 'exit',
-                    amount: purchase.paidAmount,
-                    reason: `Abono Inicial Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
-                    category: 'purchase'
-                });
+                processedCash = true;
+            } 
+            
+            if (!processedCash) {
+                if (purchase.paymentMethod !== 'credit') {
+                    await addCashMovement({
+                        type: 'exit',
+                        amount: purchase.total,
+                        reason: `Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                        category: 'purchase'
+                    });
+                } else if (purchase.paidAmount > 0) {
+                    await addCashMovement({
+                        type: 'exit',
+                        amount: purchase.paidAmount,
+                        reason: `Abono Inicial Compra #${docRef.id.slice(0, 8)} (${purchase.supplierName})`,
+                        category: 'purchase'
+                    });
+                }
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'purchases'); }
     };
 
     const updateCustomerBalance = async (customerId: string, amount: number, reason: string) => {
-        const customer = customers.find(c => c.id === customerId);
-        if (!customer) return;
-        
         try {
-            const currentBalance = customer.balance || 0;
-            await updateCustomer(customerId, { balance: currentBalance + amount });
+            await updateDoc(doc(db, 'customers', customerId), {
+                balance: increment(amount)
+            });
             
             // Log as a special movement
             await addCashMovement({
                 amount: 0,
                 type: 'entry',
-                reason: `Cargar Saldo (Trueque) - ${customer.name}: ${reason} (Nuevo Saldo: ${currentBalance + amount})`
+                reason: `Cargar Saldo (Trueque) - Cliente: ${reason}`
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
@@ -399,12 +406,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 lastSequenceDate: today
             });
             
-            // Sync inventory
+            // Sync inventory using atomic increment
             for (const item of sale.items) {
-                const p = products.find(prod => prod.id === item.productId);
-                if (p) {
-                    await updateProduct(p.id, { stock: p.stock - item.quantity });
-                }
+                await updateDoc(doc(db, 'products', item.productId), {
+                    stock: increment(-item.quantity)
+                });
             }
 
             // Sync cash / Balance
@@ -412,16 +418,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const customer = customers.find(c => c.id === sale.customerId);
                 if (customer) {
                     const balanceUsed = Math.min(customer.balance || 0, sale.paidAmount);
-                    await updateCustomer(customer.id, { balance: (customer.balance || 0) - balanceUsed });
+                    await updateDoc(doc(db, 'customers', customer.id), {
+                        balance: increment(-balanceUsed)
+                    });
                 }
             }
 
             // If there are detailed payments, process them
+            let processedCash = false;
             if (sale.payments && sale.payments.length > 0) {
                 const updatedPayments = [];
                 for (const pmt of sale.payments) {
-                    // Transfer payments are recorded but don't always go into the same "Cash" bucket if we want to distinguish
-                    // For now, satisfy the "Entry" requirement
                     const moveRef = await addDoc(collection(db, 'cashFlow'), clean({
                         date: new Date().toISOString(),
                         type: 'entry',
@@ -433,14 +440,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
                 // Update sale with movement IDs
                 await updateDoc(doc(db, 'sales', saleId), { payments: updatedPayments });
-            } else if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
-                const isBalancePayment = sale.paymentMethod === 'balance';
-                await addCashMovement({
-                    type: 'entry',
-                    amount: isBalancePayment ? 0 : sale.paidAmount,
-                    reason: `Venta #${saleId.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
-                    category: 'sale'
-                });
+                processedCash = true;
+            } 
+            
+            if (!processedCash) {
+                if (sale.paymentMethod === 'cash' || sale.paidAmount > 0) {
+                    const isBalancePayment = sale.paymentMethod === 'balance';
+                    await addCashMovement({
+                        type: 'entry',
+                        amount: isBalancePayment ? 0 : sale.paidAmount,
+                        reason: `Venta #${saleId.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
+                        category: 'sale'
+                    });
+                }
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'sales'); }
     };
@@ -462,19 +474,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sale) return;
 
         try {
-            // Restore inventory
+            // Restore inventory using atomic increment
             for (const item of sale.items) {
-                const p = products.find(prod => prod.id === item.productId);
-                if (p) {
-                    await updateProduct(p.id, { stock: p.stock + item.quantity });
-                }
+                if (item.productId === 'saldo-inicial') continue;
+                await updateDoc(doc(db, 'products', item.productId), {
+                    stock: increment(item.quantity)
+                });
             }
 
-            // Find and delete associated cash movement
-            const saleSnippet = id.slice(0, 8);
-            const movement = cashFlow.find(m => m.reason.includes(`Venta #${saleSnippet}`));
-            if (movement) {
-                await deleteCashMovement(movement.id);
+            // Restore customer balance if applicable
+            if (sale.paymentMethod === 'balance' && sale.customerId) {
+                await updateDoc(doc(db, 'customers', sale.customerId), {
+                    balance: increment(sale.paidAmount)
+                });
+            }
+
+            // Delete ALL associated cash movements
+            if (sale.payments && sale.payments.length > 0) {
+                for (const pmt of sale.payments) {
+                    if (pmt.cashMovementId) {
+                        try {
+                            await deleteCashMovement(pmt.cashMovementId);
+                        } catch (e) {
+                            console.warn("Could not delete payment movement", pmt.cashMovementId);
+                        }
+                    }
+                }
+            } else {
+                const saleSnippet = id.slice(0, 8);
+                const relatedMovements = cashFlow.filter(m => m.reason.includes(`Venta #${saleSnippet}`));
+                for (const m of relatedMovements) {
+                    await deleteCashMovement(m.id);
+                }
             }
             
             await deleteDoc(doc(db, 'sales', id));
@@ -486,19 +517,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!purchase) return;
 
         try {
-            // Restore inventory (subtract what was added)
+            // Restore inventory (subtract what was added) using atomic increment
             for (const item of purchase.items) {
-                const p = products.find(prod => prod.id === item.productId);
-                if (p) {
-                    await updateProduct(p.id, { stock: p.stock - item.quantity });
-                }
+                if (item.productId === 'saldo-inicial') continue;
+                await updateDoc(doc(db, 'products', item.productId), {
+                    stock: increment(-item.quantity)
+                });
             }
 
-            // Find and delete associated cash movement
-            const purchaseSnippet = id.slice(0, 8);
-            const movement = cashFlow.find(m => m.reason.includes(`Compra #${purchaseSnippet}`));
-            if (movement) {
-                await deleteCashMovement(movement.id);
+            // Delete ALL associated cash movements
+            if (purchase.payments && purchase.payments.length > 0) {
+                for (const pmt of purchase.payments) {
+                    if (pmt.cashMovementId) {
+                        try {
+                            await deleteCashMovement(pmt.cashMovementId);
+                        } catch (e) {
+                            console.warn("Could not delete payment movement", pmt.cashMovementId);
+                        }
+                    }
+                }
+            } else {
+                const purchaseSnippet = id.slice(0, 8);
+                const relatedMovements = cashFlow.filter(m => m.reason.includes(`Compra #${purchaseSnippet}`));
+                for (const m of relatedMovements) {
+                    await deleteCashMovement(m.id);
+                }
             }
             
             await deleteDoc(doc(db, 'purchases', id));
@@ -514,28 +557,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             await addDoc(collection(db, 'processings'), clean(processing));
 
-            // Rest input from inventory
+            // Rest input from inventory using atomic increment
             if (processing.inputItems && processing.inputItems.length > 0) {
                 for (const input of processing.inputItems) {
-                    const prod = products.find(p => p.id === input.productId);
-                    if (prod) {
-                        await updateProduct(prod.id, { stock: prod.stock - (input.quantity || 0) });
-                    }
+                    await updateDoc(doc(db, 'products', input.productId), {
+                        stock: increment(-(input.quantity || 0))
+                    });
                 }
             } else if (processing.inputProductId && processing.inputQuantity) {
                 // Legacy single input support
-                const whole = products.find(p => p.id === processing.inputProductId);
-                if (whole) {
-                    await updateProduct(whole.id, { stock: whole.stock - (processing.inputQuantity || 0) });
-                }
+                await updateDoc(doc(db, 'products', processing.inputProductId), {
+                    stock: increment(-(processing.inputQuantity || 0))
+                });
             }
 
-            // Add derivations to inventory
+            // Add derivations to inventory using atomic increment
             for (const d of processing.outputItems) {
-                const prod = products.find(p => p.id === d.productId);
-                if (prod) {
-                    await updateProduct(prod.id, { stock: prod.stock + (d.quantity || 0) });
-                }
+                await updateDoc(doc(db, 'products', d.productId), {
+                    stock: increment(d.quantity || 0)
+                });
             }
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'processings'); }
     };
@@ -548,17 +588,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // 1. Revert previous stock changes
             if (existing.inputItems && existing.inputItems.length > 0) {
                 for (const input of existing.inputItems) {
-                    const prod = products.find(p => p.id === input.productId);
-                    if (prod) await updateProduct(prod.id, { stock: prod.stock + (input.quantity || 0) });
+                    await updateDoc(doc(db, 'products', input.productId), {
+                        stock: increment(input.quantity || 0)
+                    });
                 }
             } else if (existing.inputProductId && existing.inputQuantity) {
-                const whole = products.find(p => p.id === existing.inputProductId);
-                if (whole) await updateProduct(whole.id, { stock: whole.stock + (existing.inputQuantity || 0) });
+                await updateDoc(doc(db, 'products', existing.inputProductId), {
+                    stock: increment(existing.inputQuantity || 0)
+                });
             }
 
             for (const d of existing.outputItems) {
-                const prod = products.find(p => p.id === d.productId);
-                if (prod) await updateProduct(prod.id, { stock: prod.stock - (d.quantity || 0) });
+                await updateDoc(doc(db, 'products', d.productId), {
+                    stock: increment(-(d.quantity || 0))
+                });
             }
 
             // 2. Apply new processing data
@@ -567,17 +610,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Apply new stock changes
             if (merging.inputItems && merging.inputItems.length > 0) {
                 for (const input of merging.inputItems) {
-                    const prod = products.find(p => p.id === input.productId);
-                    if (prod) await updateProduct(prod.id, { stock: prod.stock - (input.quantity || 0) });
+                    await updateDoc(doc(db, 'products', input.productId), {
+                        stock: increment(-(input.quantity || 0))
+                    });
                 }
             } else if (merging.inputProductId && merging.inputQuantity) {
-                const whole = products.find(p => p.id === merging.inputProductId);
-                if (whole) await updateProduct(whole.id, { stock: whole.stock - (merging.inputQuantity || 0) });
+                await updateDoc(doc(db, 'products', merging.inputProductId), {
+                    stock: increment(-(merging.inputQuantity || 0))
+                });
             }
 
             for (const d of merging.outputItems) {
-                const prod = products.find(p => p.id === d.productId);
-                if (prod) await updateProduct(prod.id, { stock: prod.stock + (d.quantity || 0) });
+                await updateDoc(doc(db, 'products', d.productId), {
+                    stock: increment(d.quantity || 0)
+                });
             }
 
             await updateDoc(doc(db, 'processings', id), clean(updates));
@@ -589,20 +635,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!existing) return;
 
         try {
-            // Revert stock changes
+            // Revert stock changes using atomic increment
             if (existing.inputItems && existing.inputItems.length > 0) {
                 for (const input of existing.inputItems) {
-                    const prod = products.find(p => p.id === input.productId);
-                    if (prod) await updateProduct(prod.id, { stock: prod.stock + (input.quantity || 0) });
+                    await updateDoc(doc(db, 'products', input.productId), {
+                        stock: increment(input.quantity || 0)
+                    });
                 }
             } else if (existing.inputProductId && existing.inputQuantity) {
-                const whole = products.find(p => p.id === existing.inputProductId);
-                if (whole) await updateProduct(whole.id, { stock: whole.stock + (existing.inputQuantity || 0) });
+                await updateDoc(doc(db, 'products', existing.inputProductId), {
+                    stock: increment(existing.inputQuantity || 0)
+                });
             }
 
             for (const d of existing.outputItems) {
-                const prod = products.find(p => p.id === d.productId);
-                if (prod) await updateProduct(prod.id, { stock: prod.stock - (d.quantity || 0) });
+                await updateDoc(doc(db, 'products', d.productId), {
+                    stock: increment(-(d.quantity || 0))
+                });
             }
 
             await deleteDoc(doc(db, 'processings', id));

@@ -202,7 +202,11 @@ service cloud.firestore {
 
     match /admins/{adminId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (
+        isSignedIn() && 
+        adminId == request.auth.uid && 
+        request.resource.data.email in ['distribucionesquepollodelsur@gmail.com', 'alex.b19h@gmail.com', 'alex@quepollo.com']
+      );
     }
 
     match /expenses/{expenseId} {

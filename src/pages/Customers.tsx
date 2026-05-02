@@ -34,6 +34,7 @@ const Customers: React.FC = () => {
     const [address, setAddress] = useState('');
     const [initialDebt, setInitialDebt] = useState<number>(0);
     const [initialDebtReason, setInitialDebtReason] = useState('');
+    const [initialDebtDueDate, setInitialDebtDueDate] = useState<string>('');
 
     // Payment state
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -107,6 +108,7 @@ const Customers: React.FC = () => {
             phone,
             address,
             initialDebt: isAdmin ? initialDebt : (editingCustomer ? editingCustomer.initialDebt : initialDebt),
+            initialDebtDueDate: isAdmin ? initialDebtDueDate : (editingCustomer ? editingCustomer.initialDebtDueDate : initialDebtDueDate),
             initialDebtReason: isAdmin ? initialDebtReason : (editingCustomer ? editingCustomer.initialDebtReason : initialDebtReason),
             initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString()
         };
@@ -174,6 +176,7 @@ const Customers: React.FC = () => {
             setAddress(customer.address || '');
             setInitialDebt(customer.initialDebt || 0);
             setInitialDebtReason(customer.initialDebtReason || '');
+            setInitialDebtDueDate(customer.initialDebtDueDate || '');
         } else {
             setEditingCustomer(null);
             setName('');
@@ -181,6 +184,7 @@ const Customers: React.FC = () => {
             setAddress('');
             setInitialDebt(0);
             setInitialDebtReason('');
+            setInitialDebtDueDate('');
         }
         setIsModalOpen(true);
     };
@@ -193,6 +197,7 @@ const Customers: React.FC = () => {
         setAddress('');
         setInitialDebt(0);
         setInitialDebtReason('');
+        setInitialDebtDueDate('');
     };
 
     const filteredCustomers = customers.filter(c => 
@@ -798,6 +803,15 @@ const Customers: React.FC = () => {
                                             onChange={e => setInitialDebtReason(e.target.value)}
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-sm h-20"
                                             placeholder="Ej: Saldo de facturas mes pasado..."
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Pago que Toca Hacer (Vencimiento)</label>
+                                        <input 
+                                            type="date" 
+                                            value={initialDebtDueDate}
+                                            onChange={e => setInitialDebtDueDate(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-xs"
                                         />
                                     </div>
                                     <p className="text-[8px] text-slate-400 font-bold uppercase">

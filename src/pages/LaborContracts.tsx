@@ -757,30 +757,30 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div className="text-center space-y-8 pb-12 relative z-[1]">
-                                    <div className="flex justify-center mb-6">
-                                        <div className="w-20 h-20 p-2 bg-white flex items-center justify-center rounded-2xl border border-slate-100 shadow-sm ring-4 ring-slate-50/50">
+                                <div className="text-center space-y-6 pb-12 relative z-[1]">
+                                    <div className="flex justify-center mb-4">
+                                        <div className="w-24 h-24 p-3 bg-white flex items-center justify-center rounded-3xl border border-slate-100 shadow-sm ring-8 ring-slate-50/30">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <Building2 className="text-slate-200" size={32} />
+                                                <Building2 className="text-slate-200" size={40} />
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <h2 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
-                                        <div className="flex items-center justify-center gap-3">
-                                            <div className="h-[1px] w-8 bg-slate-200"></div>
-                                            <p className="text-[10px] font-sans font-black text-slate-400 tracking-[0.2em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
-                                            <div className="h-[1px] w-8 bg-slate-200"></div>
+                                    <div className="space-y-4">
+                                        <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
+                                        <div className="flex items-center justify-center gap-4 text-slate-400">
+                                            <div className="h-px flex-1 max-w-[100px] bg-slate-200"></div>
+                                            <p className="text-[11px] font-sans font-black tracking-[0.3em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                            <div className="h-px flex-1 max-w-[100px] bg-slate-200"></div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-8 text-[11pt] leading-[1.6] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
-                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
+                                <div className="space-y-10 text-[12pt] leading-[1.8] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
+                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
                                         {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
+                                            <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
                                                 {para}
                                             </p>
                                         ))}
@@ -789,15 +789,15 @@ const LaborContracts: React.FC = () => {
                                     {selectedContract.regulationsText && (
                                         <>
                                             <div className="h-20" />
-                                            <div className="relative mb-10">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-300"></div></div>
+                                            <div className="relative mb-14">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-100"></div></div>
                                                 <div className="relative flex justify-center">
-                                                    <h3 className="bg-white px-6 py-2 text-xl font-display font-black text-slate-800 uppercase tracking-widest border border-slate-200">REGLAMENTO INTERNO DE TRABAJO</h3>
+                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-widest border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a]">REGLAMENTO INTERNO DE TRABAJO</h3>
                                                 </div>
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
                                                 {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
+                                                    <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
                                                         {para}
                                                     </p>
                                                 ))}
@@ -808,15 +808,15 @@ const LaborContracts: React.FC = () => {
                                     {selectedContract.dotationText && (
                                         <>
                                             <div className="h-20" />
-                                            <div className="relative mb-10">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-300"></div></div>
+                                            <div className="relative mb-14">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-100"></div></div>
                                                 <div className="relative flex justify-center">
-                                                    <h3 className="bg-white px-6 py-2 text-xl font-display font-black text-slate-800 uppercase tracking-widest border border-slate-200">ACTA DE ENTREGA DE DOTACIÓN</h3>
+                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-widest border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a]">ACTA DE ENTREGA DE DOTACIÓN</h3>
                                                 </div>
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
                                                 {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
+                                                    <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
                                                         {para}
                                                     </p>
                                                 ))}
@@ -824,49 +824,41 @@ const LaborContracts: React.FC = () => {
                                         </>
                                     )}
 
-                                    <div className="grid grid-cols-2 gap-x-20 gap-y-20 pt-32 pb-4">
-                                        <div className="space-y-4">
-                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
-                                                {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker.image} alt="Firma Trabajador" className="h-full object-contain" />}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
-                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.worker?.documentId || '________________'}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">EL TRABAJADOR</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
-                                                {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer.image} alt="Firma Empleador" className="h-full object-contain" />}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
-                                                <p className="text-[10px] font-bold text-slate-500">NIT/C.C. {selectedContract.signatures?.employer?.documentId || '________________'}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">POR EL EMPLEADOR</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
-                                                {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss.image} alt="Firma Jefe" className="h-full object-contain" />}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
-                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.boss?.documentId || '________________'}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">JEFE INMEDIATO</p>
-                                            </div>
-                                        </div>
-                                        {/* Talento Humano */}
-                                        <div className="space-y-4">
-                                            <div className="h-40 border-b-2 border-slate-900 flex items-end justify-center pb-4 relative hover:bg-slate-50 transition-colors">
-                                                {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain mix-blend-multiply" />}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.hr?.name || 'Jefe de Talento Humano'}</p>
-                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.hr?.documentId || '________________'}</p>
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">TALENTO HUMANO</p>
-                                            </div>
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-x-20 gap-y-24 pt-32 pb-4 relative z-[1]">
+                                        {[
+                                            { role: 'worker', label: 'EL TRABAJADOR', title: selectedContract.employeeName },
+                                            { role: 'employer', label: 'POR EL EMPLEADOR', title: 'Representante Legal' },
+                                            { role: 'boss', label: 'JEFE INMEDIATO', title: 'Firma Autorizada' },
+                                            { role: 'hr', label: 'TALENTO HUMANO', title: 'Revisión y Control' }
+                                        ].map(({ role, label, title }) => {
+                                            const sig = selectedContract.signatures?.[role as keyof SignatureData];
+                                            return (
+                                                <div key={role} className="flex flex-col">
+                                                    <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2 relative group/sig">
+                                                        {sig ? (
+                                                            <img 
+                                                                src={sig.image} 
+                                                                alt={`Firma ${label}`} 
+                                                                className="max-h-full max-w-full object-contain mix-blend-multiply transition-all hover:scale-110" 
+                                                            />
+                                                        ) : (
+                                                            <div className="text-slate-200 text-[10px] font-black uppercase tracking-[0.3em] mb-4 opacity-50">Espacio para firma</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="pt-4 space-y-1">
+                                                        <p className="text-[10px] font-sans font-black text-slate-400 tracking-widest uppercase">{label}</p>
+                                                        <p className="font-display font-black text-slate-900 text-sm leading-tight uppercase">
+                                                            {sig?.name || title}
+                                                        </p>
+                                                        {sig?.documentId && (
+                                                            <p className="text-[10px] font-sans font-bold text-slate-500">C.C. {sig.documentId}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
+
                                 </div>
                             </div>
                         </div>

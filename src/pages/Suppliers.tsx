@@ -29,6 +29,7 @@ const Suppliers: React.FC = () => {
     const [initialDebt, setInitialDebt] = useState<number>(0);
     const [initialDebtReason, setInitialDebtReason] = useState('');
     const [initialDebtDate, setInitialDebtDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [initialDebtDueDate, setInitialDebtDueDate] = useState<string>('');
     
     // Payment form
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -50,6 +51,7 @@ const Suppliers: React.FC = () => {
                     phone,
                     initialDebt: isAdmin ? initialDebt : editingSupplier.initialDebt,
                     initialDebtDate: isAdmin ? initialDebtDate : editingSupplier.initialDebtDate,
+                    initialDebtDueDate: isAdmin ? initialDebtDueDate : editingSupplier.initialDebtDueDate,
                     initialDebtReason: isAdmin ? initialDebtReason : editingSupplier.initialDebtReason
                 });
             } else {
@@ -58,6 +60,7 @@ const Suppliers: React.FC = () => {
                     phone, 
                     initialDebt: initialDebt > 0 ? initialDebt : undefined,
                     initialDebtDate: initialDebt > 0 ? initialDebtDate : undefined,
+                    initialDebtDueDate: initialDebt > 0 ? initialDebtDueDate : undefined,
                     initialDebtReason: initialDebt > 0 ? initialDebtReason : undefined
                 });
             }
@@ -115,6 +118,7 @@ const Suppliers: React.FC = () => {
         setInitialDebt(0);
         setInitialDebtReason('');
         setInitialDebtDate(new Date().toISOString().split('T')[0]);
+        setInitialDebtDueDate('');
         setEditingSupplier(null);
         setIsModalOpen(false);
     };
@@ -127,6 +131,7 @@ const Suppliers: React.FC = () => {
         setInitialDebt(s.initialDebt || 0);
         setInitialDebtReason(s.initialDebtReason || '');
         setInitialDebtDate(s.initialDebtDate ? s.initialDebtDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+        setInitialDebtDueDate(s.initialDebtDueDate || '');
         setIsModalOpen(true);
     };
 
@@ -614,6 +619,16 @@ const Suppliers: React.FC = () => {
                                     onChange={e => setInitialDebtReason(e.target.value)}
                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm h-20"
                                     placeholder="Ej: Facturas pendientes del mes..."
+                                />
+                            </div>
+                            
+                            <div className="space-y-1">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Pago que Toca Hacer (Vencimiento)</label>
+                                <input 
+                                    type="date" 
+                                    value={initialDebtDueDate}
+                                    onChange={e => setInitialDebtDueDate(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-xs"
                                 />
                             </div>
                             
