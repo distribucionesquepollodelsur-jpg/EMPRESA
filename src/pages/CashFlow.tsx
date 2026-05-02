@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const CashFlow: React.FC = () => {
-    const { cashFlow, sales, purchases, advances, addCashMovement, updateCashMovement, deleteCashMovement, config } = useData();
+    const { cashFlow, sales, purchases, advances, addCashMovement, updateCashMovement, deleteCashMovement, addBusinessLoan, config } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -25,12 +25,20 @@ const CashFlow: React.FC = () => {
     const [amount, setAmount] = useState(0);
     const [reason, setReason] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedMovement) {
             updateCashMovement(selectedMovement.id, { type, amount, reason });
+        } else if (isLoanModalOpen) {
+            await addBusinessLoan({
+                lenderName: reason,
+                amount: amount,
+                cashAmount: amount,
+                description: 'Préstamo Base registrado desde Caja',
+                date: new Date().toISOString()
+            });
         } else {
-            addCashMovement({ type, amount, reason, category: isLoanModalOpen ? 'loan' : 'manual' });
+            addCashMovement({ type, amount, reason, category: 'manual' });
         }
         setIsModalOpen(false);
         setIsLoanModalOpen(false);

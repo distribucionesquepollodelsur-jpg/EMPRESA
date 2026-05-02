@@ -30,6 +30,7 @@ const Purchases: React.FC = () => {
     const [cashAmount, setCashAmount] = useState<number>(0);
     const [transferAmount, setTransferAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([]);
 
     const { addSupplier } = useData();
@@ -130,6 +131,7 @@ const Purchases: React.FC = () => {
             nextPurchaseNumber = 1;
         }
 
+        setIsSubmitting(true);
         try {
             await addPurchase({
                 supplierId: supplierId || undefined,
@@ -163,6 +165,8 @@ const Purchases: React.FC = () => {
         } catch (error) {
             console.error("Error saving purchase:", error);
             alert("Error al guardar la compra.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -633,10 +637,16 @@ const Purchases: React.FC = () => {
                                         </div>
                                         <button 
                                             type="submit"
-                                            disabled={items.length === 0 || !supplierName}
+                                            disabled={items.length === 0 || !supplierName || isSubmitting}
                                             className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50 shadow-xl shadow-slate-900/10 active:scale-95 transition-all"
                                         >
-                                            <CheckCircle2 size={24} /> Confirmar Compra
+                                            {isSubmitting ? (
+                                                <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 size={24} /> Confirmar Compra
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>

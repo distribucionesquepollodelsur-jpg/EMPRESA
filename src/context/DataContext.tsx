@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan, BusinessLoan } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -109,6 +109,10 @@ interface DataContextType extends AppState {
     addLoanAbono: (loanId: string, amount: number, method: string) => Promise<void>;
     deleteLoanAbono: (loanId: string, abonoIndex: number) => Promise<void>;
     deleteLoan: (id: string) => Promise<void>;
+    addBusinessLoan: (loan: Omit<BusinessLoan, 'id' | 'paidAmount' | 'payments' | 'status'>) => Promise<void>;
+    addBusinessLoanAbono: (loanId: string, amount: number, method: string) => Promise<void>;
+    deleteBusinessLoanAbono: (loanId: string, abonoIndex: number) => Promise<void>;
+    deleteBusinessLoan: (id: string) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
@@ -158,6 +162,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [inventoryLogs, setInventoryLogs] = useState<InventoryAdjustment[]>([]);
     const [expenses, setExpenses] = useState<any[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
+    const [businessLoans, setBusinessLoans] = useState<BusinessLoan[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -247,6 +252,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubscribes.push(onSnapshot(collection(db, 'loans'), (s) => {
                     setLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
                 }, (e) => handleFirestoreError(e, OperationType.GET, 'loans')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'businessLoans'), (s) => {
+                    setBusinessLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as BusinessLoan)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'businessLoans')));
             } else {
                 // Clear state when no user
                 setEmployees([]);
@@ -1224,26 +1233,130 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `expenses/${id}`); }
     };
 
-    const addLoan = async (loan: Omit<Loan, 'id' | 'paidAmount' | 'payments' | 'status'>) => {
+    const addLoan = async (loanData: Omit<Loan, 'id' | 'paidAmount' | 'payments' | 'status'>) => {
         try {
-            const loanWithId = { 
-                ...loan, 
-                date: loan.date || new Date().toISOString(),
-                dueDate: loan.dueDate || null,
+            const batch = writeBatch(db);
+            const loanRef = doc(collection(db, 'loans'));
+            const loanId = loanRef.id;
+
+            const loan = { 
+                ...loanData, 
+                date: loanData.date || new Date().toISOString(),
+                dueDate: loanData.dueDate || null,
                 paidAmount: 0,
                 payments: [],
                 status: 'pending'
             };
-            const docRef = await addDoc(collection(db, 'loans'), clean(loanWithId));
             
-            // Deduction from cash
-            await addCashMovement({
-                type: 'exit',
-                amount: loan.amount,
-                reason: `Préstamo a Tercero: ${loan.borrowerName}`,
-                category: 'loan'
-            });
+            batch.set(loanRef, clean(loan));
+            
+            // Only affect cash if cashAmount > 0
+            if (loan.cashAmount && loan.cashAmount > 0) {
+                const moveRef = doc(collection(db, 'cashFlow'));
+                batch.set(moveRef, clean({
+                    date: new Date().toISOString(),
+                    type: loan.isEntry ? 'entry' : 'exit',
+                    amount: loan.cashAmount,
+                    reason: `Préstamo a Tercero: ${loan.borrowerName}${loan.isEntry ? ' (Ingreso a Caja)' : ' (Salida de Caja)'}`,
+                    category: 'loan'
+                }));
+            }
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'loans'); }
+    };
+
+    const addBusinessLoan = async (loanData: Omit<BusinessLoan, 'id' | 'paidAmount' | 'payments' | 'status'>) => {
+        try {
+            const batch = writeBatch(db);
+            const loanRef = doc(collection(db, 'businessLoans'));
+            
+            const loan: any = {
+                ...loanData,
+                date: loanData.date || new Date().toISOString(),
+                paidAmount: 0,
+                payments: [],
+                status: 'pending'
+            };
+
+            batch.set(loanRef, clean(loan));
+
+            // Business loans usually SUM to cash (entry)
+            if (loan.cashAmount && loan.cashAmount > 0) {
+                const moveRef = doc(collection(db, 'cashFlow'));
+                batch.set(moveRef, clean({
+                    date: new Date().toISOString(),
+                    type: 'entry',
+                    amount: loan.cashAmount,
+                    reason: `Préstamo Base (Entrada): ${loan.lenderName || 'Desconocido'}`,
+                    category: 'loan'
+                }));
+            }
+
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'businessLoans'); }
+    };
+
+    const addBusinessLoanAbono = async (loanId: string, amount: number, method: string) => {
+        const loan = businessLoans.find(l => l.id === loanId);
+        if (!loan) return;
+
+        try {
+            const batch = writeBatch(db);
+            const moveRef = doc(collection(db, 'cashFlow'));
+            
+            batch.set(moveRef, clean({
+                date: new Date().toISOString(),
+                type: 'exit', // Payment of a debt is an exit
+                amount: amount,
+                reason: `Abono a Préstamo Base (${method}): ${loan.lenderName}`,
+                category: 'loan'
+            }));
+
+            const newPaidAmount = (loan.paidAmount || 0) + amount;
+            batch.update(doc(db, 'businessLoans', loanId), {
+                paidAmount: newPaidAmount,
+                status: newPaidAmount >= loan.amount ? 'paid' : 'pending',
+                payments: [...(loan.payments || []), { 
+                    date: new Date().toISOString(), 
+                    amount, 
+                    method, 
+                    cashMovementId: moveRef.id 
+                }]
+            });
+
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `businessLoans/${loanId}`); }
+    };
+
+    const deleteBusinessLoanAbono = async (loanId: string, abonoIndex: number) => {
+        const loan = businessLoans.find(l => l.id === loanId);
+        if (!loan || !loan.payments || !loan.payments[abonoIndex]) return;
+
+        const payment = loan.payments[abonoIndex];
+
+        try {
+            const batch = writeBatch(db);
+            if (payment.cashMovementId) {
+                batch.delete(doc(db, 'cashFlow', payment.cashMovementId));
+            }
+
+            const updatedPayments = loan.payments.filter((_, i) => i !== abonoIndex);
+            const newPaidAmount = (loan.paidAmount || 0) - payment.amount;
+            batch.update(doc(db, 'businessLoans', loanId), {
+                paidAmount: newPaidAmount,
+                status: newPaidAmount >= loan.amount ? 'paid' : 'pending',
+                payments: updatedPayments
+            });
+
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `businessLoans/${loanId}`); }
+    };
+
+    const deleteBusinessLoan = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'businessLoans', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `businessLoans/${id}`); }
     };
 
     const updateLoan = async (id: string, updates: any) => {
@@ -1314,7 +1427,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, businessLoans, config,
             loading,
             addProduct,
             updateProduct,
@@ -1338,6 +1451,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addLoanAbono,
             deleteLoanAbono,
             deleteLoan,
+            addBusinessLoan,
+            addBusinessLoanAbono,
+            deleteBusinessLoanAbono,
+            deleteBusinessLoan,
             addEmployee,
             updateEmployee,
             deleteEmployee,

@@ -769,10 +769,16 @@ const Sales: React.FC = () => {
                                     </div>
                                     <button 
                                         onClick={handleConfirmSale}
-                                        disabled={cart.length === 0}
+                                        disabled={cart.length === 0 || isSubmitting}
                                         className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-95 shadow-xl shadow-slate-900/10"
                                     >
-                                        <CheckCircle2 size={24} /> Confirmar Venta
+                                        {isSubmitting ? (
+                                            <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 size={24} /> Confirmar Venta
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>

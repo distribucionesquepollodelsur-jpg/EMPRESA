@@ -395,7 +395,7 @@ const LaborContracts: React.FC = () => {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             
-            // Calculate aspect ratio
+            // Calculate height in mm to check for paging
             const imgWidth = pageWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             
@@ -411,10 +411,11 @@ const LaborContracts: React.FC = () => {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
+                heightLeft -= (pageHeight); // Reduced to avoid massive overlaps or gaps if calculation is slightly off
             }
 
-            pdf.save(`CONTRATO_${contractToDownload.employeeName.toUpperCase().replace(/\s+/g, '_')}.pdf`);
+            const fileName = `CONTRATO_${contractToDownload.employeeName.toUpperCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            pdf.save(fileName);
         } catch (error) {
             console.error("Error generating PDF:", error);
             alert("Error al generar el PDF de alta calidad. Intente nuevamente.");

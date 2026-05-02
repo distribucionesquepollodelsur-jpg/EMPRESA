@@ -91,6 +91,22 @@ service cloud.firestore {
              (data.userName is string);
     }
 
+    function isValidLoan(data) {
+      return data.keys().hasAll(['borrowerName', 'amount', 'date', 'status']) &&
+             data.borrowerName is string && data.borrowerName.size() <= 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string &&
+             data.status in ['pending', 'paid'];
+    }
+
+    function isValidBusinessLoan(data) {
+      return data.keys().hasAll(['lenderName', 'amount', 'date', 'status']) &&
+             data.lenderName is string && data.lenderName.size() <= 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string &&
+             data.status in ['pending', 'paid'];
+    }
+
     // --- Rules ---
 
     match /products/{productId} {
@@ -111,7 +127,7 @@ service cloud.firestore {
         isAdmin() ||
         incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'payments', 'paymentStatus'])
       );
-      allow delete: if isAdmin();
+      allow delete: if isSignedIn();
     }
 
     match /purchases/{purchaseId} {
@@ -121,14 +137,14 @@ service cloud.firestore {
         isAdmin() ||
         incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'payments', 'paymentStatus'])
       );
-      allow delete: if isAdmin();
+      allow delete: if isSignedIn();
     }
 
     match /cashFlow/{movementId} {
       allow read: if true;
       allow create: if isSignedIn() && isValidCashMovement(incoming()) && isValidId(movementId);
       allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isSignedIn();
     }
 
     match /inventoryLogs/{logId} {
@@ -217,8 +233,16 @@ service cloud.firestore {
 
     match /loans/{loanId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(loanId);
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isValidLoan(incoming()) && isValidId(loanId);
+      allow update: if isSignedIn() && (isAdmin() || isValidLoan(incoming()));
+      allow delete: if isAdmin();
+    }
+
+    match /businessLoans/{loanId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidBusinessLoan(incoming()) && isValidId(loanId);
+      allow update: if isSignedIn() && (isAdmin() || isValidBusinessLoan(incoming()));
+      allow delete: if isAdmin();
     }
   }
 }

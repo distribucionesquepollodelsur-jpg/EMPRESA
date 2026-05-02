@@ -181,12 +181,26 @@ export interface Loan {
     id: string;
     borrowerName: string;
     amount: number;
+    cashAmount?: number;
+    isEntry?: boolean;
     term: string;
     description: string;
     date: string;
     dueDate?: string;
     paidAmount: number;
-    payments: { date: string, amount: number, method: string }[];
+    payments: { date: string, amount: number, method: string, cashMovementId?: string }[];
+    status: 'pending' | 'paid';
+}
+
+export interface BusinessLoan {
+    id: string;
+    lenderName: string;
+    amount: number;
+    cashAmount?: number;
+    date: string;
+    description: string;
+    paidAmount: number;
+    payments: { date: string, amount: number, method: string, cashMovementId?: string }[];
     status: 'pending' | 'paid';
 }
 
@@ -236,5 +250,6 @@ export interface AppState {
     processings: Processing[];
     inventoryLogs: InventoryAdjustment[];
     loans: Loan[];
+    businessLoans: BusinessLoan[];
     config: AppConfig;
 }

@@ -229,6 +229,57 @@
       },
       "required": ["employeeId", "date", "item", "quantity"]
     },
+    "Loan": {
+      "title": "Loan",
+      "description": "Loans to third parties",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "borrowerName": { "type": "string" },
+        "amount": { "type": "number" },
+        "cashAmount": { "type": "number" },
+        "isEntry": { "type": "boolean" },
+        "term": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "dueDate": { "type": "string", "format": "date" },
+        "paidAmount": { "type": "number" },
+        "payments": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "paid"] }
+      },
+      "required": ["borrowerName", "amount", "date", "status"]
+    },
+    "BusinessLoan": {
+      "title": "BusinessLoan",
+      "description": "Loans received by the business (Base Loans)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "lenderName": { "type": "string" },
+        "amount": { "type": "number" },
+        "cashAmount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "paidAmount": { "type": "number" },
+        "payments": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "paid"] }
+      },
+      "required": ["lenderName", "amount", "date", "status"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expenses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "receipt": { "type": "string" }
+      },
+      "required": ["date", "category", "amount", "description"]
+    },
     "InventoryAdjustment": {
       "title": "InventoryAdjustment",
       "description": "Manual inventory stock adjustments",
@@ -313,6 +364,9 @@
     "assets": { "schema": "Asset", "description": "Company fixed assets" },
     "inventoryLogs": { "schema": "InventoryAdjustment", "description": "Manual inventory adjustments" },
     "contracts": { "schema": "LaborContract", "description": "Employee labor contracts" },
+    "loans": { "schema": "Loan", "description": "Loans to third parties" },
+    "businessLoans": { "schema": "BusinessLoan", "description": "Base business loans" },
+    "expenses": { "schema": "Expense", "description": "Business expenses" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }
