@@ -768,22 +768,29 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 )}
 
-                                <div className="text-center space-y-6 pb-12 relative z-[1]">
+                                {/* PDF Header Decoration */}
+                                <div className="absolute top-0 left-0 right-0 h-4 bg-[#ea580c]" />
+                                <div className="absolute top-4 left-0 right-0 h-1 bg-[#fb923c]" />
+
+                                <div className="text-center space-y-6 pb-12 pt-16 relative z-[1]">
                                     <div className="flex justify-center mb-4">
-                                        <div className="w-24 h-24 p-3 bg-white flex items-center justify-center rounded-3xl border border-slate-100 shadow-sm ring-8 ring-slate-50/30">
+                                        <div className="w-32 h-32 p-4 bg-white flex items-center justify-center rounded-full border-4 border-[#ea580c] shadow-lg">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <Building2 className="text-slate-200" size={40} />
+                                                <div className="flex flex-col items-center">
+                                                    <Building2 className="text-[#ea580c]" size={48} />
+                                                    <span className="text-[8px] font-black uppercase text-slate-400 mt-2">Logo Empresa</span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
+                                        <h2 className="text-3xl font-display font-black text-[#0f172a] tracking-tight uppercase leading-tight border-b-2 border-[#ea580c] pb-4 inline-block px-8">
+                                            CONTRATO INDIVIDUAL DE TRABAJO
+                                        </h2>
                                         <div className="flex items-center justify-center gap-4 text-slate-400">
-                                            <div className="h-px flex-1 max-w-[100px] bg-slate-200"></div>
-                                            <p className="text-[11px] font-sans font-black tracking-[0.3em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
-                                            <div className="h-px flex-1 max-w-[100px] bg-slate-200"></div>
+                                            <p className="text-[12px] font-sans font-black tracking-[0.4em] uppercase text-[#64748b]">DISTRIBUCIONES QUE POLLO DEL SUR</p>
                                         </div>
                                     </div>
                                 </div>

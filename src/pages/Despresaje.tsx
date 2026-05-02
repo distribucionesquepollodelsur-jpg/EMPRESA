@@ -84,7 +84,13 @@ const Despresaje: React.FC = () => {
     const handleProcess = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const totalOut = derivations.reduce((sum, d) => sum + (d.quantity || 0), 0);
+        const totalOutWeight = derivations.reduce((sum, d) => {
+            const product = products.find(p => p.id === d.productId);
+            const weight = (product?.name.toLowerCase().includes('picada') || product?.unit === 'und') 
+                ? (d.quantity * 0.475) 
+                : d.quantity;
+            return sum + (weight || 0);
+        }, 0);
         
         try {
             const data = mode === 'purchase' 
@@ -93,12 +99,12 @@ const Despresaje: React.FC = () => {
                     inputProductId: wholeChickenId,
                     inputQuantity: bulkQuantity,
                     outputItems: derivations,
-                    totalOutputWeight: totalOut
+                    totalOutputWeight: totalOutWeight
                 }
                 : {
                     inputItems: inputItems,
                     outputItems: derivations,
-                    totalOutputWeight: totalOut
+                    totalOutputWeight: totalOutWeight
                 };
 
             if (editingId) {
@@ -405,27 +411,33 @@ const Despresaje: React.FC = () => {
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="w-full sm:w-32">
+                                    <div className="w-full sm:w-40">
                                         <div className="flex justify-between items-center mb-1">
-                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Peso/Cant.</label>
-                                            {products.find(p => p.id === d.productId)?.name.toLowerCase().includes('picada') && d.quantity > 0.475 && (
-                                                <span className="text-[8px] font-black text-red-400 uppercase tracking-tighter animate-pulse">¡Max 475g!</span>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                {products.find(p => p.id === d.productId)?.unit === 'und' ? 'Unidades' : 'Peso (Kg)'}
+                                            </label>
+                                            {products.find(p => p.id === d.productId)?.name.toLowerCase().includes('picada') && (
+                                                <span className="text-[8px] font-black text-orange-400 uppercase tracking-tighter">
+                                                    {(d.quantity * 0.475).toFixed(2)} Kg
+                                                </span>
                                             )}
                                         </div>
-                                        <input 
-                                            type="number"
-                                            step="0.01"
-                                            required
-                                            value={d.quantity || ''}
-                                            onChange={e => updateDerivation(index, 'quantity', parseFloat(e.target.value))}
-                                            className={cn(
-                                                "w-full p-3 border-none rounded-xl font-bold text-white outline-none focus:ring-1 text-sm transition-all",
-                                                products.find(p => p.id === d.productId)?.name.toLowerCase().includes('picada') && d.quantity > 0.475 
-                                                ? "bg-red-900/50 ring-1 ring-red-500" 
-                                                : "bg-slate-700 focus:ring-orange-500"
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                step={products.find(p => p.id === d.productId)?.unit === 'und' ? "1" : "0.01"}
+                                                required
+                                                value={d.quantity || ''}
+                                                onChange={e => updateDerivation(index, 'quantity', parseFloat(e.target.value))}
+                                                className={cn(
+                                                    "w-full p-3 border-none rounded-xl font-bold text-white outline-none focus:ring-1 text-sm transition-all bg-slate-700 focus:ring-orange-500"
+                                                )}
+                                                placeholder="0.00"
+                                            />
+                                            {products.find(p => p.id === d.productId)?.unit === 'und' && (
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-500 uppercase">Unds</span>
                                             )}
-                                            placeholder="0.00"
-                                        />
+                                        </div>
                                     </div>
                                     <button 
                                         type="button"
@@ -454,8 +466,14 @@ const Despresaje: React.FC = () => {
                             )}
                             <div className="flex items-center gap-4 ml-auto">
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Rendimiento</p>
-                                    <p className="text-xl font-black text-white">{derivations.reduce((sum, d) => sum + (d.quantity || 0), 0).toFixed(2)} Kg/Und</p>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Peso Total Resultante</p>
+                                    <p className="text-xl font-black text-white">
+                                        {derivations.reduce((sum, d) => {
+                                            const prod = products.find(p => p.id === d.productId);
+                                            const w = (prod?.name.toLowerCase().includes('picada') || prod?.unit === 'und') ? (d.quantity * 0.475) : d.quantity;
+                                            return sum + (w || 0);
+                                        }, 0).toFixed(2)} Kg
+                                    </p>
                                 </div>
                                 <button 
                                     type="submit"
