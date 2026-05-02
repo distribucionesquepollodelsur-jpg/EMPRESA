@@ -196,7 +196,8 @@ service cloud.firestore {
 
     match /contracts/{contractId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(contractId);
+      allow delete: if isSignedIn();
     }
 
     match /admins/{adminId} {
@@ -206,12 +207,14 @@ service cloud.firestore {
 
     match /expenses/{expenseId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(expenseId);
+      allow delete: if isSignedIn();
     }
 
     match /loans/{loanId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(loanId);
+      allow delete: if isSignedIn();
     }
   }
 }

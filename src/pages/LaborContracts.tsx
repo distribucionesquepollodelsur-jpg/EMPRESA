@@ -187,6 +187,9 @@ const LaborContracts: React.FC = () => {
         
         try {
             await deleteDoc(doc(db, 'contracts', id));
+            if (selectedContract?.id === id) {
+                setSelectedContract(null);
+            }
         } catch (error) {
             console.error("Error deleting contract:", error);
             alert("Error al eliminar el contrato.");
@@ -514,19 +517,19 @@ const LaborContracts: React.FC = () => {
                     </div>
 
                     {/* Logo Management */}
-                    <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center gap-3 shadow-sm">
-                        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center overflow-hidden border border-slate-100">
+                    <div className="bg-white p-3 rounded-2xl border border-slate-200 flex items-center gap-3 shadow-sm hover:border-orange-200 transition-colors group">
+                        <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 group-hover:scale-105 transition-transform">
                             {companyLogo ? (
-                                <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                                <img src={companyLogo} alt="Logo" className="w-full h-full object-contain p-1" />
                             ) : (
                                 <Building2 className="text-slate-300" size={20} />
                             )}
                         </div>
                         <div className="space-y-0.5">
-                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">Logo Empresa</p>
-                            <label className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold uppercase tracking-widest cursor-pointer hover:bg-slate-200 transition-all">
-                                <Plus size={10} />
-                                {companyLogo ? 'Cambiar' : 'Subir'}
+                            <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none">Identidad Visual</p>
+                            <label className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest cursor-pointer hover:bg-slate-800 transition-all shadow-sm">
+                                <Upload size={10} />
+                                {companyLogo ? 'Actualizar' : 'Subir Logo'}
                                 <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={isSavingLogo} />
                             </label>
                         </div>
@@ -708,17 +711,28 @@ const LaborContracts: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-slate-100 w-full max-w-6xl rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 flex flex-col lg:flex-row h-full max-h-[95vh]">
                         {/* Left Side: Document Viewer */}
-                        <div className="lg:w-2/3 bg-white p-6 lg:p-20 overflow-y-auto print:p-0" ref={contractRef}>
-                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-sm font-serif text-slate-900 border border-slate-100" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                        <div className="lg:w-2/3 bg-white p-6 lg:p-20 overflow-y-auto print:p-0 relative group/doc" ref={contractRef}>
+                            {/* Document Actions Floating Menu */}
+                            <div className="absolute top-8 right-8 flex gap-2 opacity-0 group-hover/doc:opacity-100 transition-opacity">
+                                <button 
+                                    onClick={() => handleDeleteContract(selectedContract.id)}
+                                    className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 hover:bg-red-100 transition-all"
+                                    title="Eliminar este contrato"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
+                            </div>
+
+                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-sm font-serif text-slate-900 border border-slate-50" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
                                 <div className="text-center space-y-12 pb-16">
                                     <div className="flex justify-center pb-4">
-                                        {companyLogo ? (
-                                            <img src={companyLogo} alt="Logo" className="w-48 h-48 object-contain" />
-                                        ) : (
-                                            <div className="w-48 h-48 bg-slate-50 flex items-center justify-center">
-                                                <Building2 className="text-slate-200" size={64} />
-                                            </div>
-                                        )}
+                                        <div className="w-32 h-32 rounded-2xl border border-slate-100 p-2 bg-white flex items-center justify-center">
+                                            {companyLogo ? (
+                                                <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                                            ) : (
+                                                <Building2 className="text-slate-200" size={48} />
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="space-y-4">
                                         <h2 className="text-2xl font-bold uppercase">CONTRATO INDIVIDUAL DE TRABAJO</h2>
@@ -726,11 +740,11 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal" style={{ textAlignLast: 'left' }}>
+                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal" style={{ textAlignLast: 'left', fontFeatureSettings: '"kern" 1' }}>
                                     <div className="whitespace-pre-wrap select-text">
                                         {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
-                                                {para}
+                                            <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
                                             </p>
                                         ))}
                                     </div>
@@ -741,8 +755,8 @@ const LaborContracts: React.FC = () => {
                                             <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">REGLAMENTO INTERNO DE TRABAJO</h3>
                                             <div className="whitespace-pre-wrap select-text">
                                                 {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
-                                                        {para}
+                                                    <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
                                                     </p>
                                                 ))}
                                             </div>
@@ -755,8 +769,8 @@ const LaborContracts: React.FC = () => {
                                             <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">ACTA DE ENTREGA DE DOTACIÓN</h3>
                                             <div className="whitespace-pre-wrap select-text">
                                                 {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
-                                                        {para}
+                                                    <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
                                                     </p>
                                                 ))}
                                             </div>
