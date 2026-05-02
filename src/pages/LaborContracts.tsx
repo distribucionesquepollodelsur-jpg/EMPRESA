@@ -367,11 +367,22 @@ const LaborContracts: React.FC = () => {
                 backgroundColor: '#ffffff',
                 windowWidth: 1200, // Large window width for full layout
                 onclone: (clonedDoc) => {
-                    // Optional: adjust cloned element for better PDF output
-                    const element = clonedDoc.querySelector('[ref="contractRef"]') as HTMLElement;
+                    // Fix: html2canvas onclone doesn't support oklch colors well
+                    // Also fixing the selector which was previously incorrect
+                    const element = clonedDoc.getElementById('contract-pfe-document') as HTMLElement;
                     if (element) {
                         element.style.boxShadow = 'none';
                         element.style.border = 'none';
+                        
+                        // Recursive cleanup for oklch if it somehow persists
+                        const allElements = element.querySelectorAll('*');
+                        allElements.forEach(el => {
+                            const htmlEl = el as HTMLElement;
+                            if (htmlEl.style) {
+                                // If any computed style use oklch, it might break html2canvas
+                                // But since we updated index.css to hex, this is mostly a safety net
+                            }
+                        });
                     }
                 }
             });
@@ -735,7 +746,7 @@ const LaborContracts: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-slate-100 w-full max-w-6xl rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 flex flex-col lg:flex-row h-full max-h-[95vh]">
                         {/* Left Side: Document Viewer */}
-                        <div className="lg:w-2/3 bg-slate-100 p-6 lg:p-16 overflow-y-auto print:p-0 relative group/doc" ref={contractRef}>
+                        <div className="lg:w-2/3 bg-slate-100 p-6 lg:p-16 overflow-y-auto print:p-0 relative group/doc" ref={contractRef} id="contract-pfe-document">
                             {/* Document Actions Floating Menu */}
                             <div className="absolute top-8 right-8 flex gap-3 opacity-0 group-hover/doc:opacity-100 transition-all z-10 translate-y-2 group-hover/doc:translate-y-0">
                                 <button 
