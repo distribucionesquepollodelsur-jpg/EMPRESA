@@ -361,28 +361,18 @@ const LaborContracts: React.FC = () => {
             contractRef.current.style.width = '816px'; // Standard A4 width at 96 DPI
 
             const canvas = await html2canvas(contractRef.current, {
-                scale: 2, // High resolution for crisp text
+                scale: 2,
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#ffffff',
-                windowWidth: 1200, // Large window width for full layout
+                windowWidth: 1200,
+                windowHeight: contractRef.current.scrollHeight, // Capture full height
                 onclone: (clonedDoc) => {
-                    // Fix: html2canvas onclone doesn't support oklch colors well
-                    // Also fixing the selector which was previously incorrect
                     const element = clonedDoc.getElementById('contract-pfe-document') as HTMLElement;
                     if (element) {
                         element.style.boxShadow = 'none';
                         element.style.border = 'none';
-                        
-                        // Recursive cleanup for oklch if it somehow persists
-                        const allElements = element.querySelectorAll('*');
-                        allElements.forEach(el => {
-                            const htmlEl = el as HTMLElement;
-                            if (htmlEl.style) {
-                                // If any computed style use oklch, it might break html2canvas
-                                // But since we updated index.css to hex, this is mostly a safety net
-                            }
-                        });
+                        element.style.padding = '40px'; // Add consistent padding for PDF
                     }
                 }
             });
@@ -395,23 +385,22 @@ const LaborContracts: React.FC = () => {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             
-            // Calculate height in mm to check for paging
             const imgWidth = pageWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             
             let heightLeft = imgHeight;
             let position = 0;
 
-            // Add first page
+            // Page 1
             pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pageHeight;
 
-            // Add additional pages if needed
+            // Extra Pages
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= (pageHeight); // Reduced to avoid massive overlaps or gaps if calculation is slightly off
+                heightLeft -= pageHeight;
             }
 
             const fileName = `CONTRATO_${contractToDownload.employeeName.toUpperCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;

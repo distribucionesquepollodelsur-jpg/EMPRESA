@@ -12,6 +12,7 @@ const Purchases: React.FC = () => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
+        'esquepollodelsur@gmail.com',
         'alex.b19h@gmail.com',
         'alex@quepollo.com',
         'admin@quepollo.com'

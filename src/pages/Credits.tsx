@@ -215,7 +215,7 @@ const Credits: React.FC = () => {
                                     <h3 className="font-black text-slate-900 uppercase tracking-tight">
                                         {activeTab === 'toPay' ? item.supplierName : (item.customerName || 'Venta de Mostrador')}
                                     </h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                         {item.isInitial ? (
                                             <div className="flex flex-col">
                                                 <span className="text-orange-600 font-black text-xs">SALDO INICIAL / ANTIGUO</span>
@@ -230,7 +230,7 @@ const Credits: React.FC = () => {
                                         ) : (
                                             `Fecha: ${formatDate(item.date)} • Ref: ${item.id.slice(0, 8)}`
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
 
