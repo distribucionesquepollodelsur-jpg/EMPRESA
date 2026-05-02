@@ -182,17 +182,21 @@ const LaborContracts: React.FC = () => {
         }
     };
 
-    const handleDeleteContract = async (id: string) => {
-        if (!window.confirm("¿Estás seguro de que deseas eliminar este contrato? Esta acción no se puede deshacer.")) return;
+    const handleDeleteContract = async (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (!window.confirm("¿Estás seguro de eliminar este contrato de forma permanente? Esta acción no se puede deshacer.")) return;
         
         try {
+            setLoading(true);
             await deleteDoc(doc(db, 'contracts', id));
             if (selectedContract?.id === id) {
                 setSelectedContract(null);
             }
         } catch (error) {
             console.error("Error deleting contract:", error);
-            alert("Error al eliminar el contrato.");
+            alert("No tienes permisos suficientes para eliminar este documento o hubo un error de red.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -711,52 +715,70 @@ const LaborContracts: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-slate-100 w-full max-w-6xl rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 flex flex-col lg:flex-row h-full max-h-[95vh]">
                         {/* Left Side: Document Viewer */}
-                        <div className="lg:w-2/3 bg-white p-6 lg:p-20 overflow-y-auto print:p-0 relative group/doc" ref={contractRef}>
+                        <div className="lg:w-2/3 bg-slate-100 p-6 lg:p-16 overflow-y-auto print:p-0 relative group/doc" ref={contractRef}>
                             {/* Document Actions Floating Menu */}
-                            <div className="absolute top-8 right-8 flex gap-2 opacity-0 group-hover/doc:opacity-100 transition-opacity">
+                            <div className="absolute top-8 right-8 flex gap-3 opacity-0 group-hover/doc:opacity-100 transition-all z-10 translate-y-2 group-hover/doc:translate-y-0">
                                 <button 
-                                    onClick={() => handleDeleteContract(selectedContract.id)}
-                                    className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 hover:bg-red-100 transition-all"
+                                    onClick={(e) => handleDeleteContract(selectedContract.id, e)}
+                                    disabled={loading}
+                                    className="p-4 bg-white/90 backdrop-blur-md text-red-600 rounded-2xl border border-red-100 hover:bg-red-600 hover:text-white shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
                                     title="Eliminar este contrato"
                                 >
-                                    <Trash2 size={20} />
+                                    <Trash2 size={18} />
+                                    <span>{loading ? 'Eliminando...' : 'Eliminar Documento'}</span>
                                 </button>
                             </div>
 
-                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-sm font-serif text-slate-900 border border-slate-50" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-                                <div className="text-center space-y-12 pb-16">
-                                    <div className="flex justify-center pb-4">
-                                        <div className="w-32 h-32 rounded-2xl border border-slate-100 p-2 bg-white flex items-center justify-center">
+                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] font-serif text-slate-900 border border-slate-50 relative overflow-hidden" style={{ fontFamily: '"Lora", serif' }}>
+                                {/* Watermark Background */}
+                                {companyLogo && (
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.035] pointer-events-none w-[90%] aspect-square flex items-center justify-center">
+                                        <img src={companyLogo} alt="Watermark" className="w-full h-full object-contain grayscale scale-125" />
+                                    </div>
+                                )}
+
+                                <div className="text-center space-y-12 pb-24 relative z-[1]">
+                                    <div className="flex justify-center mb-10">
+                                        <div className="w-32 h-32 p-3 bg-white flex items-center justify-center rounded-3xl border border-slate-100 shadow-sm ring-4 ring-slate-50/50">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <Building2 className="text-slate-200" size={48} />
+                                                <Building2 className="text-slate-200" size={56} />
                                             )}
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <h2 className="text-2xl font-bold uppercase">CONTRATO INDIVIDUAL DE TRABAJO</h2>
-                                        <p className="text-xl font-bold uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                        <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">CONTRATO INDIVIDUAL DE TRABAJO</h2>
+                                        <div className="flex items-center justify-center gap-4">
+                                            <div className="h-[1px] w-12 bg-slate-200"></div>
+                                            <p className="text-xs font-sans font-black text-slate-400 tracking-[0.3em] uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                            <div className="h-[1px] w-12 bg-slate-200"></div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal" style={{ textAlignLast: 'left', fontFeatureSettings: '"kern" 1' }}>
-                                    <div className="whitespace-pre-wrap select-text">
+                                <div className="space-y-12 text-[11pt] leading-[2.0] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
+                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                         {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
+                                            <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                                {para}
                                             </p>
                                         ))}
                                     </div>
 
                                     {selectedContract.regulationsText && (
                                         <>
-                                            <div className="h-16" />
-                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">REGLAMENTO INTERNO DE TRABAJO</h3>
-                                            <div className="whitespace-pre-wrap select-text">
+                                            <div className="h-32" />
+                                            <div className="relative mb-16">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-900"></div></div>
+                                                <div className="relative flex justify-center text-xs px-4">
+                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-[0.25em] border-2 border-slate-900 rounded-[50px] shadow-sm">REGLAMENTO INTERNO DE TRABAJO</h3>
+                                                </div>
+                                            </div>
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                                 {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
+                                                    <p key={i} className={para.trim() ? "mb-8" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                                        {para}
                                                     </p>
                                                 ))}
                                             </div>
@@ -765,57 +787,63 @@ const LaborContracts: React.FC = () => {
 
                                     {selectedContract.dotationText && (
                                         <>
-                                            <div className="h-16" />
-                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">ACTA DE ENTREGA DE DOTACIÓN</h3>
-                                            <div className="whitespace-pre-wrap select-text">
+                                            <div className="h-32" />
+                                            <div className="relative mb-16">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-900"></div></div>
+                                                <div className="relative flex justify-center text-xs px-4">
+                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-[0.25em] border-2 border-slate-900 rounded-[50px] shadow-sm">ACTA DE ENTREGA DE DOTACIÓN</h3>
+                                                </div>
+                                            </div>
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                                 {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-8"}>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{para}
+                                                    <p key={i} className={para.trim() ? "mb-8" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                                        {para}
                                                     </p>
                                                 ))}
                                             </div>
                                         </>
                                     )}
 
-                                    <div className="grid grid-cols-2 gap-x-20 gap-y-24 pt-24">
-                                        <div className="space-y-2">
-                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                    <div className="grid grid-cols-2 gap-x-20 gap-y-20 pt-32 pb-4">
+                                        <div className="space-y-4">
+                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
                                                 {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker.image} alt="Firma Trabajador" className="h-full object-contain" />}
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
-                                                <p className="text-sm">C.C. {selectedContract.signatures?.worker?.documentId || '________________'}</p>
-                                                <p className="font-bold italic">EL TRABAJADOR</p>
+                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
+                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.worker?.documentId || '________________'}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">EL TRABAJADOR</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                        <div className="space-y-4">
+                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
                                                 {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer.image} alt="Firma Empleador" className="h-full object-contain" />}
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
-                                                <p className="text-sm">NIT/C.C. {selectedContract.signatures?.employer?.documentId || '________________'}</p>
-                                                <p className="font-bold italic">POR EL EMPLEADOR</p>
+                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
+                                                <p className="text-[10px] font-bold text-slate-500">NIT/C.C. {selectedContract.signatures?.employer?.documentId || '________________'}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">POR EL EMPLEADOR</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                        <div className="space-y-4">
+                                            <div className="h-32 border-b-2 border-slate-900 flex items-end justify-center pb-2">
                                                 {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss.image} alt="Firma Jefe" className="h-full object-contain" />}
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
-                                                <p className="text-sm">C.C. {selectedContract.signatures?.boss?.documentId || '________________'}</p>
-                                                <p className="font-bold italic">JEFE INMEDIATO</p>
+                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
+                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.boss?.documentId || '________________'}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">JEFE INMEDIATO</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
-                                                {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain" />}
+                                        {/* Talento Humano */}
+                                        <div className="space-y-4">
+                                            <div className="h-40 border-b-2 border-slate-900 flex items-end justify-center pb-4 relative hover:bg-slate-50 transition-colors">
+                                                {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain mix-blend-multiply" />}
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.hr?.name || 'Jefe Talento Humano'}</p>
-                                                <p className="text-sm">C.C. {selectedContract.signatures?.hr?.documentId || '________________'}</p>
-                                                <p className="font-bold italic">TALENTO HUMANO</p>
+                                                <p className="font-display font-black text-slate-800 uppercase tracking-tight leading-none">{selectedContract.signatures?.hr?.name || 'Jefe de Talento Humano'}</p>
+                                                <p className="text-[10px] font-bold text-slate-500">C.C. {selectedContract.signatures?.hr?.documentId || '________________'}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] pt-1">TALENTO HUMANO</p>
                                             </div>
                                         </div>
                                     </div>
