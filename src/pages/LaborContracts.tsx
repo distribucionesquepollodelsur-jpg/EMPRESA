@@ -222,7 +222,7 @@ const LaborContracts: React.FC = () => {
                     const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas o itálicas. Solo devuelve el texto plano limpio.";
                     
                     let result;
-                    const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+                    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
                     let success = false;
 
                     for (const modelName of models) {
@@ -262,8 +262,8 @@ const LaborContracts: React.FC = () => {
                     let text = result?.text;
                     if (!text) throw new Error("No se pudo extraer el texto del documento.");
 
-                    // Clean any residual asterisks
-                    text = text.replace(/\*/g, '').replace(/__/g, '');
+                    // Clean any residual asterisks and markdown markers
+                    text = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/#/g, '');
 
                     if (type === 'contract') setContractText(text);
                     if (type === 'regulations') setRegulationsText(text);
@@ -334,7 +334,8 @@ const LaborContracts: React.FC = () => {
         }
     };
 
-    const downloadPDF = async (contractToDownload = selectedContract) => {
+    const downloadPDF = async (contractData?: LaborContract) => {
+        const contractToDownload = contractData && 'id' in contractData ? contractData : selectedContract;
         if (!contractRef.current || !contractToDownload) return;
         setLoading(true);
         try {
@@ -349,13 +350,13 @@ const LaborContracts: React.FC = () => {
             }));
 
             const canvas = await html2canvas(contractRef.current, {
-                scale: 2,
+                scale: 1.5, // Reduced scale for better performance and smaller pdf size
                 logging: false,
                 useCORS: true,
-                allowTaint: true,
+                allowTaint: false,
                 backgroundColor: '#ffffff'
             });
-            const imgData = canvas.toDataURL('image/png', 1.0);
+            const imgData = canvas.toDataURL('image/png', 0.8);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -378,7 +379,7 @@ const LaborContracts: React.FC = () => {
             pdf.save(`Contrato_${contractToDownload.employeeName}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
-            alert("Error al generar el PDF.");
+            alert("Error al generar el PDF. Por favor, asegúrate de que el documento esté visible.");
         } finally {
             setLoading(false);
         }
@@ -408,7 +409,7 @@ const LaborContracts: React.FC = () => {
             ${selectedContract.dotationText}`;
 
             let result;
-            const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+            const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
             let success = false;
 
             for (const modelName of models) {
@@ -444,8 +445,8 @@ const LaborContracts: React.FC = () => {
             
             let explanation = result?.text;
             if (explanation) {
-                // Final safety cleanup of any Markdown markers
-                explanation = explanation.replace(/\*/g, '').replace(/__/g, '');
+                // Final safety cleanup of any Markdown markers and asterisks
+                explanation = explanation.replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/#/g, '');
                 setAiExplanation(explanation);
             }
         } catch (error: any) {
@@ -892,7 +893,7 @@ const LaborContracts: React.FC = () => {
                             <div className="mt-auto space-y-4">
                                 {selectedContract.status === 'signed' && (
                                     <button 
-                                        onClick={downloadPDF}
+                                        onClick={() => downloadPDF()}
                                         className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white rounded-3xl font-black uppercase text-sm tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20"
                                     >
                                         <Download size={20} />
