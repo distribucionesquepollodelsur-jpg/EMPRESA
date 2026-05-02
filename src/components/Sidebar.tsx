@@ -66,6 +66,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         { id: 'purchases', label: 'Compras', icon: ShoppingCart, adminOnly: true },
         { id: 'sales', label: 'Ventas', icon: Tag },
         { id: 'despresaje', label: 'Despresaje', icon: Scissors, adminOnly: false },
+        { id: 'expenses', label: 'Gastos', icon: History, adminOnly: true },
+        { id: 'loans', label: 'Préstamos 3ro', icon: Wallet, adminOnly: true },
         { id: 'cash', label: 'Caja', icon: Wallet },
         { id: 'employees', label: 'Empleados', icon: Users, adminOnly: true },
         { id: 'assets', label: 'Activos Fijos', icon: ShieldCheck, adminOnly: true },

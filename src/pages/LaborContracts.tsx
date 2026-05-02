@@ -708,82 +708,89 @@ const LaborContracts: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
                     <div className="bg-slate-100 w-full max-w-6xl rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300 flex flex-col lg:flex-row h-full max-h-[95vh]">
                         {/* Left Side: Document Viewer */}
-                        <div className="lg:w-2/3 bg-white p-6 lg:p-12 overflow-y-auto" ref={contractRef}>
-                            <div className="max-w-prose mx-auto space-y-12">
-                                <div className="text-center space-y-4 pb-8 border-b-4 border-slate-900 flex flex-col items-center">
-                                    <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center p-2 border-2 border-slate-100 overflow-hidden">
+                        <div className="lg:w-2/3 bg-white p-6 lg:p-20 overflow-y-auto print:p-0" ref={contractRef}>
+                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-sm font-serif text-slate-900 border border-slate-100" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                                <div className="text-center space-y-12 pb-16">
+                                    <div className="flex justify-center pb-4">
                                         {companyLogo ? (
-                                            <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
+                                            <img src={companyLogo} alt="Logo" className="w-48 h-48 object-contain" />
                                         ) : (
-                                            <img src="/icon.svg" alt="Logo" className="w-full h-full" />
+                                            <div className="w-48 h-48 bg-slate-50 flex items-center justify-center">
+                                                <Building2 className="text-slate-200" size={64} />
+                                            </div>
                                         )}
                                     </div>
-                                    <div>
-                                        <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Contrato de Trabajo</h2>
-                                        <p className="font-bold text-slate-500 tracking-widest uppercase text-sm">Distribuciones Que Pollo del Sur</p>
+                                    <div className="space-y-4">
+                                        <h2 className="text-2xl font-bold uppercase">CONTRATO INDIVIDUAL DE TRABAJO</h2>
+                                        <p className="text-xl font-bold uppercase">DISTRIBUCIONES QUE POLLO DEL SUR</p>
                                     </div>
                                 </div>
 
-                                <section className="space-y-6">
-                                    <h3 className="text-xl font-black uppercase border-l-4 border-orange-500 pl-4">Cláusulas del Contrato</h3>
-                                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-serif text-lg">
+                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal italic-none">
+                                    <div className="whitespace-pre-wrap indent-8">
                                         {selectedContract.contractText}
                                     </div>
-                                </section>
 
-                                <section className="space-y-6 page-break-before">
-                                    <h3 className="text-xl font-black uppercase border-l-4 border-orange-500 pl-4">Reglamento Interno</h3>
-                                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-serif text-lg">
-                                        {selectedContract.regulationsText || "No hay reglamento adjunto."}
-                                    </div>
-                                </section>
+                                    {selectedContract.regulationsText && (
+                                        <>
+                                            <div className="h-12" />
+                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-3 mb-6">REGLAMENTO INTERNO DE TRABAJO</h3>
+                                            <div className="whitespace-pre-wrap indent-8">
+                                                {selectedContract.regulationsText}
+                                            </div>
+                                        </>
+                                    )}
 
-                                <section className="space-y-6">
-                                    <h3 className="text-xl font-black uppercase border-l-4 border-orange-500 pl-4">Acta de Dotación</h3>
-                                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-serif text-lg">
-                                        {selectedContract.dotationText || "No hay registros de dotación."}
-                                    </div>
-                                </section>
+                                    {selectedContract.dotationText && (
+                                        <>
+                                            <div className="h-12" />
+                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-3 mb-6">ACTA DE ENTREGA DE DOTACIÓN</h3>
+                                            <div className="whitespace-pre-wrap indent-8">
+                                                {selectedContract.dotationText}
+                                            </div>
+                                        </>
+                                    )}
 
-                                <div className="grid grid-cols-2 gap-12 pt-20 border-t border-slate-100">
-                                    <div className="space-y-4">
-                                        <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker.image} alt="Firma Trabajador" className="h-full object-contain" />}
+                                    <div className="grid grid-cols-2 gap-x-20 gap-y-24 pt-24">
+                                        <div className="space-y-2">
+                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                                {selectedContract.signatures?.worker && <img src={selectedContract.signatures.worker.image} alt="Firma Trabajador" className="h-full object-contain" />}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
+                                                <p className="text-sm">C.C. {selectedContract.signatures?.worker?.documentId || '________________'}</p>
+                                                <p className="font-bold italic">EL TRABAJADOR</p>
+                                            </div>
                                         </div>
-                                        <div className="text-center space-y-1">
-                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.worker?.name || selectedContract.employeeName}</p>
-                                            <p className="font-bold text-[10px] text-slate-500">CC: {selectedContract.signatures?.worker?.documentId || '________________'}</p>
-                                            <p className="font-black uppercase text-[10px] text-slate-400">TRABAJADOR</p>
+                                        <div className="space-y-2">
+                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                                {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer.image} alt="Firma Empleador" className="h-full object-contain" />}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
+                                                <p className="text-sm">NIT/C.C. {selectedContract.signatures?.employer?.documentId || '________________'}</p>
+                                                <p className="font-bold italic">POR EL EMPLEADOR</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.employer && <img src={selectedContract.signatures.employer.image} alt="Firma Empleador" className="h-full object-contain" />}
+                                        <div className="space-y-2">
+                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                                {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss.image} alt="Firma Jefe" className="h-full object-contain" />}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
+                                                <p className="text-sm">C.C. {selectedContract.signatures?.boss?.documentId || '________________'}</p>
+                                                <p className="font-bold italic">JEFE INMEDIATO</p>
+                                            </div>
                                         </div>
-                                        <div className="text-center space-y-1">
-                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.employer?.name || 'Representante Legal'}</p>
-                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.employer?.documentId || '________________'}</p>
-                                            <p className="font-black uppercase text-[10px] text-slate-400">EMPLEADOR</p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.boss && <img src={selectedContract.signatures.boss.image} alt="Firma Jefe" className="h-full object-contain" />}
-                                        </div>
-                                        <div className="text-center space-y-1">
-                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.boss?.name || 'Jefe Inmediato'}</p>
-                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.boss?.documentId || '________________'}</p>
-                                            <p className="font-black uppercase text-[10px] text-slate-400">JEFE INMEDIATO</p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="h-32 border-b-2 border-slate-900 flex items-center justify-center overflow-hidden">
-                                            {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain" />}
-                                        </div>
-                                        <div className="text-center space-y-1">
-                                            <p className="font-black uppercase text-xs">Firma: {selectedContract.signatures?.hr?.name || 'Jefe Talento Humano'}</p>
-                                            <p className="font-bold text-[10px] text-slate-500">ID: {selectedContract.signatures?.hr?.documentId || '________________'}</p>
-                                            <p className="font-black uppercase text-[10px] text-slate-400">TALENTO HUMANO</p>
+                                        <div className="space-y-2">
+                                            <div className="h-32 border-b border-slate-900 flex items-end justify-center pb-2">
+                                                {selectedContract.signatures?.hr && <img src={selectedContract.signatures.hr.image} alt="Firma RH" className="h-full object-contain" />}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="font-bold underline leading-none uppercase">{selectedContract.signatures?.hr?.name || 'Jefe Talento Humano'}</p>
+                                                <p className="text-sm">C.C. {selectedContract.signatures?.hr?.documentId || '________________'}</p>
+                                                <p className="font-bold italic">TALENTO HUMANO</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

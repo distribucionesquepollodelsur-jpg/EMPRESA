@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins } from 'lucide-react';
+import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins, AlertCircle } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Customer, Sale } from '../types';
+import { differenceInDays, parseISO } from 'date-fns';
 
 const Customers: React.FC = () => {
-    const { customers, sales, addCustomer, updateCustomer, updateCustomerBalance, deleteCustomer, addSalePayment, updateSale } = useData();
+    const { customers, sales, addCustomer, updateCustomer, updateCustomerBalance, deleteCustomer, addSalePayment, deleteSalePayment, updateSale } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -79,6 +80,17 @@ const Customers: React.FC = () => {
         return sales
             .filter(s => s.customerId === customerId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    };
+
+    const isClientOverdue = (customerId: string) => {
+        const customerSales = sales.filter(s => s.customerId === customerId && s.total > (s.paidAmount || 0));
+        if (customerSales.length === 0) return false;
+
+        const oldestSale = customerSales.reduce((oldest, s) => {
+            return new Date(s.date) < new Date(oldest.date) ? s : oldest;
+        });
+
+        return differenceInDays(new Date(), parseISO(oldestSale.date)) >= 5;
     };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -186,6 +198,19 @@ const Customers: React.FC = () => {
                     <Plus size={20} /> Nuevo Cliente
                 </button>
             </div>
+
+            {/* Overdue Banner */}
+            {customers.some(c => isClientOverdue(c.id)) && (
+                <div className="bg-red-600 text-white p-4 rounded-3xl flex items-center justify-between shadow-xl shadow-red-200 animate-pulse">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle size={24} className="shrink-0" />
+                        <div>
+                            <p className="font-black text-sm uppercase tracking-tight">¡Atención! Cobros Pendientes</p>
+                            <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Hay clientes con deudas superando los 5 días de retraso.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -406,13 +431,27 @@ const Customers: React.FC = () => {
                                                         {sale.payments && sale.payments.length > 0 ? (
                                                             <div className="space-y-2">
                                                                 {sale.payments.map((payment, idx) => (
-                                                                    <div key={idx} className="flex justify-between items-center text-xs">
+                                                                    <div key={idx} className="flex justify-between items-center text-xs group/payment">
                                                                         <div className="flex items-center gap-2 text-slate-500 font-medium">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                                                                             <span>{formatDate(payment.date)}</span>
                                                                             <span className="text-[8px] uppercase font-black opacity-50 px-1 bg-slate-100 rounded">{payment.method}</span>
                                                                         </div>
-                                                                        <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
+                                                                            {isAdmin && (
+                                                                                <button 
+                                                                                    onClick={async () => {
+                                                                                        if (window.confirm('¿Eliminar este abono?')) {
+                                                                                            await deleteSalePayment(sale.id, idx);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/payment:opacity-100"
+                                                                                >
+                                                                                    <Trash2 size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>

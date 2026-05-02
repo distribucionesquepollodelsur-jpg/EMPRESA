@@ -100,6 +100,13 @@ interface DataContextType extends AppState {
     deleteCustomerDebtAbono: (customerId: string, paymentIndex: number) => Promise<void>;
     addSupplierDebtAbono: (supplierId: string, amount: number) => Promise<void>;
     deleteSupplierDebtAbono: (supplierId: string, paymentIndex: number) => Promise<void>;
+    addExpense: (expense: any) => Promise<void>;
+    deleteExpense: (id: string) => Promise<void>;
+    addLoan: (loan: any) => Promise<void>;
+    updateLoan: (id: string, updates: any) => Promise<void>;
+    addLoanAbono: (loanId: string, amount: number, method: string) => Promise<void>;
+    deleteLoanAbono: (loanId: string, abonoIndex: number) => Promise<void>;
+    deleteLoan: (id: string) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
@@ -147,6 +154,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [assets, setAssets] = useState<Asset[]>([]);
     const [processings, setProcessings] = useState<Processing[]>([]);
     const [inventoryLogs, setInventoryLogs] = useState<InventoryAdjustment[]>([]);
+    const [expenses, setExpenses] = useState<any[]>([]);
+    const [loans, setLoans] = useState<any[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -220,6 +229,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAssets(s.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
         }, (e) => handleFirestoreError(e, OperationType.GET, 'assets'));
 
+        const unsubExpenses = onSnapshot(collection(db, 'expenses'), (s) => {
+            setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'expenses'));
+
+        const unsubLoans = onSnapshot(collection(db, 'loans'), (s) => {
+            setLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'loans'));
+
         return () => {
             unsubEmployees();
             unsubInventory();
@@ -237,6 +254,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unsubDotations();
             unsubProcessings();
             unsubAssets();
+            unsubExpenses();
+            unsubLoans();
         };
     }, []);
 
@@ -1055,6 +1074,107 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
     };
 
+    const addExpense = async (expense: any) => {
+        try {
+            const expenseWithDate = { ...expense, date: expense.date || new Date().toISOString() };
+            await addDoc(collection(db, 'expenses'), clean(expenseWithDate));
+            
+            // Register as exit in cash flow
+            await addCashMovement({
+                type: 'exit',
+                amount: expense.amount,
+                reason: `Gasto: ${expense.category} - ${expense.description}`,
+                category: 'expense'
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'expenses'); }
+    };
+
+    const deleteExpense = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'expenses', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `expenses/${id}`); }
+    };
+
+    const addLoan = async (loan: any) => {
+        try {
+            const loanWithId = { 
+                ...loan, 
+                date: loan.date || new Date().toISOString(),
+                paidAmount: 0,
+                payments: [],
+                status: 'pending'
+            };
+            const docRef = await addDoc(collection(db, 'loans'), clean(loanWithId));
+            
+            // Deduction from cash
+            await addCashMovement({
+                type: 'exit',
+                amount: loan.amount,
+                reason: `Préstamo a Tercero: ${loan.borrowerName}`,
+                category: 'loan'
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'loans'); }
+    };
+
+    const updateLoan = async (id: string, updates: any) => {
+        try {
+            await updateDoc(doc(db, 'loans', id), clean(updates));
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `loans/${id}`); }
+    };
+
+    const addLoanAbono = async (loanId: string, amount: number, method: string) => {
+        const loan = loans.find(l => l.id === loanId);
+        if (!loan) return;
+
+        try {
+            const cashMovementId = await addCashMovement({
+                type: 'entry',
+                amount: amount,
+                reason: `Abono de Préstamo: ${loan.borrowerName}`,
+                category: 'loan'
+            }) || undefined;
+
+            const newPaidAmount = (loan.paidAmount || 0) + amount;
+            await updateDoc(doc(db, 'loans', loanId), {
+                paidAmount: newPaidAmount,
+                status: newPaidAmount >= loan.amount ? 'paid' : 'pending',
+                payments: [...(loan.payments || []), { 
+                    date: new Date().toISOString(), 
+                    amount, 
+                    method, 
+                    cashMovementId 
+                }]
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `loans/${loanId}`); }
+    };
+
+    const deleteLoanAbono = async (loanId: string, abonoIndex: number) => {
+        const loan = loans.find(l => l.id === loanId);
+        if (!loan || !loan.payments || !loan.payments[abonoIndex]) return;
+
+        const payment = loan.payments[abonoIndex];
+
+        try {
+            if (payment.cashMovementId) {
+                await deleteCashMovement(payment.cashMovementId);
+            }
+
+            const updatedPayments = loan.payments.filter((_, i) => i !== abonoIndex);
+            const newPaidAmount = (loan.paidAmount || 0) - payment.amount;
+            await updateDoc(doc(db, 'loans', loanId), {
+                paidAmount: newPaidAmount,
+                status: newPaidAmount >= loan.amount ? 'paid' : 'pending',
+                payments: updatedPayments
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `loans/${loanId}`); }
+    };
+
+    const deleteLoan = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'loans', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `loans/${id}`); }
+    };
+
     const resetData = async () => {
         if (window.confirm("¿Estás seguro de que deseas restablecer todos los datos del sistema? Esto eliminará todo de la base de datos.")) {
             // In a real app we'd delete collections, but for safety let's just warn it's not implemented for safety.
@@ -1064,7 +1184,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, config,
             loading,
             addProduct,
             updateProduct,
@@ -1081,6 +1201,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addCashMovement,
             updateCashMovement,
             deleteCashMovement,
+            addExpense,
+            deleteExpense,
+            addLoan,
+            updateLoan,
+            addLoanAbono,
+            deleteLoanAbono,
+            deleteLoan,
             addEmployee,
             updateEmployee,
             deleteEmployee,

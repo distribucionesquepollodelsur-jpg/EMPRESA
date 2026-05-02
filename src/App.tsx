@@ -23,6 +23,8 @@ import Employees from './pages/Employees';
 import Assets from './pages/Assets';
 import LaborContracts from './pages/LaborContracts';
 import Credits from './pages/Credits';
+import Expenses from './pages/Expenses';
+import Loans from './pages/Loans';
 import Reports from './pages/Reports';
 import Config from './pages/Config';
 
@@ -70,6 +72,8 @@ const MainContent: React.FC = () => {
       case 'assets': return <Assets />;
       case 'contracts': return <LaborContracts />;
       case 'credits': return <Credits />;
+      case 'expenses': return <Expenses />;
+      case 'loans': return <Loans />;
       case 'reports': return <Reports />;
       case 'config': return <Config />;
       default: return <Dashboard />;

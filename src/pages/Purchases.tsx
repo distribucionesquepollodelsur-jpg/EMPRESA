@@ -25,8 +25,10 @@ const Purchases: React.FC = () => {
     const [supplierPhone, setSupplierPhone] = useState('');
     const [buyerName, setBuyerName] = useState(user?.role === 'admin' ? config.manager : (user?.name || config.manager));
     const [buyerPhone, setBuyerPhone] = useState(config.phone1);
-    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit'>('cash');
+    const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit' | 'mixed'>('cash');
     const [paidAmount, setPaidAmount] = useState<number>(0);
+    const [cashAmount, setCashAmount] = useState<number>(0);
+    const [transferAmount, setTransferAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [items, setItems] = useState<PurchaseItem[]>([]);
 
@@ -87,8 +89,39 @@ const Purchases: React.FC = () => {
         if (!finalSupplierName) return;
 
         let finalPaid = total;
+        let payments = [];
+
         if (paymentMethod === 'credit') {
             finalPaid = paidAmount;
+            if (paidAmount > 0) {
+                payments.push({
+                    amount: paidAmount,
+                    method: 'Efectivo',
+                    date: new Date().toISOString()
+                });
+            }
+        } else if (paymentMethod === 'mixed') {
+            finalPaid = cashAmount + transferAmount;
+            if (cashAmount > 0) {
+                payments.push({
+                    amount: cashAmount,
+                    method: 'Efectivo',
+                    date: new Date().toISOString()
+                });
+            }
+            if (transferAmount > 0) {
+                payments.push({
+                    amount: transferAmount,
+                    method: 'Transferencia',
+                    date: new Date().toISOString()
+                });
+            }
+        } else {
+            payments.push({
+                amount: total,
+                method: paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+                date: new Date().toISOString()
+            });
         }
 
         const today = format(new Date(), 'yyyy-MM-dd');
@@ -107,7 +140,8 @@ const Purchases: React.FC = () => {
                 paymentMethod,
                 items,
                 total,
-                paidAmount: finalPaid
+                paidAmount: finalPaid,
+                payments: payments
             });
 
             generatePurchaseInvoice({
@@ -248,6 +282,8 @@ const Purchases: React.FC = () => {
         setSupplierName('');
         setSupplierPhone('');
         setPaidAmount(0);
+        setCashAmount(0);
+        setTransferAmount(0);
         setPaymentMethod('cash');
         setItems([]);
         setIsModalOpen(false);
@@ -539,9 +575,43 @@ const Purchases: React.FC = () => {
                                         >
                                             <option value="cash">Efectivo</option>
                                             <option value="transfer">Transferencia</option>
+                                            <option value="mixed">Mixto (Efectivo + Transf)</option>
                                             <option value="credit">Crédito / Cuenta por Pagar</option>
                                         </select>
                                     </div>
+
+                                    {paymentMethod === 'mixed' && (
+                                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Efectivo</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={cashAmount || ''}
+                                                    onChange={e => setCashAmount(parseFloat(e.target.value))}
+                                                    className="w-full bg-white border border-slate-200 rounded p-3 text-sm font-bold outline-none"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Transferencia</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={transferAmount || ''}
+                                                    onChange={e => setTransferAmount(parseFloat(e.target.value))}
+                                                    className="w-full bg-white border border-slate-200 rounded p-3 text-sm font-bold outline-none"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <p className={cn(
+                                                    "text-[10px] font-bold uppercase tracking-tighter",
+                                                    (cashAmount + transferAmount) === total ? "text-emerald-500" : "text-amber-500"
+                                                )}>
+                                                    Suma: {formatCurrency(cashAmount + transferAmount)} / Total: {formatCurrency(total)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {paymentMethod === 'credit' && (
                                         <div className="space-y-1 animate-in fade-in slide-in-from-top-2">

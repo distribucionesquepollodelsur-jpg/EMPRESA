@@ -62,7 +62,7 @@ export interface CashMovement {
     type: 'entry' | 'exit';
     amount: number;
     reason: string;
-    category?: 'sale' | 'purchase' | 'advance' | 'loan' | 'manual';
+    category?: 'sale' | 'purchase' | 'advance' | 'loan' | 'manual' | 'expense';
 }
 
 export interface Customer {

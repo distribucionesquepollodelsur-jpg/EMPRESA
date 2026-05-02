@@ -6,7 +6,7 @@ import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 
 const Suppliers: React.FC = () => {
-    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, updatePurchase } = useData();
+    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -329,13 +329,27 @@ const Suppliers: React.FC = () => {
                                                         {purchase.payments && purchase.payments.length > 0 ? (
                                                             <div className="space-y-2">
                                                                 {purchase.payments.map((payment, idx) => (
-                                                                    <div key={idx} className="flex justify-between items-center text-xs">
+                                                                    <div key={idx} className="flex justify-between items-center text-xs group/payment">
                                                                         <div className="flex items-center gap-2 text-slate-500">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                                                                             <span className="font-bold">{formatDate(payment.date)}</span>
                                                                             <span className="text-[10px] uppercase font-black opacity-50">({payment.method})</span>
                                                                         </div>
-                                                                        <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
+                                                                            {isAdmin && (
+                                                                                <button 
+                                                                                    onClick={async () => {
+                                                                                        if (window.confirm('¿Eliminar este abono?')) {
+                                                                                            await deletePurchasePayment(purchase.id, idx);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/payment:opacity-100"
+                                                                                >
+                                                                                    <Trash2 size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
