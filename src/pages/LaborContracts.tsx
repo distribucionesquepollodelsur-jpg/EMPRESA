@@ -757,10 +757,10 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-12 text-[11pt] leading-[2.0] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
+                                <div className="space-y-8 text-[11pt] leading-[1.6] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
                                     <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                         {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-10 text-justify" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                            <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
                                                 {para}
                                             </p>
                                         ))}
@@ -768,16 +768,16 @@ const LaborContracts: React.FC = () => {
 
                                     {selectedContract.regulationsText && (
                                         <>
-                                            <div className="h-32" />
-                                            <div className="relative mb-16">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-900"></div></div>
-                                                <div className="relative flex justify-center text-xs px-4">
-                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-[0.25em] border-2 border-slate-900 rounded-[50px] shadow-sm">REGLAMENTO INTERNO DE TRABAJO</h3>
+                                            <div className="h-20" />
+                                            <div className="relative mb-10">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-300"></div></div>
+                                                <div className="relative flex justify-center">
+                                                    <h3 className="bg-white px-6 py-2 text-xl font-display font-black text-slate-800 uppercase tracking-widest border border-slate-200">REGLAMENTO INTERNO DE TRABAJO</h3>
                                                 </div>
                                             </div>
                                             <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                                 {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-8" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                                    <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
                                                         {para}
                                                     </p>
                                                 ))}
@@ -787,16 +787,16 @@ const LaborContracts: React.FC = () => {
 
                                     {selectedContract.dotationText && (
                                         <>
-                                            <div className="h-32" />
-                                            <div className="relative mb-16">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-900"></div></div>
-                                                <div className="relative flex justify-center text-xs px-4">
-                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-[0.25em] border-2 border-slate-900 rounded-[50px] shadow-sm">ACTA DE ENTREGA DE DOTACIÓN</h3>
+                                            <div className="h-20" />
+                                            <div className="relative mb-10">
+                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-300"></div></div>
+                                                <div className="relative flex justify-center">
+                                                    <h3 className="bg-white px-6 py-2 text-xl font-display font-black text-slate-800 uppercase tracking-widest border border-slate-200">ACTA DE ENTREGA DE DOTACIÓN</h3>
                                                 </div>
                                             </div>
                                             <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                                 {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-8" : "h-6"} style={para.trim() ? { textIndent: '4rem' } : {}}>
+                                                    <p key={i} className={para.trim() ? "mb-5" : "h-4"}>
                                                         {para}
                                                     </p>
                                                 ))}
