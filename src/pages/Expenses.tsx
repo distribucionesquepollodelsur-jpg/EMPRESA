@@ -71,11 +71,27 @@ const Expenses: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gasto Mensual</p>
-                    <h3 className="text-2xl font-black text-red-600">
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm ring-2 ring-red-50">
+                    <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Gasto Mensual Total</p>
+                    <h3 className="text-3xl font-black text-red-600 tracking-tighter">
                         {formatCurrency(filteredExpenses.reduce((sum, e) => sum + e.amount, 0))}
                     </h3>
+                </div>
+                
+                <div className="md:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Distribución por Categoría</p>
+                    <div className="flex flex-wrap gap-2">
+                        {categories.map(cat => {
+                            const total = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
+                            if (total === 0) return null;
+                            return (
+                                <div key={cat} className="flex flex-col bg-slate-50 border border-slate-100 p-3 rounded-2xl min-w-[120px]">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{cat}</span>
+                                    <span className="text-sm font-black text-slate-900">{formatCurrency(total)}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 

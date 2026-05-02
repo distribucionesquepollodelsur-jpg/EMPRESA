@@ -726,27 +726,39 @@ const LaborContracts: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal italic-none">
-                                    <div className="whitespace-pre-wrap indent-8">
-                                        {selectedContract.contractText}
+                                <div className="space-y-8 text-[12pt] leading-[2.0] text-justify font-normal" style={{ textAlignLast: 'left' }}>
+                                    <div className="whitespace-pre-wrap select-text">
+                                        {selectedContract.contractText.split('\n').map((para, i) => (
+                                            <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
+                                                {para}
+                                            </p>
+                                        ))}
                                     </div>
 
                                     {selectedContract.regulationsText && (
                                         <>
-                                            <div className="h-12" />
-                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-3 mb-6">REGLAMENTO INTERNO DE TRABAJO</h3>
-                                            <div className="whitespace-pre-wrap indent-8">
-                                                {selectedContract.regulationsText}
+                                            <div className="h-16" />
+                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">REGLAMENTO INTERNO DE TRABAJO</h3>
+                                            <div className="whitespace-pre-wrap select-text">
+                                                {selectedContract.regulationsText.split('\n').map((para, i) => (
+                                                    <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
+                                                        {para}
+                                                    </p>
+                                                ))}
                                             </div>
                                         </>
                                     )}
 
                                     {selectedContract.dotationText && (
                                         <>
-                                            <div className="h-12" />
-                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-3 mb-6">ACTA DE ENTREGA DE DOTACIÓN</h3>
-                                            <div className="whitespace-pre-wrap indent-8">
-                                                {selectedContract.dotationText}
+                                            <div className="h-16" />
+                                            <h3 className="text-xl font-bold uppercase text-center border-y-2 border-slate-900 py-4 mb-10 tracking-widest">ACTA DE ENTREGA DE DOTACIÓN</h3>
+                                            <div className="whitespace-pre-wrap select-text">
+                                                {selectedContract.dotationText.split('\n').map((para, i) => (
+                                                    <p key={i} className={para.trim() ? "mb-6 indent-12" : "h-4"}>
+                                                        {para}
+                                                    </p>
+                                                ))}
                                             </div>
                                         </>
                                     )}

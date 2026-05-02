@@ -58,7 +58,7 @@ service cloud.firestore {
              data.items is list && data.items.size() <= 100 &&
              data.total is number && data.total >= 0 &&
              data.paidAmount is number && data.paidAmount <= data.total &&
-             data.paymentMethod in ['cash', 'credit', 'balance'];
+             data.paymentMethod in ['cash', 'transfer', 'credit', 'balance', 'mixed'];
     }
 
     function isValidPurchase(data) {
@@ -69,7 +69,7 @@ service cloud.firestore {
              data.items is list && data.items.size() <= 100 &&
              data.total is number && data.total >= 0 &&
              data.paidAmount is number && data.paidAmount <= data.total &&
-             data.paymentMethod in ['cash', 'transfer', 'credit', 'balance'];
+             data.paymentMethod in ['cash', 'transfer', 'credit', 'balance', 'mixed'];
     }
 
     function isValidCashMovement(data) {
@@ -202,6 +202,16 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /loans/{loanId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }

@@ -96,9 +96,9 @@ interface DataContextType extends AppState {
     addSalePayment: (saleId: string, amount: number, method: string) => Promise<void>;
     deletePurchasePayment: (purchaseId: string, paymentIndex: number) => Promise<void>;
     deleteSalePayment: (saleId: string, paymentIndex: number) => Promise<void>;
-    addCustomerDebtAbono: (customerId: string, amount: number) => Promise<void>;
+    addCustomerDebtAbono: (customerId: string, amount: number, method: string) => Promise<void>;
     deleteCustomerDebtAbono: (customerId: string, paymentIndex: number) => Promise<void>;
-    addSupplierDebtAbono: (supplierId: string, amount: number) => Promise<void>;
+    addSupplierDebtAbono: (supplierId: string, amount: number, method: string) => Promise<void>;
     deleteSupplierDebtAbono: (supplierId: string, paymentIndex: number) => Promise<void>;
     addExpense: (expense: any) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
@@ -332,7 +332,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             // Sync cash
-            if (purchase.paymentMethod !== 'credit') {
+            if (purchase.payments && purchase.payments.length > 0) {
+                const updatedPayments = [];
+                for (const pmt of purchase.payments) {
+                    const moveRef = await addDoc(collection(db, 'cashFlow'), clean({
+                        date: new Date().toISOString(),
+                        type: 'exit',
+                        amount: pmt.amount,
+                        reason: `Compra #${docRef.id.slice(0, 8)} (${pmt.method})${purchase.supplierName ? ` - ${purchase.supplierName}` : ''}`,
+                        category: 'purchase'
+                    }));
+                    updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
+                }
+                await updateDoc(doc(db, 'purchases', docRef.id), { payments: updatedPayments });
+            } else if (purchase.paymentMethod !== 'credit') {
                 await addCashMovement({
                     type: 'exit',
                     amount: purchase.total,
@@ -789,7 +802,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     supplierName: supplierData.name,
                     supplierId: docRef.id,
                     supplierPhone: supplierData.phone,
-                    items: [],
+                    items: [{ productId: 'saldo-inicial', quantity: 1, cost: supplierData.initialDebt, price: supplierData.initialDebt }],
                     total: supplierData.initialDebt,
                     paidAmount: 0,
                     paymentMethod: 'credit',
@@ -830,11 +843,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     customerName: customerData.name,
                     customerId: docRef.id,
                     customerPhone: customerData.phone,
-                    items: [],
+                    items: [{ productId: 'saldo-inicial', quantity: 1, cost: customerData.initialDebt, price: customerData.initialDebt }],
                     total: customerData.initialDebt,
                     paidAmount: 0,
                     paymentMethod: 'credit',
-                    saleNumber: nextSaleNumber
+                    saleNumber: nextSaleNumber,
+                    payments: []
                 });
                 
                 await updateConfig({ 
@@ -887,7 +901,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cashMovementId = await addCashMovement({
                 type: 'exit',
                 amount: amount,
-                reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
+                reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${method}) - ${purchase.supplierName}`,
                 category: 'purchase'
             }) || undefined;
 
@@ -933,7 +947,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cashMovementId = await addCashMovement({
                 type: 'entry',
                 amount: method === 'balance' ? 0 : amount,
-                reason: `Abono a Venta #${saleId.slice(0, 8)}${method === 'balance' ? ' [SALDO]' : ''}`,
+                reason: `Abono a Venta #${saleId.slice(0, 8)} (${method})${method === 'balance' ? ' [SALDO]' : ''}${sale.customerName ? ` - ${sale.customerName}` : ''}`,
                 category: 'sale'
             }) || undefined;
 
@@ -971,21 +985,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `sales/${saleId}`); }
     };
 
-    const addCustomerDebtAbono = async (customerId: string, amount: number) => {
+    const addCustomerDebtAbono = async (customerId: string, amount: number, method: string) => {
         const customer = customers.find(c => c.id === customerId);
         if (!customer) return;
 
         try {
+            const isTransfer = method.toLowerCase().includes('transfer');
             const cashMovementId = await addCashMovement({
                 type: 'entry',
                 amount: amount,
-                reason: `Recaudo Saldo Antiguo: ${customer.name}`,
+                reason: `Recaudo Saldo Antiguo: ${customer.name} (${method})`,
                 category: 'sale'
             }) || undefined;
 
             await updateDoc(doc(db, 'customers', customerId), {
                 initialDebt: (customer.initialDebt || 0) - amount,
-                initialDebtPayments: [...(customer.initialDebtPayments || []), { date: new Date().toISOString(), amount, method: 'Efectivo', cashMovementId }]
+                initialDebtPayments: [...(customer.initialDebtPayments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
@@ -1009,7 +1024,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
 
-    const addSupplierDebtAbono = async (supplierId: string, amount: number) => {
+    const addSupplierDebtAbono = async (supplierId: string, amount: number, method: string) => {
         const supplier = suppliers.find(s => s.id === supplierId);
         if (!supplier) return;
 
@@ -1017,13 +1032,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cashMovementId = await addCashMovement({
                 type: 'exit',
                 amount: amount,
-                reason: `Abono a Saldo Antiguo Proveedor: ${supplier.name}`,
+                reason: `Abono a Saldo Antiguo Proveedor: ${supplier.name} (${method})`,
                 category: 'purchase'
             }) || undefined;
 
             await updateDoc(doc(db, 'suppliers', supplierId), {
                 initialDebt: (supplier.initialDebt || 0) - amount,
-                initialDebtPayments: [...(supplier.initialDebtPayments || []), { date: new Date().toISOString(), amount, method: 'Efectivo', cashMovementId }]
+                initialDebtPayments: [...(supplier.initialDebtPayments || []), { date: new Date().toISOString(), amount, method, cashMovementId }]
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${supplierId}`); }
     };
@@ -1130,7 +1145,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const cashMovementId = await addCashMovement({
                 type: 'entry',
                 amount: amount,
-                reason: `Abono de Préstamo: ${loan.borrowerName}`,
+                reason: `Abono de Préstamo (${method}): ${loan.borrowerName}`,
                 category: 'loan'
             }) || undefined;
 

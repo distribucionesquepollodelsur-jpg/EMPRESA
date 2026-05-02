@@ -32,6 +32,8 @@ const Suppliers: React.FC = () => {
     // Payment form
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [paidCashModal, setPaidCashModal] = useState<number>(0);
+    const [paidTransferModal, setPaidTransferModal] = useState<number>(0);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,15 +77,22 @@ const Suppliers: React.FC = () => {
         }
     };
 
-    const handlePaymentSubmit = (e: React.FormEvent) => {
+    const handlePaymentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedPurchase || paymentAmount <= 0) return;
+        if (!selectedPurchase) return;
         
-        addPurchasePayment(selectedPurchase.id, paymentAmount, paymentMethod);
+        if (paymentMethod === 'mixed') {
+            if (paidCashModal > 0) await addPurchasePayment(selectedPurchase.id, paidCashModal, 'cash');
+            if (paidTransferModal > 0) await addPurchasePayment(selectedPurchase.id, paidTransferModal, 'transfer');
+        } else {
+            if (paymentAmount <= 0) return;
+            await addPurchasePayment(selectedPurchase.id, paymentAmount, paymentMethod);
+        }
+        
         setIsPaymentModalOpen(false);
         setPaymentAmount(0);
-        
-        // Update selected purchase in the detail view if needed (it will auto-update via context)
+        setPaidCashModal(0);
+        setPaidTransferModal(0);
         setSelectedPurchase(null);
     };
 
@@ -454,30 +463,75 @@ const Suppliers: React.FC = () => {
                         </div>
 
                         <form onSubmit={handlePaymentSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor del Abono</label>
-                                <input 
-                                    type="number" 
-                                    required
-                                    autoFocus
-                                    max={selectedPurchase.total - selectedPurchase.paidAmount}
-                                    value={paymentAmount || ''}
-                                    onChange={e => setPaymentAmount(parseFloat(e.target.value))}
-                                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none text-2xl font-black text-slate-900 text-center tracking-tighter"
-                                    placeholder="0"
-                                />
-                            </div>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('cash')}
+                                        className={cn(
+                                            "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                            paymentMethod === 'cash' ? "bg-slate-900 border-slate-900 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        Efectivo
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('transfer')}
+                                        className={cn(
+                                            "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                            paymentMethod === 'transfer' ? "bg-blue-600 border-blue-600 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        Transfer
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('mixed')}
+                                        className={cn(
+                                            "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                            paymentMethod === 'mixed' ? "bg-purple-600 border-purple-600 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        Mixto
+                                    </button>
+                                </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Método de Pago</label>
-                                <select 
-                                    value={paymentMethod}
-                                    onChange={e => setPaymentMethod(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold"
-                                >
-                                    <option value="cash">Efectivo</option>
-                                    <option value="transfer">Transferencia</option>
-                                </select>
+                                {paymentMethod === 'mixed' ? (
+                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Efectivo</label>
+                                            <input 
+                                                type="number" 
+                                                value={paidCashModal || ''}
+                                                onChange={e => setPaidCashModal(parseFloat(e.target.value))}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transfer</label>
+                                            <input 
+                                                type="number" 
+                                                value={paidTransferModal || ''}
+                                                onChange={e => setPaidTransferModal(parseFloat(e.target.value))}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor del Abono</label>
+                                        <input 
+                                            type="number" 
+                                            required
+                                            max={selectedPurchase.total - selectedPurchase.paidAmount}
+                                            value={paymentAmount || ''}
+                                            onChange={e => setPaymentAmount(parseFloat(e.target.value))}
+                                            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none text-2xl font-black text-slate-900 text-center tracking-tighter"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex gap-3 pt-2">

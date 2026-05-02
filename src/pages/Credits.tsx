@@ -44,9 +44,15 @@ const Credits: React.FC = () => {
     const [newTotal, setNewTotal] = useState<number>(0);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+    const [paidCashModal, setPaidCashModal] = useState<number>(0);
+    const [paidTransferModal, setPaidTransferModal] = useState<number>(0);
 
     const pendingPurchases = useMemo(() => {
-        const items = purchases.filter(p => p.total > p.paidAmount).map(p => ({ ...p, isInitial: false }));
+        // Exclude 'saldo-inicial' purchases to avoid double counting with initials logic
+        const items = purchases
+            .filter(p => (p.total - (p.paidAmount || 0)) > 0 && !p.items.some(i => i.productId === 'saldo-inicial'))
+            .map(p => ({ ...p, isInitial: false }));
+            
         const initials = suppliers
             .filter(s => (s.initialDebt || 0) > 0)
             .map(s => ({
@@ -63,7 +69,11 @@ const Credits: React.FC = () => {
     }, [purchases, suppliers]);
 
     const pendingSales = useMemo(() => {
-        const items = sales.filter(s => s.total > (s.paidAmount || 0)).map(s => ({ ...s, isInitial: false }));
+        // Exclude 'saldo-inicial' sales to avoid double counting with initials logic
+        const items = sales
+            .filter(s => (s.total - (s.paidAmount || 0)) > 0 && !s.items.some(i => i.productId === 'saldo-inicial'))
+            .map(s => ({ ...s, isInitial: false }));
+            
         const initials = customers
             .filter(c => (c.initialDebt || 0) > 0)
             .map(c => ({
@@ -89,24 +99,36 @@ const Credits: React.FC = () => {
 
     const handleAddPayment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedItem || paymentAmount <= 0) return;
+        if (!selectedItem) return;
 
-        if (activeTab === 'toPay') {
-            if (selectedItem.isInitial) {
-                await addSupplierDebtAbono(selectedItem.supplierId, paymentAmount);
+        const executePayment = async (method: string, amount: number) => {
+            if (activeTab === 'toPay') {
+                if (selectedItem.isInitial) {
+                    await addSupplierDebtAbono(selectedItem.supplierId, amount, method);
+                } else {
+                    await addPurchasePayment(selectedItem.id, amount, method);
+                }
             } else {
-                addPurchasePayment(selectedItem.id, paymentAmount, paymentMethod);
+                if (selectedItem.isInitial) {
+                    await addCustomerDebtAbono(selectedItem.customerId, amount, method);
+                } else {
+                    await addSalePayment(selectedItem.id, amount, method);
+                }
             }
+        };
+
+        if (paymentMethod === 'Mixto') {
+            if (paidCashModal > 0) await executePayment('Efectivo', paidCashModal);
+            if (paidTransferModal > 0) await executePayment('Transferencia', paidTransferModal);
         } else {
-            if (selectedItem.isInitial) {
-                await addCustomerDebtAbono(selectedItem.customerId, paymentAmount);
-            } else {
-                addSalePayment(selectedItem.id, paymentAmount, paymentMethod);
-            }
+            if (paymentAmount <= 0) return;
+            await executePayment(paymentMethod, paymentAmount);
         }
 
         setSelectedItem(null);
         setPaymentAmount(0);
+        setPaidCashModal(0);
+        setPaidTransferModal(0);
     };
 
     const handleEditTotal = (e: React.FormEvent) => {
@@ -312,6 +334,83 @@ const Credits: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleAddPayment} className="space-y-6">
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('Efectivo')}
+                                        className={cn(
+                                            "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                            paymentMethod === 'Efectivo' ? "bg-slate-900 border-slate-900 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        Efectivo
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('Transferencia')}
+                                        className={cn(
+                                            "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                            paymentMethod === 'Transferencia' ? "bg-blue-600 border-blue-600 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                        )}
+                                    >
+                                        Transfer
+                                    </button>
+                                    {!selectedItem.isInitial && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPaymentMethod('Mixto')}
+                                            className={cn(
+                                                "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                                                paymentMethod === 'Mixto' ? "bg-purple-600 border-purple-600 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
+                                            )}
+                                        >
+                                            Mixto
+                                        </button>
+                                    )}
+                                </div>
+
+                                {paymentMethod === 'Mixto' ? (
+                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Efectivo</label>
+                                            <input 
+                                                type="number" 
+                                                value={paidCashModal || ''}
+                                                onChange={e => setPaidCashModal(parseFloat(e.target.value))}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transfer</label>
+                                            <input 
+                                                type="number" 
+                                                value={paidTransferModal || ''}
+                                                onChange={e => setPaidTransferModal(parseFloat(e.target.value))}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
+                                        <div className="relative">
+                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
+                                            <input 
+                                                type="number" 
+                                                required
+                                                autoFocus
+                                                max={selectedItem.total - (selectedItem.paidAmount || 0)}
+                                                value={paymentAmount || ''}
+                                                onChange={e => setPaymentAmount(parseFloat(e.target.value))}
+                                                className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-black text-xl text-slate-900"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Historial de Abonos */}
                             {selectedItem.payments && selectedItem.payments.length > 0 && (
                                 <div className="space-y-3 pt-4 border-t border-slate-100">
