@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench } from 'lucide-react';
+import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench, FileText, Upload } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Employee, Shift, Dotation } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
@@ -54,6 +54,9 @@ const Employees: React.FC = () => {
     // Form inputs
     const [name, setName] = useState('');
     const [photo, setPhoto] = useState<string | null>(null);
+    const [resumePdf, setResumePdf] = useState<string | null>(null);
+    const [resumeText, setResumeText] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -111,6 +114,46 @@ const Employees: React.FC = () => {
         }
     };
 
+    const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setResumePdf(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDigitalizeResume = async (empId: string, pdfData: string) => {
+        if (!isAdmin) return;
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/ai/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileData: pdfData,
+                    prompt: "EXTRAE TODO EL CONTENIDO DE ESTA HOJA DE VIDA / RESUME DE MANERA LITERAL Y COMPLETA. NO HAGAS RESÚMENES. NO USES ASTERISCOS (*) NI CUALQUIER OTRO FORMATO MARKDOWN. DEVUELVE EL TEXTO PLANO LIMPIO Y COMPLETO."
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Error al procesar el documento con IA');
+            }
+            const data = await response.json();
+            
+            await updateEmployee(empId, { resumeText: data.text });
+            alert("Información de Hoja de Vida extraída correctamente.");
+        } catch (error: any) {
+            console.error(error);
+            alert(`Error: ${error.message || "No se pudo procesar la hoja de vida con IA."}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const handleAddEmployee = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !email || !password) {
@@ -124,6 +167,8 @@ const Employees: React.FC = () => {
             role, 
             salary,
             photo,
+            resumePdf,
+            resumeText,
             restDay
         };
         
@@ -149,6 +194,8 @@ const Employees: React.FC = () => {
             role,
             salary,
             photo,
+            resumePdf,
+            resumeText,
             restDay
         };
 
@@ -166,6 +213,8 @@ const Employees: React.FC = () => {
     const resetForm = () => {
         setName('');
         setPhoto(null);
+        setResumePdf(null);
+        setResumeText(null);
         setEmail('');
         setPassword('');
         setRole('employee');
@@ -188,6 +237,8 @@ const Employees: React.FC = () => {
         setRole(emp.role);
         setSalary(emp.salary);
         setPhoto(emp.photo || null);
+        setResumePdf(emp.resumePdf || null);
+        setResumeText(emp.resumeText || null);
         setRestDay(emp.restDay || 0);
         setIsEditModalOpen(true);
     };
@@ -363,6 +414,26 @@ const Employees: React.FC = () => {
                                             >
                                                 Ver Contraseña
                                             </button>
+                                            {emp.resumePdf && (
+                                                <button 
+                                                    onClick={() => {
+                                                        const win = window.open();
+                                                        win?.document.write(`<iframe src="${emp.resumePdf}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                                    }}
+                                                    className="text-[10px] font-black text-green-500 uppercase tracking-widest text-left hover:underline flex items-center gap-1"
+                                                >
+                                                    <FileText size={10} /> Hoja Vida
+                                                </button>
+                                            )}
+                                            {emp.resumePdf && isAdmin && !emp.resumeText && (
+                                                <button 
+                                                    onClick={() => handleDigitalizeResume(emp.id, emp.resumePdf!)}
+                                                    disabled={isSubmitting}
+                                                    className="text-[10px] font-black text-purple-500 uppercase tracking-widest text-left hover:underline flex items-center gap-1"
+                                                >
+                                                    <BadgeInfo size={10} /> IA Leer HV
+                                                </button>
+                                            )}
                                             {isAdmin && (
                                                 <button 
                                                     onClick={() => openEditModal(emp)}
@@ -859,14 +930,54 @@ const Employees: React.FC = () => {
                                 </select>
                              </div>
 
-                            <div className="flex flex-col gap-3 pt-6">
-                                <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
-                                    Guardar Cambios
-                                </button>
-                                <button type="button" onClick={() => { setIsEditModalOpen(false); resetForm(); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
-                                    Cancelar
-                                </button>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 italic">Hoja de Vida (PDF)</label>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="file" 
+                                        accept="application/pdf"
+                                        onChange={handleResumeChange}
+                                        className="hidden" 
+                                        id="edit-resume-upload"
+                                    />
+                                    <label 
+                                        htmlFor="edit-resume-upload"
+                                        className={cn(
+                                            "flex-1 px-5 py-3 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer transition-all font-bold text-xs uppercase tracking-widest",
+                                            resumePdf ? "bg-green-50 border-green-200 text-green-600" : "bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-400 hover:bg-slate-100"
+                                        )}
+                                    >
+                                        <Upload size={16} /> {resumePdf ? 'Actualizar PDF' : 'Subir Hoja de Vida'}
+                                    </label>
+                                    {resumePdf && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setResumePdf(null)}
+                                            className="p-3 bg-red-50 text-red-500 rounded-2xl border border-red-100 hover:bg-red-100 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
+
+                            {resumeText && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest ml-1">Información Extraída (IA)</label>
+                                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 text-sm font-medium text-purple-900 max-h-64 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                                        {resumeText}
+                                    </div>
+                                </div>
+                            )}
+
+                             <div className="flex flex-col gap-3 pt-6">
+                                 <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
+                                     Guardar Cambios
+                                 </button>
+                                 <button type="button" onClick={() => { setIsEditModalOpen(false); resetForm(); }} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
+                                     Cancelar
+                                 </button>
+                             </div>
                         </form>
                     </div>
                 </div>
@@ -976,7 +1087,47 @@ const Employees: React.FC = () => {
                                     ))}
                                 </select>
                              </div>
-                            
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 italic">Hoja de Vida (PDF)</label>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="file" 
+                                        accept="application/pdf"
+                                        onChange={handleResumeChange}
+                                        className="hidden" 
+                                        id="add-resume-upload"
+                                    />
+                                    <label 
+                                        htmlFor="add-resume-upload"
+                                        className={cn(
+                                            "flex-1 px-5 py-3 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 cursor-pointer transition-all font-bold text-xs uppercase tracking-widest",
+                                            resumePdf ? "bg-green-50 border-green-200 text-green-600" : "bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-400 hover:bg-slate-100"
+                                        )}
+                                    >
+                                        <Upload size={16} /> {resumePdf ? 'PDF Listo' : 'Subir Hoja de Vida'}
+                                    </label>
+                                    {resumePdf && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setResumePdf(null)}
+                                            className="p-3 bg-red-50 text-red-500 rounded-2xl border border-red-100 hover:bg-red-100 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {resumeText && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest ml-1">Información Extraída (IA)</label>
+                                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 text-sm font-medium text-purple-900 max-h-64 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                                        {resumeText}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex flex-col gap-3 pt-6">
                                 <button type="submit" className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-950/20 active:scale-95 transition-all">
                                     Finalizar Registro

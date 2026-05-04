@@ -39,6 +39,7 @@ export interface SaleItem {
     productId: string;
     quantity: number;
     price: number;
+    discount?: number; // Discount per item or total for this line
 }
 
 export interface Sale {
@@ -52,6 +53,8 @@ export interface Sale {
     sellerPhone?: string;
     items: SaleItem[];
     total: number;
+    subtotal?: number;
+    totalDiscount?: number;
     paidAmount: number;
     paymentMethod: 'cash' | 'credit' | 'balance' | 'transfer' | 'mixed';
     payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
@@ -91,6 +94,8 @@ export interface Employee {
     active: boolean;
     documentId?: string;
     photo?: string | null;
+    resumePdf?: string | null;
+    resumeText?: string | null;
     restDay?: number; // 0-6 (0=Domingo, 1=Lunes, etc.)
 }
 

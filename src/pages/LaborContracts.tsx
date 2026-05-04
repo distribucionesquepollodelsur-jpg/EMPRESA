@@ -225,63 +225,32 @@ const LaborContracts: React.FC = () => {
                 const base64 = (reader.result as string).split(',')[1];
                 
                 try {
-                    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-                    const prompt = "Por favor extrae todo el texto de este documento legal de forma estructurada y fiel al original. Extrae el texto COMPLETO sin omitir cláusulas. IMPORTANTE: No utilices ningún tipo de formato Markdown como asteriscos (*) para negritas o itálicas. Solo devuelve el texto plano limpio.";
-                    
-                    let result;
-                    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
-                    let success = false;
+                    const response = await fetch('/api/ai/extract', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            base64,
+                            mimeType: file.type,
+                            prompt: "Por favor extrae todo el texto de este documento de forma literal, completa y fiel al original. No resumas. Extrae el texto COMPLETO palabra por palabra. IMPORTANTE: NO USES ningún tipo de formato Markdown, no uses asteriscos (*) para negritas, no uses puntos para listas, no uses numerales (#). Devuelve exclusivamente el TEXTO PLANO LIMPIO."
+                        })
+                    });
 
-                    for (const modelName of models) {
-                        let retries = 3;
-                        let delay = 1000;
-                        
-                        while (retries > 0 && !success) {
-                            try {
-                                result = await ai.models.generateContent({
-                                    model: modelName,
-                                    contents: [
-                                        { text: prompt },
-                                        { inlineData: { data: base64, mimeType: file.type } }
-                                    ]
-                                });
-                                success = true;
-                            } catch (err: any) {
-                                const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
-                                const isNotFoundError = err.message?.includes('404') || err.message?.includes('NOT_FOUND');
-                                
-                                if (retries > 1 && isQuotaError) {
-                                    await sleep(delay);
-                                    delay *= 2; 
-                                    retries--;
-                                    continue;
-                                }
-                                if (isNotFoundError && modelName !== models[models.length - 1]) {
-                                    break; 
-                                }
-                                if (modelName === models[models.length - 1]) throw err;
-                                break; 
-                            }
-                        }
-                        if (success) break;
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || "Error en la respuesta del servidor");
                     }
-                    
-                    let text = result?.text;
-                    if (!text) throw new Error("No se pudo extraer el texto del documento.");
 
-                    // Clean any residual asterisks and markdown markers
-                    text = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/#/g, '');
+                    const data = await response.json();
+                    let text = data.text;
+
+                    if (!text) throw new Error("No se pudo extraer el texto del documento.");
 
                     if (type === 'contract') setContractText(text);
                     if (type === 'regulations') setRegulationsText(text);
                     if (type === 'dotation') setDotationText(text);
                 } catch (apiError: any) {
-                    console.error("Gemini API Error:", apiError);
-                    if (apiError.message?.includes('429') || apiError.message?.includes('RESOURCE_EXHAUSTED')) {
-                        alert("El servicio de IA está saturado en este momento debido a alta demanda global de Google. Por favor, intente de nuevo en un minuto o ingrese el texto manualmente.");
-                    } else {
-                        alert("Error al procesar el documento con inteligencia artificial. Por favor, compruebe su conexión e intente de nuevo.");
-                    }
+                    console.error("AI API Error:", apiError);
+                    alert(`Error al procesar con IA: ${apiError.message || 'Error Desconocido'}. Intente de nuevo o ingrese el texto manualmente.`);
                 } finally {
                     setLoading(false);
                 }
@@ -420,70 +389,23 @@ const LaborContracts: React.FC = () => {
         setAiExplanation(null);
         
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-            
-            const prompt = `Como un asistente legal experto de Distribuciones Que Pollo del Sur, explica de forma muy sencilla y clara este contrato de trabajo para el trabajador ${selectedContract.employeeName}. 
-            Resume los puntos clave: tipo de contrato (${selectedContract.type}), obligaciones principales, reglamento interno y dotación. 
-            Habla directamente al trabajador con un tono amable y profesional. Máximo 200 palabras.
-            IMPORTANTE: NO USES ASTERISCOS (*) NI NINGÚN FORMATO MARKDOWN. SOLO TEXTO PLANO.
-            
-            TEXTO DEL CONTRATO:
-            ${selectedContract.contractText}
-            
-            REGLAMENTO:
-            ${selectedContract.regulationsText}
-            
-            DOTACIÓN:
-            ${selectedContract.dotationText}`;
+            const response = await fetch('/api/ai/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: `Explica este contrato de forma clara y completa para el trabajador ${selectedContract.employeeName}. No omitas detalles importantes. No uses markdown ni asteriscos. Usa un lenguaje amable. TEXTO:\n${selectedContract.contractText}`
+                })
+            });
 
-            let result;
-            const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
-            let success = false;
-
-            for (const modelName of models) {
-                let retries = 3;
-                let delay = 1000;
-                
-                while (retries > 0 && !success) {
-                    try {
-                        result = await ai.models.generateContent({
-                            model: modelName,
-                            contents: [{ text: prompt }]
-                        });
-                        success = true;
-                    } catch (err: any) {
-                        const isQuotaError = err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED');
-                        const isNotFoundError = err.message?.includes('404') || err.message?.includes('NOT_FOUND');
-                        
-                        if (retries > 1 && isQuotaError) {
-                            await sleep(delay);
-                            delay *= 2; 
-                            retries--;
-                            continue;
-                        }
-                        if (isNotFoundError && modelName !== models[models.length - 1]) {
-                            break; 
-                        }
-                        if (modelName === models[models.length - 1]) throw err;
-                        break; 
-                    }
-                }
-                if (success) break;
-            }
+            if (!response.ok) throw new Error("Error en el servidor de IA");
             
-            let explanation = result?.text;
-            if (explanation) {
-                // Final safety cleanup of any Markdown markers and asterisks
-                explanation = explanation.replace(/\*\*/g, '').replace(/\*/g, '').replace(/__/g, '').replace(/#/g, '');
-                setAiExplanation(explanation);
+            const data = await response.json();
+            if (data.text) {
+                setAiExplanation(data.text);
             }
         } catch (error: any) {
             console.error("Error generating AI explanation:", error);
-            if (error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-                alert("El asistente de IA está muy ocupado en este momento. Por favor, intenta de nuevo en unos segundos.");
-            } else {
-                alert("No se pudo generar la explicación con IA en este momento.");
-            }
+            alert("No se pudo generar la explicación con IA en este momento.");
         } finally {
             setIsExplaining(false);
         }

@@ -350,7 +350,7 @@ const Credits: React.FC = () => {
 
                         <form onSubmit={handleAddPayment} className="space-y-6">
                             <div className="space-y-4">
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     <button 
                                         type="button"
                                         onClick={() => setPaymentMethod('Efectivo')}
@@ -371,59 +371,24 @@ const Credits: React.FC = () => {
                                     >
                                         Transfer
                                     </button>
-                                    {!selectedItem.isInitial && (
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPaymentMethod('Mixto')}
-                                            className={cn(
-                                                "py-3 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                                                paymentMethod === 'Mixto' ? "bg-purple-600 border-purple-600 text-white shadow-lg" : "bg-white border-slate-100 text-slate-400"
-                                            )}
-                                        >
-                                            Mixto
-                                        </button>
-                                    )}
                                 </div>
 
-                                {paymentMethod === 'Mixto' ? (
-                                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Efectivo</label>
-                                            <input 
-                                                type="number" 
-                                                value={paidCashModal || ''}
-                                                onChange={e => setPaidCashModal(parseFloat(e.target.value))}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transfer</label>
-                                            <input 
-                                                type="number" 
-                                                value={paidTransferModal || ''}
-                                                onChange={e => setPaidTransferModal(parseFloat(e.target.value))}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none font-bold text-sm"
-                                            />
-                                        </div>
+                                <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
+                                        <input 
+                                            type="number" 
+                                            required
+                                            autoFocus
+                                            max={selectedItem.total - (selectedItem.paidAmount || 0)}
+                                            value={paymentAmount || ''}
+                                            onChange={e => setPaymentAmount(parseFloat(e.target.value))}
+                                            className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-black text-xl text-slate-900"
+                                            placeholder="0"
+                                        />
                                     </div>
-                                ) : (
-                                    <div className="space-y-1 animate-in fade-in slide-in-from-top-2">
-                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
-                                        <div className="relative">
-                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
-                                            <input 
-                                                type="number" 
-                                                required
-                                                autoFocus
-                                                max={selectedItem.total - (selectedItem.paidAmount || 0)}
-                                                value={paymentAmount || ''}
-                                                onChange={e => setPaymentAmount(parseFloat(e.target.value))}
-                                                className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-black text-xl text-slate-900"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
                             </div>
 
                             {/* Historial de Abonos */}
@@ -432,10 +397,10 @@ const Credits: React.FC = () => {
                                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <History size={12} /> Historial de Abonos
                                     </h3>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar text-center">
                                         {selectedItem.payments.map((p: any, idx: number) => (
                                             <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 group">
-                                                <div>
+                                                <div className="text-left">
                                                     <p className="text-[10px] font-black text-slate-900">{formatCurrency(p.amount)}</p>
                                                     <p className="text-[9px] text-slate-400 font-bold uppercase">{formatDate(p.date)} • {p.method}</p>
                                                 </div>
@@ -470,35 +435,6 @@ const Credits: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Monto del Abono</label>
-                                <div className="relative">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-slate-400">$</span>
-                                    <input 
-                                        type="number" 
-                                        required
-                                        autoFocus
-                                        max={selectedItem.total - (selectedItem.paidAmount || 0)}
-                                        value={paymentAmount || ''}
-                                        onChange={e => setPaymentAmount(parseFloat(e.target.value))}
-                                        className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-black text-xl text-slate-900"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Método de Pago</label>
-                                <select 
-                                    value={paymentMethod}
-                                    onChange={e => setPaymentMethod(e.target.value)}
-                                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-900"
-                                >
-                                    <option value="Efectivo">Efectivo (Caja)</option>
-                                    <option value="Transferencia">Transferencia</option>
-                                </select>
-                            </div>
 
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => setSelectedItem(null)} className="flex-1 py-4 text-slate-400 font-bold uppercase text-xs tracking-widest">

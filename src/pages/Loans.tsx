@@ -361,7 +361,9 @@ const Loans: React.FC = () => {
                                         />
                                     </div>
                                     <p className="text-[8px] text-slate-400 font-bold uppercase italic mt-1">
-                                        {activeTab === 'thirdParty' ? 'Sólo este monto saldrá de caja' : 'Sólo este monto entrará a caja'}
+                                        {activeTab === 'thirdParty' 
+                                            ? 'Monto real que sale del cajón. Si es una suma de cuentas viejas, puede ser 0.' 
+                                            : 'Monto real que ingresa al cajón.'}
                                     </p>
                                 </div>
                             </div>

@@ -77,6 +77,7 @@ const Sales: React.FC = () => {
     const [paidCash, setPaidCash] = useState<number>(0);
     const [paidTransfer, setPaidTransfer] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'balance' | 'transfer' | 'mixed'>('cash');
+    const [totalDiscount, setTotalDiscount] = useState<number>(0);
 
     // Payment/Edit management
     const [paymentValue, setPaymentValue] = useState<number>(0);
@@ -98,15 +99,15 @@ const Sales: React.FC = () => {
                     : item
                 );
             }
-            return [...prev, { productId: product.id, quantity, price: price }];
+            return [...prev, { productId: product.id, quantity, price: price, discount: 0 }];
         });
         setSearchTerm('');
     };
 
-    const updateCartItem = (index: number, quantity: number, price: number) => {
+    const updateCartItem = (index: number, quantity: number, price: number, discount: number = 0) => {
         setCart(prev => {
             const copy = [...prev];
-            copy[index] = { ...copy[index], quantity, price };
+            copy[index] = { ...copy[index], quantity, price, discount };
             return copy;
         });
     };
@@ -115,7 +116,9 @@ const Sales: React.FC = () => {
         setCart(prev => prev.filter((_, i) => i !== index));
     };
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const itemDiscounts = cart.reduce((sum, item) => sum + (item.discount || 0), 0);
+    const total = subtotal - itemDiscounts - totalDiscount;
 
     const selectedCustomerData = customers.find(c => c.id === customerId);
     const customerBalance = selectedCustomerData?.balance || 0;
@@ -129,78 +132,59 @@ const Sales: React.FC = () => {
         customerName: string;
         customerPhone: string;
         sellerName: string;
+        totalDiscount: number;
     } | null>(null);
 
-    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string, mode: 'save' | 'print' = 'save') => {
-        const doc = new jsPDF({ format: [80, 250] });
-        const margin = 5;
-        let y = 10;
+    const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string, mode: 'save' | 'print' = 'save', sDiscount: number = 0) => {
+        const doc = new jsPDF({ format: [80, 250] }); // Taller height for POS
+        const margin = 4;
+        let y = 8;
         
-        if (config.logo) {
-            try {
-                doc.addImage(config.logo, 'PNG', 30, y, 20, 20);
-                y += 25;
-            } catch (e) {
-                console.error("Error adding logo to PDF", e);
-            }
-        }
-        
-        doc.setFontSize(10);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
         doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
         
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
-        y += 5;
+        y += 4;
         if (config.nit) {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
-            y += 4;
+            y += 3;
         }
-        doc.text(`Tel: ${config.phone1}${config.phone2 && config.phone2 !== 'Pendiente' ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
-        y += 4;
-        doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
-        y += 4;
-        doc.text(config.email, 40, y, { align: 'center' });
+        doc.text(`${config.warehouseAddress}`, 40, y, { align: 'center' });
+        y += 3;
+        doc.text(`Tel: ${config.phone1}`, 40, y, { align: 'center' });
         
-        y += 6;
+        y += 4;
         doc.setLineWidth(0.1);
         doc.line(margin, y, 80 - margin, y);
         
-        y += 6;
-        doc.setFontSize(9);
+        y += 5;
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        doc.text('FACTURA DE VENTA', 40, y, { align: 'center' });
-        y += 4;
-        doc.text(`No. V-${(saleNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
+        doc.text(`FACTURA V-${(saleNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
         
-        y += 8;
+        y += 5;
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         const now = new Date();
-        doc.text(`Fecha: ${format(now, 'dd/MM/yyyy')}`, margin, y);
-        doc.text(`Hora: ${format(now, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        doc.text(`F: ${format(now, 'dd/MM/yy HH:mm')}`, margin, y);
         
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text('INFORMACIÓN DE VENTA', margin, y);
         y += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Vendedor: ${sName || config.manager}`, margin, y);
-        y += 4;
-        doc.text(`Cliente: ${cName || 'Venta Mostrador'}`, margin, y);
+        doc.text(`Cliente: ${cName || 'General'}`, margin, y);
         if (cPhone) {
-            y += 4;
+            y += 3;
             doc.text(`Tel: ${cPhone}`, margin, y);
         }
         
-        y += 6;
+        y += 4;
         doc.line(margin, y, 80 - margin, y);
-        y += 5;
+        y += 4;
         
         // Table Header
         doc.setFont('helvetica', 'bold');
-        doc.text('Cant.', margin, y);
-        doc.text('Producto', margin + 10, y);
+        doc.text('Cant', margin, y);
+        doc.text('Prod', margin + 8, y);
         doc.text('Total', 80 - margin, y, { align: 'right' });
         y += 3;
         
@@ -208,39 +192,55 @@ const Sales: React.FC = () => {
         doc.setFont('helvetica', 'normal');
         items.forEach(item => {
             const p = products.find(prod => prod.id === item.productId);
-            y += 5;
+            y += 4;
             doc.text(`${item.quantity}`, margin, y);
             
             const name = p?.name || 'Producto';
-            const splitName = doc.splitTextToSize(name, 40);
-            doc.text(splitName, margin + 10, y);
+            const splitName = doc.splitTextToSize(name, 55);
+            doc.text(splitName, margin + 8, y);
             
-            doc.text(`${formatCurrency(item.quantity * item.price)}`, 80 - margin, y, { align: 'right' });
+            const lineTotal = (item.quantity * item.price) - (item.discount || 0);
+            doc.text(`${formatCurrency(lineTotal)}`, 80 - margin, y, { align: 'right' });
+            
+            if (item.discount) {
+                y += 3;
+                doc.setFontSize(6);
+                doc.text(`(Desc: -${formatCurrency(item.discount)})`, margin + 8, y);
+                doc.setFontSize(7);
+            }
             
             if (splitName.length > 1) y += (splitName.length - 1) * 3;
         });
         
-        y += 8;
+        y += 5;
         doc.line(margin, y, 80 - margin, y);
-        y += 6;
+        y += 5;
         
+        if (sDiscount > 0) {
+            doc.text('SUBTOTAL:', margin, y);
+            const sumOriginal = items.reduce((s, i) => s + (i.price * i.quantity), 0);
+            doc.text(formatCurrency(sumOriginal), 80 - margin, y, { align: 'right' });
+            y += 4;
+            doc.text('DESCUENTOS:', margin, y);
+            const sumDesc = items.reduce((s, i) => s + (i.discount || 0), 0) + sDiscount;
+            doc.text(`-${formatCurrency(sumDesc)}`, 80 - margin, y, { align: 'right' });
+            y += 4;
+        }
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL:', margin, y);
         doc.text(formatCurrency(saleTotal), 80 - margin, y, { align: 'right' });
         
-        y += 10;
+        y += 8;
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
         doc.text('¡Gracias por su compra!', 40, y, { align: 'center' });
-        y += 4;
-        doc.text('Este documento es un comprobante de venta.', 40, y, { align: 'center' });
         
         if (mode === 'save') {
             doc.save(`Venta_${saleNumber || Date.now()}.pdf`);
         } else {
-            const blob = doc.output('blob');
-            const url = URL.createObjectURL(blob);
+            const url = doc.output('bloburl');
             window.open(url, '_blank');
         }
     };
@@ -282,6 +282,8 @@ const Sales: React.FC = () => {
             await addSale({ 
                 items: saleItems, 
                 total: saleTotal, 
+                subtotal: subtotal,
+                totalDiscount: totalDiscount,
                 customerId: customerId || undefined,
                 customerName: cName,
                 customerPhone: cPhone,
@@ -297,7 +299,8 @@ const Sales: React.FC = () => {
                 saleNumber: sNum,
                 customerName: cName,
                 customerPhone: cPhone,
-                sellerName: sName
+                sellerName: sName,
+                totalDiscount: totalDiscount
             });
             
             setCart([]);
@@ -307,6 +310,7 @@ const Sales: React.FC = () => {
             setPaidAmount(0);
             setPaidCash(0);
             setPaidTransfer(0);
+            setTotalDiscount(0);
             setPaymentMethod('cash');
             setIsModalOpen(false);
             setShowSuccessBanner(true);
@@ -367,7 +371,7 @@ const Sales: React.FC = () => {
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => {
-                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'print');
+                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'print', lastSaleData.totalDiscount);
                                     setShowSuccessBanner(false);
                                 }}
                                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black uppercase tracking-widest border border-slate-700 transition-all flex items-center gap-2"
@@ -376,7 +380,7 @@ const Sales: React.FC = () => {
                             </button>
                             <button 
                                 onClick={() => {
-                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'save');
+                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'save', lastSaleData.totalDiscount);
                                     setShowSuccessBanner(false);
                                 }}
                                 className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2"
@@ -536,6 +540,21 @@ const Sales: React.FC = () => {
                                 </h3>
 
                                 <div className="space-y-4">
+                                    <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 italic space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Descuento Global:</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-orange-700 text-xs">$</span>
+                                                <input 
+                                                    type="number"
+                                                    value={totalDiscount || ''}
+                                                    onChange={e => setTotalDiscount(parseFloat(e.target.value) || 0)}
+                                                    className="w-24 bg-white border border-orange-200 rounded-lg px-2 py-1 text-xs font-black text-orange-700 outline-none focus:ring-1 focus:ring-orange-500"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={() => {
@@ -734,7 +753,7 @@ const Sales: React.FC = () => {
                                                         <input 
                                                             type="number"
                                                             value={item.quantity || ''}
-                                                            onChange={e => updateCartItem(idx, parseFloat(e.target.value), item.price)}
+                                                            onChange={e => updateCartItem(idx, parseFloat(e.target.value), item.price, item.discount)}
                                                             className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
                                                         />
                                                     </div>
@@ -743,13 +762,22 @@ const Sales: React.FC = () => {
                                                         <input 
                                                             type="number"
                                                             value={item.price || ''}
-                                                            onChange={e => updateCartItem(idx, item.quantity, parseFloat(e.target.value))}
+                                                            onChange={e => updateCartItem(idx, item.quantity, parseFloat(e.target.value), item.discount)}
                                                             className="w-full px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Desc.</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={item.discount || ''}
+                                                            onChange={e => updateCartItem(idx, item.quantity, item.price, parseFloat(e.target.value))}
+                                                            className="w-full px-2 py-1 bg-red-50 border border-red-100 rounded-lg text-xs font-black text-red-600"
                                                         />
                                                     </div>
                                                     <div className="text-right min-w-[80px]">
                                                         <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Subtotal</label>
-                                                        <p className="font-bold text-sm text-slate-900">{formatCurrency(item.quantity * item.price)}</p>
+                                                        <p className="font-bold text-sm text-slate-900">{formatCurrency((item.quantity * item.price) - (item.discount || 0))}</p>
                                                     </div>
                                                 </div>
                                             </div>
