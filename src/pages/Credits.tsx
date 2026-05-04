@@ -123,13 +123,8 @@ const Credits: React.FC = () => {
             }
         };
 
-        if (paymentMethod === 'Mixto') {
-            if (paidCashModal > 0) await executePayment('Efectivo', paidCashModal);
-            if (paidTransferModal > 0) await executePayment('Transferencia', paidTransferModal);
-        } else {
-            if (paymentAmount <= 0) return;
-            await executePayment(paymentMethod, paymentAmount);
-        }
+        if (paymentAmount <= 0) return;
+        await executePayment(paymentMethod, paymentAmount);
 
         setSelectedItem(null);
         setPaymentAmount(0);
