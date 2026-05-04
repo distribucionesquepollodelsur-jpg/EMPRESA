@@ -6,8 +6,6 @@ import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 const Recruitment: React.FC = () => {
     const { jobOffers, evaluations, employees, addJobOffer, updateJobOffer, deleteJobOffer, addEvaluation, addEmployee } = useData();
     const [isAddOfferModalOpen, setIsAddOfferModalOpen] = useState(false);
@@ -16,6 +14,14 @@ const Recruitment: React.FC = () => {
     const [candidateName, setCandidateName] = useState('');
     const [candidateResume, setCandidateResume] = useState('');
     const [isEvaluating, setIsEvaluating] = useState(false);
+
+    const getAIClient = () => {
+        const apiKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
+        if (!apiKey) {
+            throw new Error("GEMINI_API_KEY is not configured in the environment.");
+        }
+        return new GoogleGenAI({ apiKey });
+    };
 
     // Offer form
     const [title, setTitle] = useState('');
@@ -73,6 +79,7 @@ const Recruitment: React.FC = () => {
               "weaknesses": ["debilidad 1", "..."]
             }`;
 
+            const ai = getAIClient();
             const response = await ai.models.generateContent({
                 model: "gemini-3-flash-preview",
                 contents: { parts: [{ text: prompt }] }

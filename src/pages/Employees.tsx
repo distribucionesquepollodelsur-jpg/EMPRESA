@@ -8,8 +8,6 @@ import { GoogleGenAI } from '@google/genai';
 
 import { useData } from '../context/DataContext';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string, onClick: () => void, disabled?: boolean }> = ({ label, icon, time, onClick, disabled }) => (
     <button 
         onClick={onClick}
@@ -35,6 +33,14 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 const Employees: React.FC = () => {
     const { employees, attendance, advances, shifts, reprimands, dotations, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, addReprimand, resolveReprimand, addDotation, deleteDotation, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
+    
+    const getAIClient = () => {
+        const apiKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
+        if (!apiKey) {
+            throw new Error("GEMINI_API_KEY is not configured in the environment.");
+        }
+        return new GoogleGenAI({ apiKey });
+    };
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
         'alex.b19h@gmail.com',
@@ -147,7 +153,8 @@ const Employees: React.FC = () => {
             const base64 = pdfData.split(',')[1];
             const mimeType = pdfData.split(',')[0].split(':')[1].split(';')[0];
 
-            const response = await ai.models.generateContent({
+            const aiClient = getAIClient();
+            const response = await aiClient.models.generateContent({
                 model: "gemini-3-flash-preview",
                 contents: {
                     parts: [

@@ -44,8 +44,6 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 interface SignatureInfo {
     image: string;
     name: string;
@@ -82,6 +80,14 @@ interface LaborContract {
 const LaborContracts: React.FC = () => {
     const { employees } = useData();
     const { user } = useAuth();
+
+    const getAIClient = () => {
+        const apiKey = typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined;
+        if (!apiKey) {
+            throw new Error("GEMINI_API_KEY is not configured in the environment.");
+        }
+        return new GoogleGenAI({ apiKey });
+    };
     const [contracts, setContracts] = useState<LaborContract[]>([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedContract, setSelectedContract] = useState<LaborContract | null>(null);
@@ -227,7 +233,8 @@ const LaborContracts: React.FC = () => {
                 const base64 = (reader.result as string).split(',')[1];
                 
                 try {
-                    const response = await ai.models.generateContent({
+                    const aiClient = getAIClient();
+                    const response = await aiClient.models.generateContent({
                         model: "gemini-3-flash-preview",
                         contents: {
                             parts: [
@@ -390,7 +397,8 @@ const LaborContracts: React.FC = () => {
         setAiExplanation(null);
         
         try {
-            const response = await ai.models.generateContent({
+            const aiClient = getAIClient();
+            const response = await aiClient.models.generateContent({
                 model: "gemini-3-flash-preview",
                 contents: {
                     parts: [
