@@ -7,7 +7,11 @@ export const COLOMBIA_PAYROLL = {
     PENSION_EMPLOYEE: 0.04,
     HEALTH_EMPLOYER: 0.085,
     PENSION_EMPLOYER: 0.12,
-    ARL_LEVEL_1: 0.00522,
+    // ARL Levels in Colombia:
+    // Level 1: 0.522% (Risk I - Office/Admin)
+    // Level 2: 1.044% (Risk II - Meat processing/Distribution)
+    // Level 3: 2.436% (Risk III - Production/Warehouse)
+    ARL_RISK: 0.01044, // Using level 2 as default for distribution business
     PRIMA: 0.0833,
     CESANTIAS: 0.0833,
     INTERESES_CESANTIAS: 0.12, // Anual, se calcula 1% mensual proporcinal
@@ -80,7 +84,7 @@ export function calculateEmployeePayroll(
     const pensionEmployer = basicSalary * COLOMBIA_PAYROLL.PENSION_EMPLOYER;
     // Health Employer is 0 if earning less than 10 SMLV (Law 1607/2012)
     const healthEmployer = employee.salary >= (COLOMBIA_PAYROLL.SMLV_2024 * 10) ? basicSalary * COLOMBIA_PAYROLL.HEALTH_EMPLOYER : 0;
-    const arl = basicSalary * COLOMBIA_PAYROLL.ARL_LEVEL_1;
+    const arl = basicSalary * COLOMBIA_PAYROLL.ARL_RISK;
     
     const totalEmployerCost = netPay + healthDeduction + pensionDeduction + prima + cesantias + interesesCesantias + vacaciones + pensionEmployer + healthEmployer + arl;
 

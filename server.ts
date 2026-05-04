@@ -91,6 +91,9 @@ async function startServer() {
         }
       });
 
+      // Verify connection before sending
+      await transporter.verify();
+
       await transporter.sendMail({
         from: `"Que Pollo - Nómina" <${process.env.EMAIL_USER}>`,
         to,
@@ -101,8 +104,17 @@ async function startServer() {
 
       res.json({ success: true, message: "Correo enviado correctamente." });
     } catch (error: any) {
-      console.error("Error sending email:", error);
-      res.status(500).json({ error: error.message || "Error al enviar el correo." });
+      console.error("[Email Error]:", error);
+      let userFriendlyMessage = "Error al enviar el correo.";
+      
+      if (error.code === 'EAUTH') {
+        userFriendlyMessage = "Error de autenticación: El correo o la contraseña de aplicación son incorrectos.";
+      }
+      
+      res.status(500).json({ 
+        error: userFriendlyMessage,
+        details: error.message 
+      });
     }
   });
 

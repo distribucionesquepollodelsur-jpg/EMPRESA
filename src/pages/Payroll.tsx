@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
     Calculator, 
     Send, 
@@ -288,17 +288,28 @@ const Payroll: React.FC = () => {
                 <motion.div 
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-4"
+                    className="bg-red-50 border border-red-200 p-6 rounded-[2rem] flex flex-col md:flex-row items-start gap-6 shadow-sm"
                 >
-                    <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
-                        <AlertCircle size={20} />
+                    <div className="bg-red-100 p-3 rounded-2xl text-red-600 shrink-0">
+                        <AlertCircle size={24} />
                     </div>
-                    <div>
-                        <p className="text-sm font-bold text-amber-900">Configuración de Correo Requerida</p>
-                        <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                            Para enviar boletas de nómina por correo, debes configurar <code className="bg-amber-200/50 px-1 rounded">EMAIL_USER</code> y <code className="bg-amber-200/50 px-1 rounded">EMAIL_PASS</code> en los ajustes de AI Studio. 
-                            Usa una "Contraseña de Aplicación" de Google si usas Gmail.
+                    <div className="flex-1">
+                        <p className="text-base font-black text-red-900 mb-2 uppercase tracking-wide">Configuración de Correo Pendiente o Incorrecta</p>
+                        <p className="text-sm text-red-700 leading-relaxed mb-4">
+                            Para enviar boletas de nómina, necesitas configurar las credenciales de Gmail correctamente en los ajustes de AI Studio (Secretos/Entorno). El error actual suele deberse a que Gmail bloquea el acceso si no usas una <strong>Contraseña de Aplicación</strong>.
                         </p>
+                        
+                        <div className="bg-white/50 rounded-2xl p-4 space-y-3 border border-red-100">
+                            <p className="text-xs font-bold text-red-800 uppercase tracking-widest">¿Cómo solucionarlo?</p>
+                            <ol className="text-xs text-red-700 space-y-2 list-decimal ml-4">
+                                <li>Ve a tu <strong>Cuenta de Google</strong> {'>'} Seguridad.</li>
+                                <li>Asegúrate de tener activa la <strong>Verificación en 2 pasos</strong>.</li>
+                                <li>Busca <strong>"Contraseñas de aplicación"</strong> en el buscador de la cuenta.</li>
+                                <li>Genera una contraseña específica para "Correo" y ponle de nombre "AI Studio".</li>
+                                <li>Copia el código de 16 letras y pégalo en <code>EMAIL_PASS</code> en AI Studio.</li>
+                                <li>Asegúrate que <code>EMAIL_USER</code> sea tu correo de Gmail completo.</li>
+                            </ol>
+                        </div>
                     </div>
                 </motion.div>
             )}
