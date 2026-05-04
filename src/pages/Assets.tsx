@@ -76,7 +76,9 @@ const Assets: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const filteredAssets = assets.filter(a => 
+    const sortedAssets = [...assets].sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+
+    const filteredAssets = sortedAssets.filter(a => 
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.category.toLowerCase().includes(searchTerm.toLowerCase())
     );

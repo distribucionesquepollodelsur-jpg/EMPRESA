@@ -611,6 +611,7 @@ const Employees: React.FC = () => {
                                 <div className="space-y-2">
                                     {reprimands
                                         .filter(r => r.employeeId === emp.id && r.status === 'pending')
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                         .map(r => (
                                             <div key={r.id} className="p-3 bg-red-50/50 border border-red-100 rounded-xl flex items-center justify-between group">
                                                 <div className="flex flex-col">
@@ -763,7 +764,9 @@ const Employees: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {dotations.slice().reverse().map(d => {
+                                    {[...dotations]
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .map(d => {
                                         const emp = employees.find(e => e.id === d.employeeId);
                                         return (
                                             <tr key={d.id} className="hover:bg-slate-50 transition-colors group">
@@ -825,7 +828,9 @@ const Employees: React.FC = () => {
                     <Calendar className="text-slate-400" /> Últimos Movimientos de Personal
                 </h3>
                 <div className="space-y-4">
-                    {[...attendance].reverse().slice(0, 5).map(record => {
+                    {[...attendance]
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 5).map(record => {
                         const emp = employees.find(e => e.id === record.employeeId);
                         return (
                             <div key={record.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">

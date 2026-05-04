@@ -159,7 +159,9 @@ const Recruitment: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {jobOffers.map(offer => (
+                        {[...jobOffers]
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map(offer => (
                             <motion.div 
                                 key={offer.id}
                                 layoutId={offer.id}
@@ -267,7 +269,9 @@ const Recruitment: React.FC = () => {
                     </h2>
 
                     <div className="space-y-4">
-                        {evaluations.slice().reverse().map(ev => {
+                        {[...evaluations]
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map(ev => {
                             const offer = jobOffers.find(o => o.id === ev.jobOfferId);
                             return (
                                 <motion.div 

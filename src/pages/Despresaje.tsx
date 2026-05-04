@@ -26,9 +26,8 @@ const Despresaje: React.FC = () => {
 
     // Recent purchases that might have chicken
     const purchaseOptions = useMemo(() => {
-        return purchases
-            .slice()
-            .reverse()
+        return [...purchases]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 50); // Last 50 purchases
     }, [purchases]);
 
@@ -512,7 +511,9 @@ const Despresaje: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 text-sm">
-                                {processings.slice().reverse().map(p => {
+                                {[...processings]
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map(p => {
                                     const purchase = purchases.find(pur => pur.id === p.purchaseId);
                                     const inputProd = products.find(prod => prod.id === p.inputProductId);
                                     

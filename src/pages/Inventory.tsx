@@ -309,7 +309,9 @@ const Inventory: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 font-medium">
-                                {[...inventoryLogs].reverse().map(log => (
+                                {[...inventoryLogs]
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map(log => (
                                     <tr key={log.id} className="hover:bg-slate-50/30 transition-colors">
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col">

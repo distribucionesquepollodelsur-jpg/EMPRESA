@@ -355,7 +355,7 @@ const Reports: React.FC = () => {
                         <FileText className="text-blue-400" /> Movimientos Recientes
                     </h3>
                     <div className="space-y-4 overflow-y-auto flex-1 pr-2">
-                        {cashFlow.slice().reverse().slice(0, 10).map(m => (
+                        {[...cashFlow].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10).map(m => (
                             <div key={m.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{formatDate(m.date)}</p>

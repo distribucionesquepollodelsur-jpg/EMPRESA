@@ -89,7 +89,9 @@ const Loans: React.FC = () => {
         borrowerName: bl.lenderName, // standardizing for the list
     }));
 
-    const filteredLoans = currentLoans.filter(l => 
+    const sortedLoans = [...currentLoans].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const filteredLoans = sortedLoans.filter(l => 
         l.borrowerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
         l.description.toLowerCase().includes(searchTerm.toLowerCase())
     );

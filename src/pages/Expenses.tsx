@@ -53,6 +53,8 @@ const Expenses: React.FC = () => {
         return matchesSearch && matchesCategory;
     });
 
+    const sortedExpenses = [...filteredExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -134,7 +136,7 @@ const Expenses: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {filteredExpenses.map(expense => (
+                            {sortedExpenses.map(expense => (
                                 <tr key={expense.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-8 py-5">
                                         <div className="flex items-center gap-2 font-medium text-slate-600">
