@@ -44,6 +44,8 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { GoogleGenAI } from '@google/genai';
 
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 interface SignatureInfo {
     image: string;
     name: string;
@@ -225,23 +227,22 @@ const LaborContracts: React.FC = () => {
                 const base64 = (reader.result as string).split(',')[1];
                 
                 try {
-                    const response = await fetch('/api/ai/extract', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            base64,
-                            mimeType: file.type,
-                            prompt: "Por favor extrae todo el texto de este documento de forma literal, completa y fiel al original. No resumas. Extrae el texto COMPLETO palabra por palabra. IMPORTANTE: NO USES ningún tipo de formato Markdown, no uses asteriscos (*) para negritas, no uses puntos para listas, no uses numerales (#). Devuelve exclusivamente el TEXTO PLANO LIMPIO."
-                        })
+                    const response = await ai.models.generateContent({
+                        model: "gemini-3-flash-preview",
+                        contents: {
+                            parts: [
+                                { text: "TRANSCRIPCIÓN LITERAL: Extrae TODO el texto de este documento exactamente como aparece. NO resumas. NO omitas información. NO utilices formato Markdown (sin negritas, sin asteriscos, sin listas con guiones). Devuelve ÚNICAMENTE el texto extraído en formato de texto plano puro. No agregues comentarios introductorios ni conclusiones." },
+                                { 
+                                    inlineData: {
+                                        data: base64,
+                                        mimeType: file.type
+                                    }
+                                }
+                            ]
+                        }
                     });
 
-                    if (!response.ok) {
-                        const errData = await response.json();
-                        throw new Error(errData.error || "Error en la respuesta del servidor");
-                    }
-
-                    const data = await response.json();
-                    let text = data.text;
+                    const text = response.text;
 
                     if (!text) throw new Error("No se pudo extraer el texto del documento.");
 
@@ -389,19 +390,17 @@ const LaborContracts: React.FC = () => {
         setAiExplanation(null);
         
         try {
-            const response = await fetch('/api/ai/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: `Explica este contrato de forma clara y completa para el trabajador ${selectedContract.employeeName}. No omitas detalles importantes. No uses markdown ni asteriscos. Usa un lenguaje amable. TEXTO:\n${selectedContract.contractText}`
-                })
+            const response = await ai.models.generateContent({
+                model: "gemini-3-flash-preview",
+                contents: {
+                    parts: [
+                        { text: `Explica este contrato de forma clara y completa para el trabajador ${selectedContract.employeeName}. No omitas detalles importantes. No uses markdown ni asteriscos. Usa un lenguaje amable. TEXTO:\n${selectedContract.contractText}` }
+                    ]
+                }
             });
 
-            if (!response.ok) throw new Error("Error en el servidor de IA");
-            
-            const data = await response.json();
-            if (data.text) {
-                setAiExplanation(data.text);
+            if (response.text) {
+                setAiExplanation(response.text);
             }
         } catch (error: any) {
             console.error("Error generating AI explanation:", error);
@@ -672,45 +671,36 @@ const LaborContracts: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] font-serif text-slate-900 border border-slate-50 relative overflow-hidden" style={{ fontFamily: '"Lora", serif' }}>
+                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] font-serif text-slate-900 border border-slate-50 relative overflow-hidden" style={{ fontFamily: '"Lora", serif', lineHeight: '1.8' }}>
                                 {/* Watermark Background */}
                                 {companyLogo && (
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.035] pointer-events-none w-[90%] aspect-square flex items-center justify-center">
-                                        <img src={companyLogo} alt="Watermark" className="w-full h-full object-contain grayscale scale-125" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.025] pointer-events-none w-[70%] aspect-square flex items-center justify-center">
+                                        <img src={companyLogo} alt="Watermark" className="w-full h-full object-contain grayscale" />
                                     </div>
                                 )}
 
-                                {/* PDF Header Decoration */}
-                                <div className="absolute top-0 left-0 right-0 h-4 bg-[#ea580c]" />
-                                <div className="absolute top-4 left-0 right-0 h-1 bg-[#fb923c]" />
-
-                                <div className="text-center space-y-6 pb-12 pt-16 relative z-[1]">
-                                    <div className="flex justify-center mb-4">
-                                        <div className="w-32 h-32 p-4 bg-white flex items-center justify-center rounded-full border-4 border-[#ea580c] shadow-lg">
+                                <div className="text-center space-y-8 pb-16 pt-12 relative z-[1]">
+                                    <div className="flex justify-center mb-6">
+                                        <div className="w-24 h-24 p-2 bg-white flex items-center justify-center rounded-2xl border border-slate-100 shadow-sm">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <div className="flex flex-col items-center">
-                                                    <Building2 className="text-[#ea580c]" size={48} />
-                                                    <span className="text-[8px] font-black uppercase text-slate-400 mt-2">Logo Empresa</span>
-                                                </div>
+                                                <Building2 className="text-slate-200" size={32} />
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <h2 className="text-3xl font-display font-black text-[#0f172a] tracking-tight uppercase leading-tight border-b-2 border-[#ea580c] pb-4 inline-block px-8">
+                                    <div className="space-y-3">
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-wider uppercase leading-tight">
                                             CONTRATO INDIVIDUAL DE TRABAJO
                                         </h2>
-                                        <div className="flex items-center justify-center gap-4 text-slate-400">
-                                            <p className="text-[12px] font-sans font-black tracking-[0.4em] uppercase text-[#64748b]">DISTRIBUCIONES QUE POLLO DEL SUR</p>
-                                        </div>
+                                        <p className="text-[10px] font-sans font-black tracking-[0.4em] uppercase text-slate-400">DISTRIBUCIONES QUE POLLO DEL SUR</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-10 text-[12pt] leading-[1.8] text-justify font-normal relative z-[1]" style={{ textAlignLast: 'left' }}>
-                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
+                                <div className="space-y-8 text-[12pt] text-justify relative z-[1]">
+                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
                                         {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
+                                            <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-4"}>
                                                 {para}
                                             </p>
                                         ))}
@@ -718,16 +708,16 @@ const LaborContracts: React.FC = () => {
 
                                     {selectedContract.regulationsText && (
                                         <>
-                                            <div className="h-20" />
-                                            <div className="relative mb-14">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-100"></div></div>
-                                                <div className="relative flex justify-center">
-                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-widest border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a]">REGLAMENTO INTERNO DE TRABAJO</h3>
-                                                </div>
+                                            <div className="py-24 flex flex-col items-center">
+                                                <div className="w-20 h-0.5 bg-slate-900 mb-6" />
+                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.2em] text-center max-w-md leading-relaxed">
+                                                    REGLAMENTO INTERNO DE TRABAJO
+                                                </h3>
+                                                <div className="w-20 h-0.5 bg-slate-900 mt-6" />
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 italic text-slate-700">
                                                 {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
+                                                    <p key={i} className={para.trim() ? "mb-6" : "h-4"}>
                                                         {para}
                                                     </p>
                                                 ))}
@@ -737,16 +727,16 @@ const LaborContracts: React.FC = () => {
 
                                     {selectedContract.dotationText && (
                                         <>
-                                            <div className="h-20" />
-                                            <div className="relative mb-14">
-                                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-2 border-slate-100"></div></div>
-                                                <div className="relative flex justify-center">
-                                                    <h3 className="bg-white px-8 py-3 text-2xl font-display font-black text-slate-900 uppercase tracking-widest border-2 border-slate-900 shadow-[4px_4px_0px_#0f172a]">ACTA DE ENTREGA DE DOTACIÓN</h3>
-                                                </div>
+                                            <div className="py-24 flex flex-col items-center">
+                                                <div className="w-20 h-0.5 bg-slate-900 mb-6" />
+                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.2em] text-center max-w-md leading-relaxed">
+                                                    ACTA DE ENTREGA DE DOTACIÓN
+                                                </h3>
+                                                <div className="w-20 h-0.5 bg-slate-900 mt-6" />
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 font-serif">
+                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 text-slate-800">
                                                 {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-6"}>
+                                                    <p key={i} className={para.trim() ? "mb-6" : "h-4"}>
                                                         {para}
                                                     </p>
                                                 ))}

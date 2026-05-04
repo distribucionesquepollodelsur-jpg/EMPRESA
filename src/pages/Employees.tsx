@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GoogleGenAI } from '@google/genai';
 import { useAuth } from '../context/AuthContext';
 import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench, FileText, Upload } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -6,6 +7,8 @@ import { Employee, Shift, Dotation } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
 
 import { useData } from '../context/DataContext';
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string, onClick: () => void, disabled?: boolean }> = ({ label, icon, time, onClick, disabled }) => (
     <button 
@@ -129,22 +132,28 @@ const Employees: React.FC = () => {
         if (!isAdmin) return;
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/ai/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileData: pdfData,
-                    prompt: "EXTRAE TODO EL CONTENIDO DE ESTA HOJA DE VIDA / RESUME DE MANERA LITERAL Y COMPLETA. NO HAGAS RESÚMENES. NO USES ASTERISCOS (*) NI CUALQUIER OTRO FORMATO MARKDOWN. DEVUELVE EL TEXTO PLANO LIMPIO Y COMPLETO."
-                })
+            const base64 = pdfData.split(',')[1];
+            const mimeType = pdfData.split(',')[0].split(':')[1].split(';')[0];
+
+            const response = await ai.models.generateContent({
+                model: "gemini-3-flash-preview",
+                contents: {
+                    parts: [
+                        { text: "EXTRAE TODO EL CONTENIDO DE ESTA HOJA DE VIDA / RESUME DE MANERA LITERAL Y COMPLETA. NO HAGAS RESÚMENES. NO USES ASTERISCOS (*) NI CUALQUIER OTRO FORMATO MARKDOWN. DEVUELVE EL TEXTO PLANO LIMPIO Y COMPLETO." },
+                        {
+                            inlineData: {
+                                data: base64,
+                                mimeType: mimeType
+                            }
+                        }
+                    ]
+                }
             });
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Error al procesar el documento con IA');
-            }
-            const data = await response.json();
+            const text = response.text;
+            if (!text) throw new Error("No se pudo extraer el texto de la hoja de vida.");
             
-            await updateEmployee(empId, { resumeText: data.text });
+            await updateEmployee(empId, { resumeText: text });
             alert("Información de Hoja de Vida extraída correctamente.");
         } catch (error: any) {
             console.error(error);
