@@ -22,6 +22,7 @@ import CashFlow from './pages/CashFlow';
 import Employees from './pages/Employees';
 import Assets from './pages/Assets';
 import LaborContracts from './pages/LaborContracts';
+import Payroll from './pages/Payroll';
 import Credits from './pages/Credits';
 import Expenses from './pages/Expenses';
 import Loans from './pages/Loans';
@@ -69,6 +70,7 @@ const MainContent: React.FC = () => {
       case 'despresaje': return <Despresaje />;
       case 'cash': return <CashFlow />;
       case 'employees': return <Employees />;
+      case 'payroll': return <Payroll />;
       case 'assets': return <Assets />;
       case 'contracts': return <LaborContracts />;
       case 'credits': return <Credits />;

@@ -70,6 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         { id: 'loans', label: 'Préstamos 3ro', icon: Wallet, adminOnly: true },
         { id: 'cash', label: 'Caja', icon: Wallet },
         { id: 'employees', label: 'Empleados', icon: Users, adminOnly: true },
+        { id: 'payroll', label: 'Nómina', icon: FileText, adminOnly: true },
         { id: 'assets', label: 'Activos Fijos', icon: ShieldCheck, adminOnly: true },
         { id: 'contracts', label: 'Contratos', icon: FileText, adminOnly: true },
         { id: 'reports', label: 'Reportes', icon: BarChart3, adminOnly: true },
