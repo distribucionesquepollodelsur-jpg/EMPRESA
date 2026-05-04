@@ -23,6 +23,7 @@ import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const Payroll: React.FC = () => {
     const { employees, shifts, advances, reprimands, config } = useData();
@@ -239,6 +240,32 @@ const Payroll: React.FC = () => {
         });
 
         doc.save(`Nomina_${emp?.name}_${selectedPeriod}.pdf`);
+    };
+
+    const exportToExcel = () => {
+        const data = payrollData.map(p => ({
+            'Empleado': p.employeeName,
+            'Días Trabajados': p.daysWorked,
+            'Salario Básico': p.basicSalary,
+            'Auxilio Transporte': p.transportAux,
+            'Total Devengado': p.grossPay,
+            'Salud (4%)': p.healthDeduction,
+            'Pensión (4%)': p.pensionDeduction,
+            'Anticipos': p.advancesTotal,
+            'Sanciones': p.reprimandsTotal,
+            'Neto a Pagar': p.netPay,
+            'Costo Empleador Total': p.totalEmployerCost
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Nómina");
+        
+        // Auto-size columns
+        const maxWidths = Object.keys(data[0] || {}).map(key => ({ wch: 20 }));
+        ws['!cols'] = maxWidths;
+
+        XLSX.writeFile(wb, `Nomina_Ejecutiva_${selectedPeriod}_${format(currentMonth, 'MMMM_yyyy')}.xlsx`);
     };
 
     return (
@@ -514,7 +541,10 @@ const Payroll: React.FC = () => {
                     </p>
                     
                     <div className="flex gap-4 relative z-10">
-                        <button className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black text-sm uppercase tracking-widest transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-white/5">
+                        <button 
+                            onClick={exportToExcel}
+                            className="px-8 py-3 bg-white text-slate-900 rounded-xl font-black text-sm uppercase tracking-widest transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-white/5"
+                        >
                             Generar Reporte Excel
                         </button>
                     </div>

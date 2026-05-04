@@ -66,6 +66,18 @@ const Employees: React.FC = () => {
     const [role, setRole] = useState<'admin' | 'employee'>('employee');
     const [salary, setSalary] = useState(0);
     const [restDay, setRestDay] = useState<number>(0);
+    const [position, setPosition] = useState('');
+    const [riskLevel, setRiskLevel] = useState(1);
+    const [address, setAddress] = useState('');
+    const [phone, setPhone] = useState('');
+    const [maritalStatus, setMaritalStatus] = useState('');
+    const [birthDate, setBirthDate] = useState('');
+    const [refName, setRefName] = useState('');
+    const [refPhone, setRefPhone] = useState('');
+    const [refRel, setRefRel] = useState('');
+    const [references, setReferences] = useState<{name: string, phone: string, relationship: string}[]>([]);
+    
+    const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [advanceError, setAdvanceError] = useState('');
 
@@ -179,7 +191,11 @@ const Employees: React.FC = () => {
             photo,
             resumePdf,
             resumeText,
-            restDay
+            restDay,
+            position,
+            riskLevel,
+            personalData: { address, phone, maritalStatus, birthDate },
+            references
         };
         
         try {
@@ -206,7 +222,11 @@ const Employees: React.FC = () => {
             photo,
             resumePdf,
             resumeText,
-            restDay
+            restDay,
+            position,
+            riskLevel,
+            personalData: { address, phone, maritalStatus, birthDate },
+            references
         };
 
         try {
@@ -230,6 +250,16 @@ const Employees: React.FC = () => {
         setRole('employee');
         setSalary(0);
         setRestDay(0);
+        setPosition('');
+        setRiskLevel(1);
+        setAddress('');
+        setPhone('');
+        setMaritalStatus('');
+        setBirthDate('');
+        setReferences([]);
+        setRefName('');
+        setRefPhone('');
+        setRefRel('');
         setSelectedEmployee(null);
         setReprimandReason('');
         setReprimandType('time');
@@ -250,6 +280,13 @@ const Employees: React.FC = () => {
         setResumePdf(emp.resumePdf || null);
         setResumeText(emp.resumeText || null);
         setRestDay(emp.restDay || 0);
+        setPosition(emp.position || '');
+        setRiskLevel(emp.riskLevel || 1);
+        setAddress(emp.personalData?.address || '');
+        setPhone(emp.personalData?.phone || '');
+        setMaritalStatus(emp.personalData?.maritalStatus || '');
+        setBirthDate(emp.personalData?.birthDate || '');
+        setReferences(emp.references || []);
         setIsEditModalOpen(true);
     };
 
@@ -412,6 +449,10 @@ const Employees: React.FC = () => {
                                 <div className="flex flex-col">
                                     <h3 className="text-xl font-black text-slate-900 capitalize">{emp.name}</h3>
                                     <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-black text-slate-900 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded-lg">{emp.position || 'SIN CARGO'}</span>
+                                            <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-100">RIESGO {emp.riskLevel || 1}</span>
+                                        </div>
                                         <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter">Sueldo Quincenal: {formatCurrency(emp.salary)}</span>
                                         <div className="flex items-center gap-2">
                                            <span className="text-[10px] font-bold text-slate-400">Descanso: {daysOfWeek[emp.restDay || 0]}</span>
@@ -423,6 +464,15 @@ const Employees: React.FC = () => {
                                                 className="text-[10px] font-black text-blue-500 uppercase tracking-widest text-left hover:underline"
                                             >
                                                 Ver Contraseña
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedEmployee(emp);
+                                                    setIsIdCardModalOpen(true);
+                                                }}
+                                                className="text-[10px] font-black text-purple-600 uppercase tracking-widest text-left hover:underline"
+                                            >
+                                                Carnet
                                             </button>
                                             {emp.resumePdf && (
                                                 <button 
@@ -874,6 +924,32 @@ const Employees: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 text-blue-600">Cargo</label>
+                                    <input 
+                                        type="text" 
+                                        value={position}
+                                        onChange={e => setPosition(e.target.value)}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                        placeholder="Ej: Operario"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 text-orange-600">Nivel Riesgo ARL</label>
+                                    <select 
+                                        value={riskLevel}
+                                        onChange={e => setRiskLevel(parseInt(e.target.value))}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                    >
+                                        <option value={1}>Nivel 1 (0.522%)</option>
+                                        <option value={2}>Nivel 2 (1.044%)</option>
+                                        <option value={3}>Nivel 3 (2.436%)</option>
+                                        <option value={4}>Nivel 4 (4.350%)</option>
+                                        <option value={5}>Nivel 5 (6.960%)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Email</label>
                                     <input 
                                         type="email" 
@@ -938,6 +1014,63 @@ const Employees: React.FC = () => {
                                         <option key={idx} value={idx}>{day}</option>
                                     ))}
                                 </select>
+                             </div>
+
+                             <div className="space-y-4 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Información Personal (Hiring Directo)</p>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Dirección</label>
+                                         <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Teléfono</label>
+                                         <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Estado Civil</label>
+                                         <input type="text" value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Fecha Nacimiento</label>
+                                         <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                 </div>
+                             </div>
+
+                             <div className="space-y-4 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+                                 <div className="flex justify-between items-center">
+                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Referencias</p>
+                                     <button 
+                                        type="button"
+                                        onClick={() => {
+                                            if (refName && refPhone) {
+                                                setReferences([...references, { name: refName, phone: refPhone, relationship: refRel }]);
+                                                setRefName(''); setRefPhone(''); setRefRel('');
+                                            } else {
+                                                alert('Nombre y Teléfono son requeridos para la referencia.');
+                                            }
+                                        }}
+                                        className="text-[9px] font-black text-blue-600 uppercase"
+                                     >
+                                         + Agregar
+                                     </button>
+                                 </div>
+                                 <div className="grid grid-cols-3 gap-2">
+                                     <input placeholder="Nombre" value={refName} onChange={e => setRefName(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                     <input placeholder="Tel" value={refPhone} onChange={e => setRefPhone(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                     <input placeholder="Parentesco" value={refRel} onChange={e => setRefRel(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                 </div>
+                                 <div className="space-y-1">
+                                     {references.map((ref, i) => (
+                                         <div key={i} className="flex justify-between items-center text-[10px] font-black text-slate-600 bg-white p-2 rounded-lg border border-slate-100">
+                                             <span>{ref.name} ({ref.relationship}) - {ref.phone}</span>
+                                             <button type="button" onClick={() => setReferences(references.filter((_, idx) => idx !== i))} className="p-1 text-red-500 font-black">X</button>
+                                         </div>
+                                     ))}
+                                 </div>
                              </div>
 
                             <div className="space-y-2">
@@ -1030,6 +1163,32 @@ const Employees: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 text-blue-600">Cargo</label>
+                                    <input 
+                                        type="text" 
+                                        value={position}
+                                        onChange={e => setPosition(e.target.value)}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                        placeholder="Ej: Operario"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 text-orange-600">Nivel Riesgo ARL</label>
+                                    <select 
+                                        value={riskLevel}
+                                        onChange={e => setRiskLevel(parseInt(e.target.value))}
+                                        className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-slate-950 outline-none transition-all font-bold text-slate-950"
+                                    >
+                                        <option value={1}>Nivel 1 (0.522%)</option>
+                                        <option value={2}>Nivel 2 (1.044%)</option>
+                                        <option value={3}>Nivel 3 (2.436%)</option>
+                                        <option value={4}>Nivel 4 (4.350%)</option>
+                                        <option value={5}>Nivel 5 (6.960%)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
                                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Email</label>
                                     <input 
                                         type="email" 
@@ -1096,6 +1255,63 @@ const Employees: React.FC = () => {
                                         <option key={idx} value={idx}>{day}</option>
                                     ))}
                                 </select>
+                             </div>
+
+                             <div className="space-y-4 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Información Personal (Hiring Directo)</p>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Dirección</label>
+                                         <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Teléfono</label>
+                                         <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Estado Civil</label>
+                                         <input type="text" value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                     <div className="space-y-1">
+                                         <label className="text-[9px] font-black text-slate-500 uppercase">Fecha Nacimiento</label>
+                                         <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                     </div>
+                                 </div>
+                             </div>
+
+                             <div className="space-y-4 p-4 bg-slate-50 rounded-3xl border border-slate-100">
+                                 <div className="flex justify-between items-center">
+                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Referencias</p>
+                                     <button 
+                                        type="button"
+                                        onClick={() => {
+                                            if (refName && refPhone) {
+                                                setReferences([...references, { name: refName, phone: refPhone, relationship: refRel }]);
+                                                setRefName(''); setRefPhone(''); setRefRel('');
+                                            } else {
+                                                alert('Nombre y Teléfono son requeridos para la referencia.');
+                                            }
+                                        }}
+                                        className="text-[9px] font-black text-blue-600 uppercase"
+                                     >
+                                         + Agregar
+                                     </button>
+                                 </div>
+                                 <div className="grid grid-cols-3 gap-2">
+                                     <input placeholder="Nombre" value={refName} onChange={e => setRefName(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                     <input placeholder="Tel" value={refPhone} onChange={e => setRefPhone(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                     <input placeholder="Parentesco" value={refRel} onChange={e => setRefRel(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold" />
+                                 </div>
+                                 <div className="space-y-1">
+                                     {references.map((ref, i) => (
+                                         <div key={i} className="flex justify-between items-center text-[10px] font-black text-slate-600 bg-white p-2 rounded-lg border border-slate-100">
+                                             <span>{ref.name} ({ref.relationship}) - {ref.phone}</span>
+                                             <button type="button" onClick={() => setReferences(references.filter((_, idx) => idx !== i))} className="p-1 text-red-500 font-black">X</button>
+                                         </div>
+                                     ))}
+                                 </div>
                              </div>
 
                             <div className="space-y-2">
@@ -1335,6 +1551,77 @@ const Employees: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {isIdCardModalOpen && selectedEmployee && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[32px] w-full max-w-sm shadow-2xl p-0 overflow-hidden space-y-0">
+                        {/* ID Card Front */}
+                        <div className="aspect-[2.5/4] w-full bg-slate-900 p-8 flex flex-col items-center relative overflow-hidden">
+                            {/* Brand Header */}
+                            <div className="w-full flex items-center gap-3 mb-8 z-10">
+                                <div className="p-2 bg-slate-800 rounded-xl">
+                                    <Truck className="text-orange-500" size={24} />
+                                </div>
+                                <div className="leading-none">
+                                    <h2 className="text-lg font-black text-white italic uppercase tracking-tighter">Que Pollo</h2>
+                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Del Sur S.A.S</p>
+                                </div>
+                            </div>
+
+                            {/* Photo Wrapper */}
+                            <div className="relative z-10 mb-6">
+                                <div className="w-40 h-40 bg-slate-800 rounded-3xl border-4 border-slate-700 overflow-hidden shadow-2xl">
+                                    {selectedEmployee.photo ? (
+                                        <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-600">
+                                            <Users size={64} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
+                                    {selectedEmployee.role === 'admin' ? 'Directivo' : 'Operativo'}
+                                </div>
+                            </div>
+
+                            <div className="text-center z-10 space-y-1">
+                                <h3 className="text-2xl font-black text-white capitalize tracking-tight">{selectedEmployee.name}</h3>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{selectedEmployee.position || 'Colaborador'}</p>
+                            </div>
+
+                            {/* Decorative elements */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                            <div className="absolute bottom-0 left-0 w-64 h-64 bg-slate-800/50 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+                        </div>
+                        
+                        {/* Quick Stats/Info */}
+                        <div className="p-8 bg-slate-50 grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Documento</p>
+                                <p className="text-sm font-black text-slate-900 leading-none">{selectedEmployee.documentId || 'S.I.'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Vence</p>
+                                <p className="text-sm font-black text-slate-900 leading-none">31 DIC 2024</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white flex flex-col gap-2">
+                             <button 
+                                onClick={() => window.print()}
+                                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs"
+                             >
+                                Imprimir Carnet
+                             </button>
+                             <button 
+                                onClick={() => { setIsIdCardModalOpen(false); setSelectedEmployee(null); }}
+                                className="w-full py-2 text-slate-400 font-bold uppercase text-[10px] tracking-widest"
+                             >
+                                Cerrar
+                             </button>
+                        </div>
                     </div>
                 </div>
             )}

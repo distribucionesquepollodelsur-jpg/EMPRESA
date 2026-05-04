@@ -28,6 +28,7 @@ import Expenses from './pages/Expenses';
 import Loans from './pages/Loans';
 import Reports from './pages/Reports';
 import Config from './pages/Config';
+import Recruitment from './pages/Recruitment';
 
 import { useData } from './context/DataContext';
 import { Loader2 } from 'lucide-react';
@@ -73,6 +74,7 @@ const MainContent: React.FC = () => {
       case 'payroll': return <Payroll />;
       case 'assets': return <Assets />;
       case 'contracts': return <LaborContracts />;
+      case 'recruitment': return <Recruitment />;
       case 'credits': return <Credits />;
       case 'expenses': return <Expenses />;
       case 'loans': return <Loans />;

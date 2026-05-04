@@ -97,6 +97,40 @@ export interface Employee {
     resumePdf?: string | null;
     resumeText?: string | null;
     restDay?: number; // 0-6 (0=Domingo, 1=Lunes, etc.)
+    position?: string; // Cargo
+    riskLevel?: number; // 1-5 (ARL)
+    personalData?: {
+        address?: string;
+        phone?: string;
+        maritalStatus?: string;
+        birthDate?: string;
+    };
+    references?: {
+        name: string;
+        phone: string;
+        relationship: string;
+    }[];
+}
+
+export interface JobOffer {
+    id: string;
+    title: string;
+    description: string;
+    requirements: string[];
+    salaryRange: string;
+    status: 'open' | 'closed';
+    date: string;
+}
+
+export interface CandidateEvaluation {
+    id: string;
+    jobOfferId: string;
+    candidateName: string;
+    resumeText: string;
+    matchScore: number;
+    eligible: boolean;
+    aiSummary: string;
+    date: string;
 }
 
 export interface Attendance {
@@ -256,5 +290,7 @@ export interface AppState {
     inventoryLogs: InventoryAdjustment[];
     loans: Loan[];
     businessLoans: BusinessLoan[];
+    jobOffers: JobOffer[];
+    evaluations: CandidateEvaluation[];
     config: AppConfig;
 }

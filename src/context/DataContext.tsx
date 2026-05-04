@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan, BusinessLoan } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan, BusinessLoan, JobOffer, CandidateEvaluation } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -114,6 +114,10 @@ interface DataContextType extends AppState {
     deleteBusinessLoanAbono: (loanId: string, abonoIndex: number) => Promise<void>;
     deleteBusinessLoan: (id: string) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
+    addJobOffer: (offer: Omit<JobOffer, 'id' | 'date'>) => Promise<void>;
+    updateJobOffer: (id: string, offer: Partial<JobOffer>) => Promise<void>;
+    deleteJobOffer: (id: string) => Promise<void>;
+    addEvaluation: (evaluation: Omit<CandidateEvaluation, 'id' | 'date'>) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
     verifyInventory: () => Promise<void>;
@@ -163,6 +167,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [expenses, setExpenses] = useState<any[]>([]);
     const [loans, setLoans] = useState<Loan[]>([]);
     const [businessLoans, setBusinessLoans] = useState<BusinessLoan[]>([]);
+    const [jobOffers, setJobOffers] = useState<JobOffer[]>([]);
+    const [evaluations, setEvaluations] = useState<CandidateEvaluation[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -256,6 +262,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubscribes.push(onSnapshot(collection(db, 'businessLoans'), (s) => {
                     setBusinessLoans(s.docs.map(d => ({ id: d.id, ...d.data() } as BusinessLoan)));
                 }, (e) => handleFirestoreError(e, OperationType.GET, 'businessLoans')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'jobOffers'), (s) => {
+                    setJobOffers(s.docs.map(d => ({ id: d.id, ...d.data() } as JobOffer)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'jobOffers')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'evaluations'), (s) => {
+                    setEvaluations(s.docs.map(d => ({ id: d.id, ...d.data() } as CandidateEvaluation)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'evaluations')));
             } else {
                 // Clear state when no user
                 setEmployees([]);
@@ -722,7 +736,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const addEmployee = async (employeeData: Omit<Employee, 'id' | 'active'>) => {
         try {
-            await addDoc(collection(db, 'employees'), { ...employeeData, active: true });
+            await addDoc(collection(db, 'employees'), { 
+                ...employeeData, 
+                active: true,
+                position: employeeData.position || 'General',
+                riskLevel: employeeData.riskLevel || 1,
+                references: employeeData.references || [],
+                personalData: employeeData.personalData || {}
+            });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'employees'); }
     };
 
@@ -1185,6 +1206,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${supplierId}`); }
     };
 
+    const addJobOffer = async (offer: Omit<JobOffer, 'id' | 'date'>) => {
+        try {
+            await addDoc(collection(db, 'jobOffers'), { ...offer, date: new Date().toISOString() });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'jobOffers'); }
+    };
+
+    const updateJobOffer = async (id: string, updates: Partial<JobOffer>) => {
+        try {
+            await updateDoc(doc(db, 'jobOffers', id), updates);
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `jobOffers/${id}`); }
+    };
+
+    const deleteJobOffer = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'jobOffers', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `jobOffers/${id}`); }
+    };
+
+    const addEvaluation = async (evaluation: Omit<CandidateEvaluation, 'id' | 'date'>) => {
+        try {
+            await addDoc(collection(db, 'evaluations'), { ...evaluation, date: new Date().toISOString() });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'evaluations'); }
+    };
+
     const updateConfig = async (updates: Partial<AppConfig>) => {
         try {
             await setDoc(doc(db, 'config', 'main'), { ...config, ...updates }, { merge: true });
@@ -1427,7 +1472,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <DataContext.Provider value={{
-            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, businessLoans, config,
+            products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, businessLoans, jobOffers, evaluations, config,
             loading,
             addProduct,
             updateProduct,
@@ -1455,6 +1500,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addBusinessLoanAbono,
             deleteBusinessLoanAbono,
             deleteBusinessLoan,
+            addJobOffer,
+            updateJobOffer,
+            deleteJobOffer,
+            addEvaluation,
             addEmployee,
             updateEmployee,
             deleteEmployee,

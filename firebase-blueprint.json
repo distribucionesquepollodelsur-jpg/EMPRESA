@@ -84,9 +84,44 @@
         "salary": { "type": "number" },
         "active": { "type": "boolean" },
         "photo": { "type": "string" },
-        "restDay": { "type": "number" }
+        "restDay": { "type": "number" },
+        "position": { "type": "string" },
+        "riskLevel": { "type": "number" },
+        "personalData": { "type": "object" },
+        "references": { "type": "array" }
       },
       "required": ["name", "role", "salary", "active"]
+    },
+    "JobOffer": {
+      "title": "JobOffer",
+      "description": "Job vacancy announcements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "requirements": { "type": "array" },
+        "salaryRange": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "requirements", "status", "date"]
+    },
+    "CandidateEvaluation": {
+      "title": "CandidateEvaluation",
+      "description": "AI-powered evaluations of job candidates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobOfferId": { "type": "string" },
+        "candidateName": { "type": "string" },
+        "resumeText": { "type": "string" },
+        "matchScore": { "type": "number" },
+        "eligible": { "type": "boolean" },
+        "aiSummary": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["jobOfferId", "candidateName", "matchScore", "eligible", "aiSummary", "date"]
     },
     "Attendance": {
       "title": "Attendance",
@@ -367,6 +402,8 @@
     "loans": { "schema": "Loan", "description": "Loans to third parties" },
     "businessLoans": { "schema": "BusinessLoan", "description": "Base business loans" },
     "expenses": { "schema": "Expense", "description": "Business expenses" },
+    "jobOffers": { "schema": "JobOffer", "description": "Recruitment job offers" },
+    "evaluations": { "schema": "CandidateEvaluation", "description": "AI candidate evaluations" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }

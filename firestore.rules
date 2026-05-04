@@ -107,6 +107,19 @@ service cloud.firestore {
              data.status in ['pending', 'paid'];
     }
 
+    function isValidJobOffer(data) {
+      return data.keys().hasAll(['title', 'description', 'requirements', 'status', 'date']) &&
+             data.title is string && data.title.size() <= 300 &&
+             data.status in ['open', 'closed', 'active'];
+    }
+
+    function isValidEvaluation(data) {
+      return data.keys().hasAll(['jobOfferId', 'candidateName', 'matchScore', 'eligible', 'aiSummary', 'date']) &&
+             data.jobOfferId is string &&
+             data.candidateName is string &&
+             data.matchScore is number && data.matchScore >= 0 && data.matchScore <= 100;
+    }
+
     // --- Rules ---
 
     match /products/{productId} {
@@ -243,6 +256,18 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidBusinessLoan(incoming()) && isValidId(loanId);
       allow update: if isSignedIn() && (isAdmin() || isValidBusinessLoan(incoming()));
       allow delete: if isAdmin();
+    }
+
+    match /jobOffers/{offerId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && isValidJobOffer(incoming()) && isValidId(offerId);
+      allow delete: if isAdmin();
+    }
+
+    match /evaluations/{evalId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidEvaluation(incoming()) && isValidId(evalId);
+      allow update, delete: if isAdmin();
     }
   }
 }
