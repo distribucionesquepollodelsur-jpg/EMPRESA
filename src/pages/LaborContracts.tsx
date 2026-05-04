@@ -231,7 +231,7 @@ const LaborContracts: React.FC = () => {
                         model: "gemini-3-flash-preview",
                         contents: {
                             parts: [
-                                { text: "TRANSCRIPCIÓN LITERAL: Extrae TODO el texto de este documento exactamente como aparece. NO resumas. NO omitas información. NO utilices formato Markdown (sin negritas, sin asteriscos, sin listas con guiones). Devuelve ÚNICAMENTE el texto extraído en formato de texto plano puro. No agregues comentarios introductorios ni conclusiones." },
+                                { text: "TRANSCRIPCIÓN LITERAL: Extrae TODO el texto de este documento exactamente como aparece. NO resumas. NO omitas información. NO utilices formato Markdown (sin negritas, sin asteriscos, sin listas con guiones). Devuelve ÚNICAMENTE el texto extraído en formato de texto plano puro." },
                                 { 
                                     inlineData: {
                                         data: base64,
@@ -671,77 +671,68 @@ const LaborContracts: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] font-serif text-slate-900 border border-slate-50 relative overflow-hidden" style={{ fontFamily: '"Lora", serif', lineHeight: '1.8' }}>
+                            <div className="max-w-[8.5in] mx-auto bg-white p-[1in] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] font-serif text-slate-900 border border-slate-50 relative overflow-hidden" id="contract-content-pdf" style={{ fontFamily: '"Lora", "Merriweather", "Times New Roman", serif', lineHeight: '1.6' }}>
                                 {/* Watermark Background */}
                                 {companyLogo && (
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.025] pointer-events-none w-[70%] aspect-square flex items-center justify-center">
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.04] pointer-events-none w-[75%] aspect-square flex items-center justify-center">
                                         <img src={companyLogo} alt="Watermark" className="w-full h-full object-contain grayscale" />
                                     </div>
                                 )}
 
-                                <div className="text-center space-y-8 pb-16 pt-12 relative z-[1]">
-                                    <div className="flex justify-center mb-6">
-                                        <div className="w-24 h-24 p-2 bg-white flex items-center justify-center rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="text-center space-y-6 pb-16 pt-8 relative z-[1]">
+                                    <div className="flex justify-center mb-8">
+                                        <div className="w-24 h-24 p-2 bg-white flex items-center justify-center rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                                             {companyLogo ? (
                                                 <img src={companyLogo} alt="Logo" className="w-full h-full object-contain" />
                                             ) : (
-                                                <Building2 className="text-slate-200" size={32} />
+                                                <Building2 className="text-slate-200" size={40} />
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <h2 className="text-2xl font-black text-slate-900 tracking-wider uppercase leading-tight">
+                                    <div className="space-y-4">
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-widest uppercase leading-tight">
                                             CONTRATO INDIVIDUAL DE TRABAJO
                                         </h2>
-                                        <p className="text-[10px] font-sans font-black tracking-[0.4em] uppercase text-slate-400">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="h-0.5 w-16 bg-orange-500 rounded-full" />
+                                            <p className="text-[11px] font-sans font-black tracking-[0.5em] uppercase text-slate-400">DISTRIBUCIONES QUE POLLO DEL SUR</p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-8 text-[12pt] text-justify relative z-[1]">
-                                    <div className="whitespace-pre-wrap select-text selection:bg-orange-100">
-                                        {selectedContract.contractText.split('\n').map((para, i) => (
-                                            <p key={i} className={para.trim() ? "mb-6 text-slate-800" : "h-4"}>
-                                                {para}
-                                            </p>
-                                        ))}
+                                <div className="space-y-8 text-[12pt] text-justify relative z-[1] leading-relaxed selection:bg-orange-100">
+                                    <div className="whitespace-pre-wrap select-text text-slate-800">
+                                        {selectedContract.contractText}
                                     </div>
 
                                     {selectedContract.regulationsText && (
-                                        <>
-                                            <div className="py-24 flex flex-col items-center">
-                                                <div className="w-20 h-0.5 bg-slate-900 mb-6" />
-                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.2em] text-center max-w-md leading-relaxed">
+                                        <div className="pt-20">
+                                            <div className="flex flex-col items-center mb-10">
+                                                <div className="w-12 h-px bg-slate-300 mb-6" />
+                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.3em] text-center">
                                                     REGLAMENTO INTERNO DE TRABAJO
                                                 </h3>
-                                                <div className="w-20 h-0.5 bg-slate-900 mt-6" />
+                                                <div className="w-12 h-px bg-slate-300 mt-6" />
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 italic text-slate-700">
-                                                {selectedContract.regulationsText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6" : "h-4"}>
-                                                        {para}
-                                                    </p>
-                                                ))}
+                                            <div className="whitespace-pre-wrap select-text text-slate-800 text-[11pt]">
+                                                {selectedContract.regulationsText}
                                             </div>
-                                        </>
+                                        </div>
                                     )}
 
                                     {selectedContract.dotationText && (
-                                        <>
-                                            <div className="py-24 flex flex-col items-center">
-                                                <div className="w-20 h-0.5 bg-slate-900 mb-6" />
-                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.2em] text-center max-w-md leading-relaxed">
+                                        <div className="pt-20">
+                                            <div className="flex flex-col items-center mb-10">
+                                                <div className="w-12 h-px bg-slate-300 mb-6" />
+                                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-[0.3em] text-center">
                                                     ACTA DE ENTREGA DE DOTACIÓN
                                                 </h3>
-                                                <div className="w-20 h-0.5 bg-slate-900 mt-6" />
+                                                <div className="w-12 h-px bg-slate-300 mt-6" />
                                             </div>
-                                            <div className="whitespace-pre-wrap select-text selection:bg-orange-100 text-slate-800">
-                                                {selectedContract.dotationText.split('\n').map((para, i) => (
-                                                    <p key={i} className={para.trim() ? "mb-6" : "h-4"}>
-                                                        {para}
-                                                    </p>
-                                                ))}
+                                            <div className="whitespace-pre-wrap select-text text-slate-800 text-[11pt]">
+                                                {selectedContract.dotationText}
                                             </div>
-                                        </>
+                                        </div>
                                     )}
 
                                     <div className="grid grid-cols-2 gap-x-20 gap-y-24 pt-32 pb-4 relative z-[1]">

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { useAuth } from '../context/AuthContext';
 import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench, FileText, Upload } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Employee, Shift, Dotation } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
+import { GoogleGenAI } from '@google/genai';
 
 import { useData } from '../context/DataContext';
 
@@ -151,6 +151,7 @@ const Employees: React.FC = () => {
             });
 
             const text = response.text;
+            
             if (!text) throw new Error("No se pudo extraer el texto de la hoja de vida.");
             
             await updateEmployee(empId, { resumeText: text });
