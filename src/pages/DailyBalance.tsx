@@ -136,16 +136,17 @@ const DailyBalance: React.FC = () => {
         const summaryData = [
             ['Efectivo Recibido (Caja)', formatCurrency(stats.cashEntries)],
             ['Efectivo Entregado (Caja)', formatCurrency(stats.cashExits)],
-            ['Saldo Final Caja', formatCurrency(stats.netCash)],
-            ['Volumen Total Ventas', formatCurrency(stats.totalSalesVolume)]
+            ['EFECTIVO QUE DEBE HABER EN CAJA', formatCurrency(stats.netCash)],
+            ['Volumen Total de Ventas (Todos los métodos)', formatCurrency(stats.totalSalesVolume)]
         ];
 
         autoTable(doc, {
-            head: [['Resumen Directo', 'Monto']],
+            head: [['Resumen de Caja', 'Monto']],
             body: summaryData,
             startY: 40,
             theme: 'grid',
-            headStyles: { fillColor: [15, 23, 42] }
+            headStyles: { fillColor: [15, 23, 42] },
+            styles: { fontStyle: 'bold' }
         });
 
         // Sales breakdown
@@ -244,11 +245,11 @@ const DailyBalance: React.FC = () => {
                         <div className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center">
                             <Calculator size={20} />
                         </div>
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest text-right">Utilidad del Día</span>
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest text-right">Efectivo Físico</span>
                     </div>
                     <div>
                         <h4 className="text-2xl font-black">{formatCurrency(stats.netCash)}</h4>
-                        <p className="text-[10px] text-white/40 font-black uppercase tracking-tight mt-1">Balance Final Caja</p>
+                        <p className="text-[10px] text-white/40 font-black uppercase tracking-tight mt-1 underline decoration-white/20">Debe Haber en Caja</p>
                     </div>
                 </div>
 

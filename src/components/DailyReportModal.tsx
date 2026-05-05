@@ -279,10 +279,11 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                             <div className="space-y-6">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Efectivo Total en Caja (Hoy)</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 underline decoration-white/10">EFECTIVO QUE DEBE HABER EN CAJA</p>
                                     <h3 className={cn("text-4xl font-black tracking-tighter", netCash >= 0 ? "text-green-400" : "text-red-400")}>
                                         {formatCurrency(netCash)}
                                     </h3>
+                                    <p className="text-[9px] text-slate-500 font-bold mt-1">Este es el dinero físico que debe estar en el cajón.</p>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
