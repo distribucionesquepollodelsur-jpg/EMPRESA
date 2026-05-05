@@ -11,19 +11,60 @@ import {
     Users,
     ShieldCheck,
     Calendar,
-    Download
+    Download,
+    AlertTriangle,
+    Clock
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { differenceInDays, parseISO, subDays } from 'date-fns';
 import BalanceSheetModal from '../components/BalanceSheetModal';
 import DailyReportModal from '../components/DailyReportModal';
 
 const Dashboard: React.FC = () => {
-    const { sales, purchases, products, cashFlow, employees } = useData();
+    const { sales, purchases, products, cashFlow, employees, customers } = useData();
     const { user } = useAuth();
     const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
     const [isDailyReportOpen, setIsDailyReportOpen] = useState(false);
+    const [showOverdueAlert, setShowOverdueAlert] = useState(true);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+    // Filter overdue collections (> 5 days)
+    const overdueCollections = useMemo(() => {
+        const today = new Date();
+        const cutoff = subDays(today, 5);
+
+        const saleDebts = sales
+            .filter(s => {
+                const balance = s.total - (s.paidAmount || 0);
+                return balance > 100 && new Date(s.date) < cutoff; // Filter debts > $100 and older than 5 days
+            })
+            .map(s => ({
+                id: s.id,
+                name: s.customerName || 'Cliente No Identificado',
+                amount: s.total - s.paidAmount,
+                date: s.date,
+                days: differenceInDays(today, new Date(s.date)),
+                type: 'Venta'
+            }));
+
+        const initialDebts = customers
+            .filter(c => {
+                const debt = c.initialDebt || 0;
+                const debtDate = c.initialDebtDate ? new Date(c.initialDebtDate) : null;
+                return debt > 100 && debtDate && debtDate < cutoff;
+            })
+            .map(c => ({
+                id: c.id,
+                name: c.name,
+                amount: c.initialDebt || 0,
+                date: c.initialDebtDate!,
+                days: differenceInDays(today, new Date(c.initialDebtDate!)),
+                type: 'Saldo Antiguo'
+            }));
+
+        return [...saleDebts, ...initialDebts].sort((a, b) => b.days - a.days);
+    }, [sales, customers]);
 
     useEffect(() => {
         const handler = (e: any) => {
@@ -106,6 +147,54 @@ const Dashboard: React.FC = () => {
                     <p className="text-slate-500 font-medium tracking-tight italic">Aquí tienes un resumen de la operación hoy.</p>
                 </div>
             </header>
+
+            {overdueCollections.length > 0 && showOverdueAlert && user?.role === 'admin' && (
+                <div className="bg-red-50 border border-red-100 rounded-[32px] p-8 shadow-xl shadow-red-500/10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+                        <div className="flex items-center gap-5">
+                            <div className="w-16 h-16 bg-red-500 rounded-3xl flex items-center justify-center shadow-lg shadow-red-500/40">
+                                <AlertTriangle className="text-white" size={32} />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-red-900 tracking-tighter uppercase italic">¡Atención! Cobros Pendientes</h2>
+                                <p className="text-red-600 font-bold text-sm tracking-tight">Hay {overdueCollections.length} deudas superando los 5 días de retraso.</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setShowOverdueAlert(false)}
+                            className="text-red-300 hover:text-red-500 font-black text-[10px] uppercase tracking-widest px-4 py-2 bg-white rounded-xl border border-red-100 transition-all hover:shadow-md"
+                        >
+                            Ocultar temporalmente
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {overdueCollections.map((item, idx) => (
+                            <div key={`${item.id}-${idx}`} className="bg-white p-5 rounded-2xl border border-red-100/50 shadow-sm flex flex-col justify-between group hover:border-red-500/30 transition-all">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">{item.type}</span>
+                                        <h4 className="font-bold text-slate-900 capitalize text-sm">{item.name}</h4>
+                                    </div>
+                                    <div className="bg-red-50 text-red-600 p-2 rounded-lg group-hover:bg-red-500 group-hover:text-white transition-all">
+                                        <Clock size={16} />
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-slate-400 font-bold">RETRASO:</span>
+                                        <span className="text-red-600 font-black text-sm">{item.days} Días</span>
+                                    </div>
+                                    <div className="text-right flex flex-col">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Saldo Pendiente</span>
+                                        <span className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(item.amount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard title="Ventas Totales" value={formatCurrency(totalSalesAmount)} icon={TrendingUp} color="text-green-600" />
