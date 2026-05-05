@@ -32,6 +32,7 @@ const Purchases: React.FC = () => {
     const [transferAmount, setTransferAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [excessToBalance, setExcessToBalance] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([]);
 
     const { addSupplier } = useData();
@@ -145,7 +146,7 @@ const Purchases: React.FC = () => {
                 total,
                 paidAmount: finalPaid,
                 payments: payments
-            });
+            }, excessToBalance);
 
             generatePurchaseInvoice({
                 id: 'NUEVA',
@@ -289,6 +290,7 @@ const Purchases: React.FC = () => {
         setPaidAmount(0);
         setCashAmount(0);
         setTransferAmount(0);
+        setExcessToBalance(false);
         setPaymentMethod('cash');
         setItems([]);
         setIsModalOpen(false);
@@ -627,6 +629,21 @@ const Purchases: React.FC = () => {
                                                 value={paidAmount || ''}
                                                 onChange={e => setPaidAmount(parseFloat(e.target.value))}
                                                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm text-blue-600"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {((paymentMethod === 'mixed' ? (cashAmount + transferAmount) : (paymentMethod === 'credit' ? paidAmount : total)) > total) && (supplierId || isNewSupplier) && (
+                                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Excedente: {formatCurrency((paymentMethod === 'mixed' ? (cashAmount + transferAmount) : (paymentMethod === 'credit' ? paidAmount : total)) - total)}</span>
+                                                <span className="text-[9px] text-blue-500 font-bold">¿Guardar como saldo a favor del proveedor?</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox"
+                                                checked={excessToBalance}
+                                                onChange={e => setExcessToBalance(e.target.checked)}
+                                                className="w-5 h-5 accent-blue-600 rounded-lg cursor-pointer"
                                             />
                                         </div>
                                     )}

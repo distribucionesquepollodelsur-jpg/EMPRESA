@@ -122,8 +122,8 @@ interface DataContextType extends AppState {
     resetData: () => Promise<void>;
     resetCustomerBalance: (id: string) => Promise<void>;
     resetSupplierBalance: (id: string) => Promise<void>;
-    updateCustomerBalanceManually: (id: string, balance: number) => Promise<void>;
-    updateSupplierBalanceManually: (id: string, balance: number) => Promise<void>;
+    updateCustomerBalanceManually: (id: string, balance: number, addToCash?: boolean) => Promise<void>;
+    updateSupplierBalanceManually: (id: string, balance: number, addToCash?: boolean) => Promise<void>;
     verifyInventory: () => Promise<void>;
     inventoryLogs: InventoryAdjustment[];
     isInventoryRequired: () => boolean;
@@ -330,7 +330,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return new Date();
     };
 
-    const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date' | 'purchaseNumber'>) => {
+    const addPurchase = async (purchaseData: Omit<Purchase, 'id' | 'date' | 'purchaseNumber'>, excessToBalance: boolean = false) => {
         const today = format(new Date(), 'yyyy-MM-dd');
         let nextNumber = (config.purchaseCounter || 0) + 1;
         
@@ -356,6 +356,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (item.productId === 'saldo-inicial') continue;
                 batch.update(doc(db, 'products', item.productId), {
                     stock: increment(item.quantity)
+                });
+            }
+
+            // Handle overpayment as balance
+            if (excessToBalance && purchase.supplierId && purchase.paidAmount > purchase.total) {
+                const excess = purchase.paidAmount - purchase.total;
+                batch.update(doc(db, 'suppliers', purchase.supplierId), {
+                    balance: increment(excess)
                 });
             }
 
@@ -425,7 +433,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${customerId}`); }
     };
 
-    const addSale = async (saleData: Omit<Sale, 'id' | 'date' | 'saleNumber'>) => {
+    const addSale = async (saleData: Omit<Sale, 'id' | 'date' | 'saleNumber'>, excessToBalance: boolean = false) => {
         const today = format(new Date(), 'yyyy-MM-dd');
         let nextNumber = (config.saleCounter || 0) + 1;
         
@@ -458,6 +466,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (sale.paymentMethod === 'balance' && sale.customerId) {
                 batch.update(doc(db, 'customers', sale.customerId), {
                     balance: increment(-sale.paidAmount)
+                });
+            }
+
+            // Handle overpayment as balance
+            if (excessToBalance && sale.customerId && sale.paidAmount > sale.total) {
+                const excess = sale.paidAmount - sale.total;
+                batch.update(doc(db, 'customers', sale.customerId), {
+                    balance: increment(excess)
                 });
             }
 
@@ -1486,15 +1502,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
     };
 
-    const updateCustomerBalanceManually = async (id: string, balance: number) => {
+    const updateCustomerBalanceManually = async (id: string, balance: number, addToCash?: boolean) => {
         try {
-            await updateDoc(doc(db, 'customers', id), { balance });
+            const customerRef = doc(db, 'customers', id);
+            
+            if (addToCash) {
+                const customerSnap = await getDoc(customerRef);
+                const customer = customerSnap.data() as Customer;
+                const oldBalance = customer?.balance || 0;
+                const difference = balance - oldBalance;
+                
+                if (difference !== 0) {
+                    await addCashMovement({
+                        amount: Math.abs(difference),
+                        type: difference > 0 ? 'entry' : 'exit',
+                        reason: `Ajuste Saldo Favor (Caja) - Cliente: ${customer?.name || 'Cliente'}`,
+                        category: 'manual'
+                    });
+                }
+            }
+            
+            await updateDoc(customerRef, { balance });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${id}`); }
     };
 
-    const updateSupplierBalanceManually = async (id: string, balance: number) => {
+    const updateSupplierBalanceManually = async (id: string, balance: number, addToCash?: boolean) => {
         try {
-            await updateDoc(doc(db, 'suppliers', id), { balance });
+            const supplierRef = doc(db, 'suppliers', id);
+            
+            if (addToCash) {
+                const supplierSnap = await getDoc(supplierRef);
+                const supplier = supplierSnap.data() as Supplier;
+                const oldBalance = supplier?.balance || 0;
+                const difference = balance - oldBalance;
+                
+                if (difference !== 0) {
+                    await addCashMovement({
+                        amount: Math.abs(difference),
+                        type: difference < 0 ? 'entry' : 'exit',
+                        reason: `Ajuste Saldo Favor (Caja) - Proveedor: ${supplier?.name || 'Proveedor'}`,
+                        category: 'manual'
+                    });
+                }
+            }
+            await updateDoc(supplierRef, { balance });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
     };
 

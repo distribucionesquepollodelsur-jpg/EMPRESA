@@ -300,7 +300,10 @@ const Suppliers: React.FC = () => {
                                                         const val = window.prompt('Nuevo saldo a favor:', (selectedSupplier.balance || 0).toString());
                                                         if (val !== null) {
                                                             const newBalance = parseFloat(val);
-                                                            if (!isNaN(newBalance)) updateSupplierBalanceManually(selectedSupplier.id, newBalance);
+                                                            if (!isNaN(newBalance)) {
+                                                                const addToCash = window.confirm('¿Este dinero entró/salió físicamente de la caja?');
+                                                                updateSupplierBalanceManually(selectedSupplier.id, newBalance, addToCash);
+                                                            }
                                                         }
                                                     }}
                                                     className="text-[9px] font-black text-blue-300 hover:text-blue-100 uppercase tracking-tighter"

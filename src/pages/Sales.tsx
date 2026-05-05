@@ -78,6 +78,7 @@ const Sales: React.FC = () => {
     const [paidTransfer, setPaidTransfer] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'balance' | 'transfer' | 'mixed'>('cash');
     const [totalDiscount, setTotalDiscount] = useState<number>(0);
+    const [excessToBalance, setExcessToBalance] = useState(false);
 
     // Payment/Edit management
     const [paymentValue, setPaymentValue] = useState<number>(0);
@@ -291,7 +292,7 @@ const Sales: React.FC = () => {
                 paidAmount: paymentMethod === 'mixed' ? (paidCash + paidTransfer) : (paidAmount > 0 ? paidAmount : (paymentMethod === 'cash' || paymentMethod === 'transfer' ? saleTotal : 0)),
                 paymentMethod,
                 payments: payments.length > 0 ? payments : undefined
-            });
+            }, excessToBalance);
             
             setLastSaleData({
                 items: saleItems,
@@ -311,6 +312,7 @@ const Sales: React.FC = () => {
             setPaidCash(0);
             setPaidTransfer(0);
             setTotalDiscount(0);
+            setExcessToBalance(false);
             setPaymentMethod('cash');
             setIsModalOpen(false);
             setShowSuccessBanner(true);
@@ -635,6 +637,21 @@ const Sales: React.FC = () => {
                                         <div className="p-3 bg-green-50 rounded-xl border border-green-100 flex items-center justify-between">
                                             <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Saldo Disponible:</span>
                                             <span className="font-black text-green-700">{formatCurrency(customerBalance)}</span>
+                                        </div>
+                                    )}
+
+                                    {((paymentMethod === 'mixed' ? (paidCash + paidTransfer) : paidAmount) > total) && customerId && (
+                                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Cambio: {formatCurrency((paymentMethod === 'mixed' ? (paidCash + paidTransfer) : paidAmount) - total)}</span>
+                                                <span className="text-[9px] text-blue-500 font-bold">¿Guardar excedente como saldo a favor?</span>
+                                            </div>
+                                            <input 
+                                                type="checkbox"
+                                                checked={excessToBalance}
+                                                onChange={e => setExcessToBalance(e.target.checked)}
+                                                className="w-5 h-5 accent-blue-600 rounded-lg cursor-pointer"
+                                            />
                                         </div>
                                     )}
 

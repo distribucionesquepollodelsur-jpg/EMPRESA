@@ -404,7 +404,10 @@ const Customers: React.FC = () => {
                                                         const val = window.prompt('Nuevo saldo a favor:', (selectedCustomer.balance || 0).toString());
                                                         if (val !== null) {
                                                             const newBalance = parseFloat(val);
-                                                            if (!isNaN(newBalance)) updateCustomerBalanceManually(selectedCustomer.id, newBalance);
+                                                            if (!isNaN(newBalance)) {
+                                                                const addToCash = window.confirm('¿Este dinero entró/salió físicamente de la caja?');
+                                                                updateCustomerBalanceManually(selectedCustomer.id, newBalance, addToCash);
+                                                            }
                                                         }
                                                     }}
                                                     className="text-[9px] font-black text-blue-300 hover:text-blue-100 uppercase tracking-tighter"

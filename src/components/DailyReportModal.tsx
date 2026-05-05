@@ -12,9 +12,12 @@ import {
     Clock,
     FileText,
     Users,
-    Package
+    Package,
+    Download
 } from 'lucide-react';
-import { startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface DailyReportModalProps {
     isOpen: boolean;
@@ -22,7 +25,7 @@ interface DailyReportModalProps {
 }
 
 const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) => {
-    const { sales, purchases, cashFlow, customers, processings } = useData();
+    const { sales, purchases, cashFlow, customers, processings, config } = useData();
 
     if (!isOpen) return null;
 
@@ -46,39 +49,28 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         return isWithinInterval(date, { start, end });
     });
 
-    const todayProcessings = processings.filter(p => {
-        const date = new Date(p.date || '');
-        return isWithinInterval(date, { start, end });
-    });
+    // Detailed Categories for Sales
+    const salesCash = todaySales.filter(s => s.paymentMethod === 'cash');
+    const salesCredit = todaySales.filter(s => s.paymentMethod === 'credit');
+    const salesTransfer = todaySales.filter(s => s.paymentMethod === 'transfer');
+    const salesMixed = todaySales.filter(s => s.paymentMethod === 'mixed');
+    const salesBalance = todaySales.filter(s => s.paymentMethod === 'balance');
+
+    const totalSalesCash = salesCash.reduce((sum, s) => sum + s.total, 0);
+    const totalSalesCredit = salesCredit.reduce((sum, s) => sum + s.total, 0);
+    const totalSalesTransfer = salesTransfer.reduce((sum, s) => sum + s.total, 0);
+    const totalSalesMixed = salesMixed.reduce((sum, s) => sum + s.total, 0);
+    const totalSalesBalance = salesBalance.reduce((sum, s) => sum + s.total, 0);
 
     // Totals
     const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchases = todayPurchases.reduce((sum, p) => sum + p.total, 0);
     
-    // Ventas de hoy pagadas en efectivo
-    const salesCashToday = todaySales
-        .filter(s => s.paymentMethod === 'cash')
-        .reduce((sum, s) => sum + s.total, 0);
-
-    // Abonos recibidos hoy para ventas a crédito de hoy o días anteriores
+    // Abonos recibidos hoy
     const saleAbonos = todayCashFlow
         .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Abono a Venta #'))
         .reduce((sum, m) => sum + m.amount, 0);
 
-    // Recaudos de saldos antiguos (saldos iniciales)
-    const oldBalanceCollections = todayCashFlow
-        .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Recaudo Saldo Antiguo'))
-        .reduce((sum, m) => sum + m.amount, 0);
-
-    // Otros ingresos de ventas (ajustes, etc)
-    const otherSaleEntries = todayCashFlow
-        .filter(m => m.type === 'entry' && m.category === 'sale' && !m.reason.includes('Venta #') && !m.reason.includes('Abono a Venta #') && !m.reason.includes('Recaudo Saldo Antiguo'))
-        .reduce((sum, m) => sum + m.amount, 0);
-
-    const totalCashFromSales = todayCashFlow
-        .filter(m => m.type === 'entry' && m.category === 'sale')
-        .reduce((sum, m) => sum + m.amount, 0);
-    
     const cashEntries = todayCashFlow
         .filter(m => m.type === 'entry')
         .reduce((sum, m) => sum + m.amount, 0);
@@ -89,6 +81,20 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
 
     const netCash = cashEntries - cashExits;
 
+    // UI helper stats
+    const salesCashToday = totalSalesCash;
+    const oldBalanceCollections = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Recaudo Saldo Antiguo'))
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    const otherSaleEntries = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale' && !m.reason.includes('Venta #') && !m.reason.includes('Abono a Venta #') && !m.reason.includes('Recaudo Saldo Antiguo'))
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    const totalCashFromSales = todayCashFlow
+        .filter(m => m.type === 'entry' && m.category === 'sale')
+        .reduce((sum, m) => sum + m.amount, 0);
+
     const oldBalanceSupplierAbonos = todayCashFlow
         .filter(m => m.type === 'exit' && m.category === 'purchase' && m.reason.includes('Abono a Saldo Antiguo'))
         .reduce((sum, m) => sum + m.amount, 0);
@@ -96,6 +102,77 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
     const purchaseAbonos = todayCashFlow
         .filter(m => m.type === 'exit' && m.category === 'purchase' && m.reason.includes('Abono a Compra #'))
         .reduce((sum, m) => sum + m.amount, 0);
+
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        
+        // Header
+        doc.setFontSize(20);
+        doc.setTextColor(15, 23, 42); // slate-900
+        doc.text('Cierre de Caja Diario', 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139); // slate-500
+        doc.text(config.companyName.toUpperCase(), 14, 30);
+        doc.text(`Fecha: ${format(today, 'dd/MM/yyyy')}`, 14, 35);
+        
+        // Totals Summary
+        autoTable(doc, {
+            startY: 45,
+            head: [['Categoría', 'Venta Bruta (Total)', 'Transacciones']],
+            body: [
+                ['Efectivo (Contado)', formatCurrency(totalSalesCash), salesCash.length],
+                ['Transferencia', formatCurrency(totalSalesTransfer), salesTransfer.length],
+                ['Mixto', formatCurrency(totalSalesMixed), salesMixed.length],
+                ['Crédito', formatCurrency(totalSalesCredit), salesCredit.length],
+                ['Pago con Saldo', formatCurrency(totalSalesBalance), salesBalance.length],
+                ['TOTAL VENTAS HOY', formatCurrency(totalSales), todaySales.length],
+            ],
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+        });
+
+        // Cash Flow Summary
+        const finalY = (doc as any).lastAutoTable.finalY || 45;
+        doc.setFontSize(14);
+        doc.setTextColor(15, 23, 42);
+        doc.text('Resumen de Movimientos de Caja', 14, finalY + 15);
+
+        autoTable(doc, {
+            startY: finalY + 20,
+            head: [['Concepto', 'Ingresos (+)', 'Egresos (-)']],
+            body: [
+                ['Ventas y Abonos', formatCurrency(cashEntries), ''],
+                ['Compras y Gastos', '', formatCurrency(cashExits)],
+                ['EFECTIVO NETO HOY', netCash >= 0 ? formatCurrency(netCash) : '', netCash < 0 ? formatCurrency(Math.abs(netCash)) : ''],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [51, 65, 85] },
+        });
+
+        // Details of today's movements
+        const nextY = (doc as any).lastAutoTable.finalY || finalY + 20;
+        doc.text('Detalle Cronológico de Movimientos', 14, nextY + 15);
+
+        autoTable(doc, {
+            startY: nextY + 20,
+            head: [['Hora', 'Descripción', 'Categoría', 'Importe']],
+            body: todayCashFlow
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .map(m => [
+                    format(new Date(m.date), 'HH:mm'),
+                    m.description,
+                    m.category.toUpperCase(),
+                    `${m.type === 'entry' ? '+' : '-'}${formatCurrency(m.amount)}`
+                ]),
+            theme: 'plain',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+        });
+
+        doc.save(`Cierre_Caja_${format(today, 'yyyy-MM-dd')}.pdf`);
+    };
 
     const StatCard = ({ icon: Icon, label, value, subValue, color }: any) => (
         <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 flex flex-col justify-between">
@@ -166,6 +243,35 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                             value={formatCurrency(cashExits)} 
                             color="bg-orange-50 text-orange-600"
                         />
+                    </div>
+
+                    {/* Resumen por Método de Pago */}
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                             Diferenciación de Ventas Hoy
+                        </h4>
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                            <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
+                                <p className="text-[9px] font-black text-green-700 uppercase tracking-tight mb-1">Contado</p>
+                                <p className="text-sm font-black text-green-800">{formatCurrency(totalSalesCash)}</p>
+                            </div>
+                            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <p className="text-[9px] font-black text-blue-700 uppercase tracking-tight mb-1">Transf.</p>
+                                <p className="text-sm font-black text-blue-800">{formatCurrency(totalSalesTransfer)}</p>
+                            </div>
+                            <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+                                <p className="text-[9px] font-black text-purple-700 uppercase tracking-tight mb-1">Mixtas</p>
+                                <p className="text-sm font-black text-purple-800">{formatCurrency(totalSalesMixed)}</p>
+                            </div>
+                            <div className="p-4 bg-slate-100 rounded-2xl border border-slate-200">
+                                <p className="text-[9px] font-black text-slate-700 uppercase tracking-tight mb-1">Crédito</p>
+                                <p className="text-sm font-black text-slate-800">{formatCurrency(totalSalesCredit)}</p>
+                            </div>
+                            <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                                <p className="text-[9px] font-black text-orange-700 uppercase tracking-tight mb-1">Con Saldo</p>
+                                <p className="text-sm font-black text-orange-800">{formatCurrency(totalSalesBalance)}</p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Resumen de Flujo */}
@@ -338,12 +444,20 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                             Este reporte es un resumen instantáneo del día operativo.
                         </p>
                     </div>
-                    <button 
-                        onClick={onClose}
-                        className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-xl"
-                    >
-                        Cerrar Reporte
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={generatePDF}
+                            className="px-6 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-xl flex items-center gap-2"
+                        >
+                            <Download size={16} /> Descargar PDF
+                        </button>
+                        <button 
+                            onClick={onClose}
+                            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-xl"
+                        >
+                            Cerrar Reporte
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
