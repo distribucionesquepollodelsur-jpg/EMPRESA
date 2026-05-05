@@ -22,7 +22,7 @@ import {
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const DailyBalance: React.FC = () => {
     const { sales, purchases, cashFlow, expenses, config, customers } = useData();
@@ -140,7 +140,7 @@ const DailyBalance: React.FC = () => {
             ['Volumen Total Ventas', formatCurrency(stats.totalSalesVolume)]
         ];
 
-        (doc as any).autoTable({
+        autoTable(doc, {
             head: [['Resumen Directo', 'Monto']],
             body: summaryData,
             startY: 40,
@@ -157,7 +157,7 @@ const DailyBalance: React.FC = () => {
             ['Saldo Favor Usado (Sin entrada de caja)', formatCurrency(stats.salesStats.usedBalance)]
         ];
 
-        (doc as any).autoTable({
+        autoTable(doc, {
             head: [['Detalle por Método de Pago', 'Total']],
             body: breakdownData,
             startY: (doc as any).lastAutoTable.finalY + 10,
@@ -169,11 +169,11 @@ const DailyBalance: React.FC = () => {
             format(new Date(m.date), 'HH:mm'),
             m.concept,
             m.category,
-            m.amount >= 0 ? (m.isEntry ? '+' : '-') : '',
+            m.type === 'sale' ? '+' : (m.isEntry ? '+' : '-'),
             formatCurrency(m.amount)
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
             head: [['Hora', 'Movimiento', 'Categoría/Método', '', 'Monto']],
             body: movementsData,
             startY: (doc as any).lastAutoTable.finalY + 10,
@@ -310,8 +310,11 @@ const DailyBalance: React.FC = () => {
                                         <td className="px-6 py-4">
                                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{m.category}</p>
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-black text-sm ${m.isEntry ? 'text-green-600' : 'text-red-600'}`}>
-                                            {m.isEntry ? '+' : '-'}{formatCurrency(m.amount)}
+                                        <td className={`px-6 py-4 text-right font-black text-sm ${
+                                            m.type === 'sale' ? (m.paymentMethod === 'credit' ? 'text-blue-500' : m.paymentMethod === 'balance' ? 'text-amber-500' : 'text-green-600') :
+                                            m.isEntry ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                            {m.type === 'sale' ? '+' : (m.isEntry ? '+' : '-')}{formatCurrency(m.amount)}
                                         </td>
                                     </tr>
                                 ))}
