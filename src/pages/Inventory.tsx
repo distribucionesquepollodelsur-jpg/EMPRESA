@@ -185,7 +185,7 @@ const Inventory: React.FC = () => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm flex items-center gap-4">
-                            <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl">
+                            <div className="p-4 bg-zinc-900 text-white rounded-2xl shadow-inner">
                                 <Package size={24} />
                             </div>
                             <div>
@@ -294,7 +294,7 @@ const Inventory: React.FC = () => {
                 <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
                     <div className="p-8 border-b border-slate-100 bg-slate-50/20">
                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-                            <Clock className="text-orange-500" /> Historial de Cambios Manuales
+                            <Clock className="text-zinc-400" /> Historial de Cambios Manuales
                         </h3>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Auditabilidad de existencias</p>
                     </div>
@@ -365,7 +365,7 @@ const Inventory: React.FC = () => {
                                 </h2>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Configuración técnica de existencia</p>
                             </div>
-                            <div className="p-4 bg-white rounded-2xl border border-slate-100 text-orange-500 shadow-sm">
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 text-zinc-900 shadow-sm">
                                 <Package size={24} />
                             </div>
                         </div>
@@ -437,14 +437,14 @@ const Inventory: React.FC = () => {
                                 </div>
 
                                 {editingProduct && (
-                                    <div className="bg-orange-50/50 p-6 rounded-3xl border border-orange-100 border-dashed">
-                                        <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 block">Justificación del Cambio de Stock</label>
+                                    <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-200 border-dashed">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3 block">Justificación del Cambio de Stock</label>
                                         <textarea 
                                             required
                                             value={adjustmentReason}
                                             onChange={e => setAdjustmentReason(e.target.value)}
                                             placeholder="¿POR QUÉ SE CAMBIA EL STOCK FUERA DE UNA VENTA/COMPRA? (EJ: DESPERDICIO, AJUSTE FÍSICO...)"
-                                            className="w-full px-6 py-4 bg-white border border-orange-200 rounded-2xl focus:ring-4 focus:ring-orange-100 outline-none text-[10px] font-bold uppercase min-h-[80px]"
+                                            className="w-full px-6 py-4 bg-white border border-zinc-200 rounded-2xl focus:ring-4 focus:ring-zinc-100 outline-none text-[10px] font-bold uppercase min-h-[80px]"
                                         />
                                     </div>
                                 )}

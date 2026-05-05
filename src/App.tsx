@@ -44,10 +44,12 @@ const MainContent: React.FC = () => {
 
   if (authLoading || dataLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-          <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-xs">Cargando Sistema...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-16 h-16 bg-white/5 rounded-[24px] p-4 animate-pulse">
+            <img src="/icon.svg" alt="Loading" className="w-full h-full object-contain brightness-0 invert opacity-20" />
+          </div>
+          <p className="text-zinc-500 font-black animate-pulse uppercase tracking-[0.3em] text-[10px]">Iniciando Distribuciones</p>
         </div>
       </div>
     );

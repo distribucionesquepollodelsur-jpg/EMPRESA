@@ -98,10 +98,10 @@ const Dashboard: React.FC = () => {
 
     // Filter quick actions based on role
     const quickActions = [
-        { label: 'Registrar Venta', action: 'sales', color: 'bg-green-500' },
+        { label: 'Registrar Venta', action: 'sales', color: 'bg-zinc-900' },
         ...(user?.role === 'admin' ? [
-            { label: 'Nueva Compra', action: 'purchases', color: 'bg-blue-500' },
-            { label: 'Cierre de Caja', action: 'cash', color: 'bg-orange-500' },
+            { label: 'Nueva Compra', action: 'purchases', color: 'bg-zinc-800' },
+            { label: 'Cierre de Caja', action: 'cash', color: 'bg-zinc-700' },
         ] : []),
     ];
 
@@ -120,17 +120,19 @@ const Dashboard: React.FC = () => {
     }, []);
 
     const StatsCard = ({ title, value, icon: Icon, color, trend }: any) => (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-            <div className={cn("absolute right-[-10px] top-[-10px] opacity-10 group-hover:scale-110 transition-transform", color)}>
-                <Icon size={120} strokeWidth={1} />
+        <div className="bg-white p-8 rounded-[40px] border border-zinc-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-zinc-200/50 transition-all group relative overflow-hidden">
+            <div className={cn("absolute right-[-20px] top-[-20px] opacity-5 group-hover:scale-110 transition-transform", color)}>
+                <Icon size={160} strokeWidth={0.5} />
             </div>
-            <div className="relative z-10 flex flex-col gap-4">
-                <div className={cn("inline-flex p-3 rounded-xl", color.replace('text-', 'bg-').replace('600', '50'))}>
-                    <Icon className={color} size={24} />
+            <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                    <div className={`p-4 rounded-2xl bg-zinc-50 ${color} group-hover:scale-110 transition-transform`}>
+                        <Icon size={24} />
+                    </div>
                 </div>
                 <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{title}</p>
-                    <h3 className="text-2xl font-black text-slate-900 mt-1">{value}</h3>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">{title}</p>
+                    <h3 className="text-3xl font-black text-zinc-900 tracking-tighter">{value}</h3>
                 </div>
             </div>
         </div>
@@ -198,26 +200,27 @@ const Dashboard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard title="Ventas Totales" value={formatCurrency(totalSalesAmount)} icon={TrendingUp} color="text-green-600" />
-                <StatsCard title="Compras Totales" value={formatCurrency(totalPurchasesAmount)} icon={TrendingDown} color="text-red-600" />
-                <StatsCard title="Balance Neto" value={formatCurrency(balance)} icon={DollarSign} color="text-blue-600" />
-                <StatsCard title="Stock Crítico" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-orange-600" />
+                <StatsCard title="Compras Totales" value={formatCurrency(totalPurchasesAmount)} icon={TrendingDown} color="text-red-500" />
+                <StatsCard title="Balance Neto" value={formatCurrency(balance)} icon={DollarSign} color="text-zinc-900" />
+                <StatsCard title="Debajo de Stock" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-red-600" />
             </div>
 
-            <div className="p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/20">
-                <div className="flex items-center gap-6 text-center md:text-left">
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-md">
-                        <Download size={32} className="text-white" />
+            <div className="p-10 rounded-[40px] text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 transition-all bg-zinc-900 border border-white/5 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.05),transparent)] pointer-events-none" />
+                <div className="flex items-center gap-8 text-center md:text-left relative z-10">
+                    <div className="w-20 h-20 rounded-3xl flex items-center justify-center bg-white/5 backdrop-blur-md p-4 group-hover:scale-110 transition-transform">
+                        <Download size={40} className="text-white" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tight">¡Descargar APK Escritorio!</h3>
-                        <p className="text-orange-100 font-medium">Usa la aplicación de forma rápida y segura fuera del navegador.</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tight italic">Versión de Escritorio</h3>
+                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Usa la aplicación fuera del navegador.</p>
                     </div>
                 </div>
                 <button 
                     onClick={handleInstall}
-                    className="px-8 py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all shadow-lg active:scale-95 bg-white text-orange-600 hover:bg-orange-50"
+                    className="px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-xl active:scale-95 bg-white text-black hover:bg-zinc-200 relative z-10"
                 >
-                    Iniciar Descarga/Instalación
+                    Instalar Ahora
                 </button>
             </div>
 
@@ -249,40 +252,47 @@ const Dashboard: React.FC = () => {
                                     cursor={{fill: '#f8fafc'}}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                 />
-                                <Bar dataKey="ventas" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={32} />
-                                <Bar dataKey="compras" fill="#f87171" radius={[4, 4, 0, 0]} barSize={12} />
+                                <Bar dataKey="ventas" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
+                                <Bar dataKey="compras" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={12} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-xl flex flex-col">
-                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <ShoppingBag className="text-orange-400" /> Accesos Rápidos
+                <div className="bg-zinc-950 p-10 rounded-[40px] text-white shadow-2xl flex flex-col border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 opacity-5">
+                         <ShoppingBag size={120} />
+                    </div>
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-zinc-500 mb-8 flex items-center gap-3">
+                         Accesos de Gestión
                     </h3>
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-4 flex-1 relative z-10">
                         {user?.role === 'admin' && (
                             <>
                                 <button 
                                     onClick={() => setIsDailyReportOpen(true)}
-                                    className="w-full flex items-center justify-between p-5 bg-blue-600 rounded-2xl hover:bg-blue-700 transition-all group text-left shadow-lg shadow-blue-600/20 mb-3 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1"
+                                    className="w-full flex items-center justify-between p-6 bg-zinc-800 rounded-3xl hover:bg-zinc-700 transition-all group text-left border border-white/5 shadow-xl"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <Calendar className="text-white" size={24} />
-                                        <span className="font-black text-sm tracking-tight text-white uppercase">Reporte del Día</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center">
+                                            <Calendar className="text-white" size={24} />
+                                        </div>
+                                        <span className="font-black text-xs tracking-widest text-zinc-300 uppercase">Cerrar Caja Hoy</span>
                                     </div>
-                                    <ArrowRight size={18} className="text-white/50 group-hover:translate-x-1 group-hover:text-white transition-all" />
+                                    <ArrowRight size={18} className="text-zinc-600 group-hover:translate-x-1 group-hover:text-white transition-all" />
                                 </button>
 
                                 <button 
                                     onClick={() => setIsBalanceModalOpen(true)}
-                                    className="w-full flex items-center justify-between p-5 bg-orange-500 rounded-2xl hover:bg-orange-600 transition-all group text-left shadow-lg shadow-orange-500/20 mb-3 border-b-4 border-orange-700 active:border-b-0 active:translate-y-1"
+                                    className="w-full flex items-center justify-between p-6 bg-zinc-800 rounded-3xl hover:bg-zinc-700 transition-all group text-left border border-white/5 shadow-xl"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <ShieldCheck className="text-white" size={24} />
-                                        <span className="font-black text-sm tracking-tight text-white uppercase">Balance General</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center">
+                                            <ShieldCheck className="text-white" size={24} />
+                                        </div>
+                                        <span className="font-black text-xs tracking-widest text-zinc-300 uppercase">Estado Patrimonial</span>
                                     </div>
-                                    <ArrowRight size={18} className="text-white/50 group-hover:translate-x-1 group-hover:text-white transition-all" />
+                                    <ArrowRight size={18} className="text-zinc-600 group-hover:translate-x-1 group-hover:text-white transition-all" />
                                 </button>
                             </>
                         )}

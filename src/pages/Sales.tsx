@@ -565,8 +565,8 @@ const Sales: React.FC = () => {
                                             }}
                                             className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
                                                 paymentMethod === 'cash' 
-                                                ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20' 
-                                                : 'bg-white border-slate-100 text-slate-400 hover:border-orange-500/30'
+                                                ? 'bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-black/20' 
+                                                : 'bg-white border-slate-100 text-slate-400 hover:border-zinc-500/30'
                                             }`}
                                         >
                                             <DollarSign size={20} />

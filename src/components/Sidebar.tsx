@@ -107,16 +107,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                 isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="p-6 border-b border-slate-800/50">
-                    <h1 className="text-xl font-bold text-white flex items-center gap-2 mb-6">
-                        <Package className="text-orange-500" />
-                        Que Pollo
-                    </h1>
+                    <div className="flex items-center gap-3 mb-6">
+                        <img 
+                            src="/icon.svg" 
+                            alt="Logo" 
+                            className="w-10 h-10 object-contain brightness-0 invert" 
+                        />
+                        <h1 className="text-xl font-black text-white tracking-tighter uppercase">
+                            Que Pollo
+                        </h1>
+                    </div>
 
                     <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
                         {user?.photo ? (
                             <img src={user.photo} alt={user.name} className="w-10 h-10 rounded-lg object-cover" />
                         ) : (
-                            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-black">
+                            <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center text-white font-black">
                                 {user?.name.charAt(0)}
                             </div>
                         )}
@@ -148,8 +154,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                                 className={cn(
                                     "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
                                     activeTab === item.id 
-                                        ? "bg-orange-500 text-white" 
-                                        : "hover:bg-slate-800 hover:text-white"
+                                        ? "bg-slate-800 text-white shadow-lg shadow-black/20" 
+                                        : "hover:bg-slate-800/50 hover:text-white"
                                 )}
                             >
                                 <Icon size={18} />
@@ -161,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     <div className="pt-4 mt-4 border-t border-slate-800/50">
                         <button
                             onClick={handleInstall}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-orange-500 hover:bg-slate-800 transition-all active:scale-[0.98] animate-pulse"
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800 transition-all active:scale-[0.98]"
                         >
                             <Download size={18} />
                             <div className="flex flex-col items-start leading-none">

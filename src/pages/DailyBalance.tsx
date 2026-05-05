@@ -254,7 +254,7 @@ const DailyBalance: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-orange-500 p-6 rounded-[32px] shadow-lg shadow-orange-500/20 space-y-4 text-white">
+                <div className="bg-zinc-900 p-6 rounded-[32px] shadow-lg shadow-black/20 space-y-4 text-white">
                     <div className="flex items-center justify-between">
                         <div className="w-10 h-10 bg-white/20 text-white rounded-xl flex items-center justify-center">
                             <PieChart size={20} />
