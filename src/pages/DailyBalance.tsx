@@ -59,6 +59,54 @@ const DailyBalance: React.FC = () => {
         const totalPurchasesVolume = todayPurchases.reduce((sum, p) => sum + p.total, 0);
         const totalExpensesVolume = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+        // UNIFIED MOVEMENTS LIST
+        const allMovements = [
+            ...todaySales.map(s => ({
+                id: s.id,
+                date: s.date,
+                type: 'sale',
+                concept: `Venta: ${s.customerName}`,
+                category: `Pago: ${s.paymentMethod === 'cash' ? 'Contado' : s.paymentMethod === 'transfer' ? 'Transferencia' : s.paymentMethod === 'mixed' ? 'Mixto' : (s.paymentMethod === 'balance' ? 'Saldo Favor' : 'Crédito')}`,
+                amount: s.total,
+                isEntry: s.status === 'paid',
+                status: s.status,
+                paymentMethod: s.paymentMethod
+            })),
+            ...todayPurchases.map(p => ({
+                id: p.id,
+                date: p.date,
+                type: 'purchase',
+                concept: `Compra: ${p.supplierName}`,
+                category: `Insumos (${p.paymentMethod === 'cash' ? 'Efectivo' : p.paymentMethod === 'transfer' ? 'Transferencia' : 'Crédito'})`,
+                amount: p.total,
+                isEntry: false,
+                status: p.status,
+                paymentMethod: p.paymentMethod
+            })),
+            ...todayExpenses.map(e => ({
+                id: e.id,
+                date: e.date,
+                type: 'expense',
+                concept: `Gasto: ${e.description}`,
+                category: e.category,
+                amount: e.amount,
+                isEntry: false,
+                status: 'paid',
+                paymentMethod: 'cash'
+            })),
+            ...todayCashMovements.map(m => ({
+                id: m.id,
+                date: m.date,
+                type: 'cash',
+                concept: m.reason,
+                category: m.category,
+                amount: m.amount,
+                isEntry: m.type === 'entry',
+                status: 'completed',
+                paymentMethod: 'cash'
+            }))
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         return {
             cashEntries,
             cashExits,
@@ -70,14 +118,14 @@ const DailyBalance: React.FC = () => {
             purchasesCount: todayPurchases.length,
             expensesCount: todayExpenses.length,
             salesStats,
-            movements: todayCashMovements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+            allMovements,
             todaySales
         };
     }, [selectedDate, sales, purchases, cashFlow, expenses]);
 
     const downloadPDF = () => {
         const doc = new jsPDF();
-        const title = `Balance Diario - ${formatDate(selectedDate)}`;
+        const title = `Balance Diario Integral - ${formatDate(selectedDate)}`;
         
         doc.setFontSize(20);
         doc.text(title, 14, 22);
@@ -86,17 +134,18 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
-            ['Efectivo Recibido', formatCurrency(stats.cashEntries)],
-            ['Efectivo Entregado', formatCurrency(stats.cashExits)],
-            ['Utilidad Neta (Caja)', formatCurrency(stats.netCash)],
-            ['Volumen Ventas', formatCurrency(stats.totalSalesVolume)]
+            ['Efectivo Recibido (Caja)', formatCurrency(stats.cashEntries)],
+            ['Efectivo Entregado (Caja)', formatCurrency(stats.cashExits)],
+            ['Saldo Final Caja', formatCurrency(stats.netCash)],
+            ['Volumen Total Ventas', formatCurrency(stats.totalSalesVolume)]
         ];
 
         (doc as any).autoTable({
-            head: [['Concepto', 'Monto']],
+            head: [['Resumen Directo', 'Monto']],
             body: summaryData,
             startY: 40,
-            theme: 'grid'
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42] }
         });
 
         // Sales breakdown
@@ -105,33 +154,34 @@ const DailyBalance: React.FC = () => {
             ['Transferencia', formatCurrency(stats.salesStats.transferencia)],
             ['Mixto', formatCurrency(stats.salesStats.mixto)],
             ['Crédito', formatCurrency(stats.salesStats.credito)],
-            ['Saldo Favor Usado', formatCurrency(stats.salesStats.usedBalance)]
+            ['Saldo Favor Usado (Sin entrada de caja)', formatCurrency(stats.salesStats.usedBalance)]
         ];
 
         (doc as any).autoTable({
-            head: [['Detalle de Ventas', 'Total']],
+            head: [['Detalle por Método de Pago', 'Total']],
             body: breakdownData,
             startY: (doc as any).lastAutoTable.finalY + 10,
             theme: 'striped'
         });
 
         // Movements Table
-        const movementsData = stats.movements.map(m => [
+        const movementsData = stats.allMovements.map(m => [
             format(new Date(m.date), 'HH:mm'),
-            m.reason,
+            m.concept,
             m.category,
-            m.type === 'entry' ? '+' : '-',
+            m.amount >= 0 ? (m.isEntry ? '+' : '-') : '',
             formatCurrency(m.amount)
         ]);
 
         (doc as any).autoTable({
-            head: [['Hora', 'Concepto', 'Categoría', 'Tipo', 'Monto']],
+            head: [['Hora', 'Movimiento', 'Categoría/Método', '', 'Monto']],
             body: movementsData,
             startY: (doc as any).lastAutoTable.finalY + 10,
-            headStyles: { fillColor: [44, 62, 80] }
+            headStyles: { fillColor: [44, 62, 80] },
+            styles: { fontSize: 8 }
         });
 
-        doc.save(`Balance_${selectedDate}.pdf`);
+        doc.save(`Balance_General_${selectedDate}.pdf`);
     };
 
     return (
@@ -220,36 +270,54 @@ const DailyBalance: React.FC = () => {
                 <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden h-fit">
                     <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                         <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm flex items-center gap-2">
-                            <History className="text-slate-400" size={18} /> Detalle de Movimientos de Caja
+                            <History className="text-slate-400" size={18} /> Historial Operativo del Día
                         </h3>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stats.allMovements.length} Movimientos</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-white border-b border-slate-100">
                                 <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     <th className="px-6 py-4">Hora</th>
-                                    <th className="px-6 py-4">Concepto</th>
-                                    <th className="px-6 py-4 text-right">Monto</th>
+                                    <th className="px-6 py-4">Operación</th>
+                                    <th className="px-6 py-4">Detalle / Pago</th>
+                                    <th className="px-6 py-4 text-right">Monto Total</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {stats.movements.map(m => (
+                                {stats.allMovements.map(m => (
                                     <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4 text-xs font-bold text-slate-400">
                                             {format(new Date(m.date), 'HH:mm')}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{m.reason}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{m.category}</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                    m.type === 'sale' ? 'bg-blue-50 text-blue-600' :
+                                                    m.type === 'purchase' ? 'bg-red-50 text-red-600' :
+                                                    m.type === 'expense' ? 'bg-orange-50 text-orange-600' : 'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                    {m.type === 'sale' ? <ShoppingBag size={14} /> :
+                                                     m.type === 'purchase' ? <ShoppingBag size={14} /> :
+                                                     m.type === 'expense' ? <FileText size={14} /> : <DollarSign size={14} />}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight leading-tight">{m.concept}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{m.status === 'paid' || m.status === 'completed' ? 'Completado' : 'Pendiente'}</p>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-black text-sm ${m.type === 'entry' ? 'text-green-600' : 'text-red-600'}`}>
-                                            {m.type === 'entry' ? '+' : '-'}{formatCurrency(m.amount)}
+                                        <td className="px-6 py-4">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{m.category}</p>
+                                        </td>
+                                        <td className={`px-6 py-4 text-right font-black text-sm ${m.isEntry ? 'text-green-600' : 'text-red-600'}`}>
+                                            {m.isEntry ? '+' : '-'}{formatCurrency(m.amount)}
                                         </td>
                                     </tr>
                                 ))}
-                                {stats.movements.length === 0 && (
+                                {stats.allMovements.length === 0 && (
                                     <tr>
-                                        <td colSpan={3} className="py-20 text-center text-slate-300 italic text-sm">Sin movimientos este día</td>
+                                        <td colSpan={4} className="py-20 text-center text-slate-300 italic text-sm">Sin actividad registrada este día</td>
                                     </tr>
                                 )}
                             </tbody>

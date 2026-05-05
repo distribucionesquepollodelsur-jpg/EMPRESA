@@ -10,6 +10,7 @@ const Customers: React.FC = () => {
     const { 
         customers, sales, addCustomer, updateCustomer, 
         updateCustomerBalance, resetCustomerBalance,
+        updateCustomerBalanceManually,
         deleteCustomer, addSalePayment, deleteSalePayment, updateSale 
     } = useData();
     const { user } = useAuth();

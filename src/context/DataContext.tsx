@@ -122,6 +122,8 @@ interface DataContextType extends AppState {
     resetData: () => Promise<void>;
     resetCustomerBalance: (id: string) => Promise<void>;
     resetSupplierBalance: (id: string) => Promise<void>;
+    updateCustomerBalanceManually: (id: string, balance: number) => Promise<void>;
+    updateSupplierBalanceManually: (id: string, balance: number) => Promise<void>;
     verifyInventory: () => Promise<void>;
     inventoryLogs: InventoryAdjustment[];
     isInventoryRequired: () => boolean;
@@ -1484,6 +1486,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
     };
 
+    const updateCustomerBalanceManually = async (id: string, balance: number) => {
+        try {
+            await updateDoc(doc(db, 'customers', id), { balance });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${id}`); }
+    };
+
+    const updateSupplierBalanceManually = async (id: string, balance: number) => {
+        try {
+            await updateDoc(doc(db, 'suppliers', id), { balance });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
+    };
+
     return (
         <DataContext.Provider value={{
             products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, businessLoans, jobOffers, evaluations, config,
@@ -1539,6 +1553,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateCustomerBalance,
             resetCustomerBalance,
             resetSupplierBalance,
+            updateCustomerBalanceManually,
+            updateSupplierBalanceManually,
             deleteCustomer,
             updateShift,
             addPurchasePayment,

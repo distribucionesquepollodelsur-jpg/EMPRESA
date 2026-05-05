@@ -6,7 +6,7 @@ import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 
 const Suppliers: React.FC = () => {
-    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase, resetSupplierBalance } = useData();
+    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase, resetSupplierBalance, updateSupplierBalanceManually } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
