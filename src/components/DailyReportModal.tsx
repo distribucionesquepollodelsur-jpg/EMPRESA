@@ -116,6 +116,7 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         doc.setTextColor(100, 116, 139); // slate-500
         doc.text(config.companyName.toUpperCase(), 14, 30);
         doc.text(`Fecha: ${format(today, 'dd/MM/yyyy')}`, 14, 35);
+        doc.text(`Sesión: 12:00:00 AM a 11:59:59 PM`, 14, 40);
         
         // Totals Summary
         autoTable(doc, {
@@ -207,7 +208,7 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                         <div>
                             <h2 className="text-2xl font-black uppercase tracking-tighter">Cierre de Caja Diario</h2>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">
-                                {new Intl.DateTimeFormat('es-CO', { dateStyle: 'full' }).format(today)}
+                                {new Intl.DateTimeFormat('es-CO', { dateStyle: 'full' }).format(today)} | 12:00 AM - 11:59 PM
                             </p>
                         </div>
                     </div>

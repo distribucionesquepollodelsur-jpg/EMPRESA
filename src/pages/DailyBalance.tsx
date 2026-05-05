@@ -131,6 +131,7 @@ const DailyBalance: React.FC = () => {
         doc.text(title, 14, 22);
         doc.setFontSize(10);
         doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 30);
+        doc.text(`Caja Operativa: 12:00:00 AM a 11:59:59 PM`, 14, 35);
 
         // Summary row
         const summaryData = [
@@ -190,7 +191,7 @@ const DailyBalance: React.FC = () => {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Balance Diario General</h1>
-                    <p className="text-slate-500 font-medium italic">Resumen consolidado de operaciones por día.</p>
+                    <p className="text-slate-500 font-medium italic">Resumen consolidado de operaciones (12:00 AM - 11:59 PM).</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl border border-slate-200 shadow-sm">
