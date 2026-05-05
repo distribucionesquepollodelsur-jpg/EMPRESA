@@ -290,30 +290,44 @@ const Suppliers: React.FC = () => {
                                         {formatCurrency(getSupplierBalance(selectedSupplier.id, selectedSupplier.name))}
                                     </p>
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Favor (Trueque)</p>
-                                    <div className="flex items-center justify-between">
-                                        <p className={cn(
-                                            "text-2xl font-black",
-                                            (selectedSupplier.balance || 0) > 0 ? "text-green-400" : "text-white"
-                                        )}>
-                                            {formatCurrency(selectedSupplier.balance || 0)}
-                                        </p>
-                                        {isAdmin && (selectedSupplier.balance || 0) > 0 && (
-                                            <button 
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    if (window.confirm("¿Restablecer el saldo a favor a $0?")) {
-                                                        await resetSupplierBalance(selectedSupplier.id);
-                                                        setSelectedSupplier(prev => prev ? {...prev, balance: 0} : null);
-                                                    }
-                                                }}
-                                                className="px-2 py-1 bg-red-500 text-white rounded text-[8px] font-black uppercase hover:bg-red-600 transition-colors"
-                                            >
-                                                Eliminar
-                                            </button>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 group/balance">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Favor (Trueque)</p>
+                                        {isAdmin && (
+                                            <div className="flex gap-2 opacity-0 group-hover/balance:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => {
+                                                        const val = window.prompt('Nuevo saldo a favor:', (selectedSupplier.balance || 0).toString());
+                                                        if (val !== null) {
+                                                            const newBalance = parseFloat(val);
+                                                            if (!isNaN(newBalance)) updateSupplierBalanceManually(selectedSupplier.id, newBalance);
+                                                        }
+                                                    }}
+                                                    className="text-[9px] font-black text-blue-300 hover:text-blue-100 uppercase tracking-tighter"
+                                                >
+                                                    Editar
+                                                </button>
+                                                {(selectedSupplier.balance || 0) > 0 && (
+                                                    <button 
+                                                        onClick={async () => {
+                                                            if (window.confirm('¿Restablecer el saldo a favor a $0?')) {
+                                                                await resetSupplierBalance(selectedSupplier.id);
+                                                            }
+                                                        }}
+                                                        className="text-[9px] font-black text-red-300 hover:text-red-100 uppercase tracking-tighter"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
+                                    <p className={cn(
+                                        "text-2xl font-black tracking-tighter",
+                                        (selectedSupplier.balance || 0) > 0 ? "text-green-400" : "text-white"
+                                    )}>
+                                        {formatCurrency(selectedSupplier.balance || 0)}
+                                    </p>
                                 </div>
                             </div>
                         </div>

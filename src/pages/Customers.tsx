@@ -396,17 +396,33 @@ const Customers: React.FC = () => {
                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10 group/balance">
                                     <div className="flex justify-between items-start mb-1">
                                         <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">Saldo Favor (Trueque)</p>
-                                        {(selectedCustomer.balance || 0) > 0 && isAdmin && (
-                                            <button 
-                                                onClick={async () => {
-                                                    if (window.confirm('¿Deseas eliminar el saldo a favor de este cliente?')) {
-                                                        await resetCustomerBalance(selectedCustomer.id);
-                                                    }
-                                                }}
-                                                className="text-[9px] font-black text-red-300 hover:text-red-100 uppercase tracking-tighter opacity-0 group-hover/balance:opacity-100 transition-opacity"
-                                            >
-                                                Eliminar
-                                            </button>
+                                        {isAdmin && (
+                                            <div className="flex gap-2 opacity-0 group-hover/balance:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => {
+                                                        const val = window.prompt('Nuevo saldo a favor:', (selectedCustomer.balance || 0).toString());
+                                                        if (val !== null) {
+                                                            const newBalance = parseFloat(val);
+                                                            if (!isNaN(newBalance)) updateCustomerBalanceManually(selectedCustomer.id, newBalance);
+                                                        }
+                                                    }}
+                                                    className="text-[9px] font-black text-blue-300 hover:text-blue-100 uppercase tracking-tighter"
+                                                >
+                                                    Editar
+                                                </button>
+                                                {(selectedCustomer.balance || 0) > 0 && (
+                                                    <button 
+                                                        onClick={async () => {
+                                                            if (window.confirm('¿Deseas eliminar el saldo a favor de este cliente?')) {
+                                                                await resetCustomerBalance(selectedCustomer.id);
+                                                            }
+                                                        }}
+                                                        className="text-[9px] font-black text-red-300 hover:text-red-100 uppercase tracking-tighter"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                     <p className="text-2xl font-black text-white tracking-tighter">
