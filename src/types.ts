@@ -214,6 +214,7 @@ export interface Supplier {
     initialDebtDueDate?: string;
     initialDebtReason?: string;
     initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
+    balance?: number;
 }
 
 export interface Loan {

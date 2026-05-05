@@ -120,6 +120,8 @@ interface DataContextType extends AppState {
     addEvaluation: (evaluation: Omit<CandidateEvaluation, 'id' | 'date'>) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
+    resetCustomerBalance: (id: string) => Promise<void>;
+    resetSupplierBalance: (id: string) => Promise<void>;
     verifyInventory: () => Promise<void>;
     inventoryLogs: InventoryAdjustment[];
     isInventoryRequired: () => boolean;
@@ -1470,6 +1472,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const resetCustomerBalance = async (id: string) => {
+        try {
+            await updateDoc(doc(db, 'customers', id), { balance: 0 });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `customers/${id}`); }
+    };
+
+    const resetSupplierBalance = async (id: string) => {
+        try {
+            await updateDoc(doc(db, 'suppliers', id), { balance: 0 });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `suppliers/${id}`); }
+    };
+
     return (
         <DataContext.Provider value={{
             products, purchases, sales, cashFlow, employees, attendance, advances, suppliers, customers, shifts, reprimands, processings, dotations, assets, inventoryLogs, expenses, loans, businessLoans, jobOffers, evaluations, config,
@@ -1523,6 +1537,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addCustomer,
             updateCustomer,
             updateCustomerBalance,
+            resetCustomerBalance,
+            resetSupplierBalance,
             deleteCustomer,
             updateShift,
             addPurchasePayment,

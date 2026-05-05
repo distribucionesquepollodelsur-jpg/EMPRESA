@@ -29,6 +29,7 @@ import Loans from './pages/Loans';
 import Reports from './pages/Reports';
 import Config from './pages/Config';
 import Recruitment from './pages/Recruitment';
+import DailyBalance from './pages/DailyBalance';
 
 import { useData } from './context/DataContext';
 import { Loader2 } from 'lucide-react';
@@ -79,6 +80,7 @@ const MainContent: React.FC = () => {
       case 'expenses': return <Expenses />;
       case 'loans': return <Loans />;
       case 'reports': return <Reports />;
+      case 'daily-balance': return <DailyBalance />;
       case 'config': return <Config />;
       default: return <Dashboard />;
     }

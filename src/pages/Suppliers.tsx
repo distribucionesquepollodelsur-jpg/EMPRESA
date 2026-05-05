@@ -6,7 +6,7 @@ import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 
 const Suppliers: React.FC = () => {
-    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase } = useData();
+    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase, resetSupplierBalance } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -291,10 +291,29 @@ const Suppliers: React.FC = () => {
                                     </p>
                                 </div>
                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Compras</p>
-                                    <p className="text-2xl font-black">
-                                        {getSupplierPurchases(selectedSupplier).length}
-                                    </p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Favor (Trueque)</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className={cn(
+                                            "text-2xl font-black",
+                                            (selectedSupplier.balance || 0) > 0 ? "text-green-400" : "text-white"
+                                        )}>
+                                            {formatCurrency(selectedSupplier.balance || 0)}
+                                        </p>
+                                        {isAdmin && (selectedSupplier.balance || 0) > 0 && (
+                                            <button 
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm("¿Restablecer el saldo a favor a $0?")) {
+                                                        await resetSupplierBalance(selectedSupplier.id);
+                                                        setSelectedSupplier(prev => prev ? {...prev, balance: 0} : null);
+                                                    }
+                                                }}
+                                                className="px-2 py-1 bg-red-500 text-white rounded text-[8px] font-black uppercase hover:bg-red-600 transition-colors"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

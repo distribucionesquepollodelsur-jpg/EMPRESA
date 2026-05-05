@@ -61,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
 
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard, adminOnly: false },
+        { id: 'daily-balance', label: 'Balance Diario', icon: BarChart3, adminOnly: true },
         { id: 'inventory', label: 'Inventario', icon: Package, adminOnly: false }, // Employees need to see stock to sell
         { id: 'suppliers', label: 'Proveedores', icon: Truck, adminOnly: true },
         { id: 'customers', label: 'Clientes', icon: Users, adminOnly: false },

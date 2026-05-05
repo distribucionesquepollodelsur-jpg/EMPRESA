@@ -7,7 +7,11 @@ import { Customer, Sale } from '../types';
 import { differenceInDays, parseISO } from 'date-fns';
 
 const Customers: React.FC = () => {
-    const { customers, sales, addCustomer, updateCustomer, updateCustomerBalance, deleteCustomer, addSalePayment, deleteSalePayment, updateSale } = useData();
+    const { 
+        customers, sales, addCustomer, updateCustomer, 
+        updateCustomerBalance, resetCustomerBalance,
+        deleteCustomer, addSalePayment, deleteSalePayment, updateSale 
+    } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -389,8 +393,22 @@ const Customers: React.FC = () => {
                                         {formatCurrency(getCustomerBalance(selectedCustomer.id))}
                                     </p>
                                 </div>
-                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                    <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Saldo Favor (Trueque)</p>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 group/balance">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest">Saldo Favor (Trueque)</p>
+                                        {(selectedCustomer.balance || 0) > 0 && isAdmin && (
+                                            <button 
+                                                onClick={async () => {
+                                                    if (window.confirm('¿Deseas eliminar el saldo a favor de este cliente?')) {
+                                                        await resetCustomerBalance(selectedCustomer.id);
+                                                    }
+                                                }}
+                                                className="text-[9px] font-black text-red-300 hover:text-red-100 uppercase tracking-tighter opacity-0 group-hover/balance:opacity-100 transition-opacity"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        )}
+                                    </div>
                                     <p className="text-2xl font-black text-white tracking-tighter">
                                         {formatCurrency(selectedCustomer.balance || 0)}
                                     </p>
