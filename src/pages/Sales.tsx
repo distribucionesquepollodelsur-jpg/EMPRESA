@@ -203,6 +203,12 @@ const Sales: React.FC = () => {
             const lineTotal = (item.quantity * item.price) - (item.discount || 0);
             doc.text(`${formatCurrency(lineTotal)}`, 80 - margin, y, { align: 'right' });
             
+            // Show unit price
+            y += 3.5;
+            doc.setFontSize(6);
+            doc.text(`${item.quantity} x ${formatCurrency(item.price)}`, margin + 8, y);
+            doc.setFontSize(7);
+            
             if (item.discount) {
                 y += 3;
                 doc.setFontSize(6);

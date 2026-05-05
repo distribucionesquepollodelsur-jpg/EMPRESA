@@ -262,6 +262,12 @@ const Purchases: React.FC = () => {
             
             doc.text(`${formatCurrency(item.quantity * item.cost)}`, 80 - margin, y, { align: 'right' });
             
+            // Show unit cost
+            y += 3.5;
+            doc.setFontSize(6);
+            doc.text(`${item.quantity} x ${formatCurrency(item.cost)}`, margin + 10, y);
+            doc.setFontSize(7);
+            
             if (splitName.length > 1) y += (splitName.length - 1) * 3;
         });
         
