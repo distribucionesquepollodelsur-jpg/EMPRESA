@@ -94,7 +94,9 @@ const Dashboard: React.FC = () => {
 
     const totalSalesAmount = sales.reduce((sum, s) => sum + s.total, 0);
     const totalPurchasesAmount = purchases.reduce((sum, p) => sum + p.total, 0);
-    const balance = totalSalesAmount - totalPurchasesAmount;
+    const totalCashInBox = useMemo(() => {
+        return cashFlow.reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+    }, [cashFlow]);
 
     // Filter quick actions based on role
     const quickActions = [
@@ -201,7 +203,7 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard title="Ventas Totales" value={formatCurrency(totalSalesAmount)} icon={TrendingUp} color="text-green-600" />
                 <StatsCard title="Compras Totales" value={formatCurrency(totalPurchasesAmount)} icon={TrendingDown} color="text-red-500" />
-                <StatsCard title="Balance Neto" value={formatCurrency(balance)} icon={DollarSign} color="text-zinc-900" />
+                <StatsCard title="Efectivo en Caja" value={formatCurrency(totalCashInBox)} icon={DollarSign} color="text-blue-600" />
                 <StatsCard title="Debajo de Stock" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-red-600" />
             </div>
 

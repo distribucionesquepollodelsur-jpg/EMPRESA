@@ -42,6 +42,11 @@ const DailyBalance: React.FC = () => {
         const todayExpenses = expenses.filter(filterByDate);
         const todayCashMovements = cashFlow.filter(filterByDate);
 
+        // Calculate Opening Balance (Everything before today)
+        const openingBalance = cashFlow
+            .filter(m => new Date(m.date) < start)
+            .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+
         // Calculate Cash movements specifically
         const cashEntries = todayCashMovements.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
         const cashExits = todayCashMovements.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
@@ -108,9 +113,11 @@ const DailyBalance: React.FC = () => {
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return {
+            openingBalance,
             cashEntries,
             cashExits,
-            netCash: cashEntries - cashExits,
+            netCash: openingBalance + cashEntries - cashExits,
+            todayNetCash: cashEntries - cashExits,
             totalSalesVolume,
             totalPurchasesVolume,
             totalExpensesVolume,
@@ -135,9 +142,11 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
-            ['Efectivo Recibido (Caja)', formatCurrency(stats.cashEntries)],
-            ['Efectivo Entregado (Caja)', formatCurrency(stats.cashExits)],
-            ['EFECTIVO QUE DEBE HABER EN CAJA', formatCurrency(stats.netCash)],
+            ['Base / Saldo de Apertura (Día Anterior)', formatCurrency(stats.openingBalance)],
+            ['Efectivo Recibido (Hoy)', formatCurrency(stats.cashEntries)],
+            ['Efectivo Entregado (Hoy)', formatCurrency(stats.cashExits)],
+            ['EFECTIVO QUE DEBE HABER EN CAJA (CIERRE)', formatCurrency(stats.netCash)],
+            ['Diferencia Operativa de Hoy', formatCurrency(stats.todayNetCash)],
             ['Volumen Total de Ventas (Todos los métodos)', formatCurrency(stats.totalSalesVolume)]
         ];
 
@@ -215,6 +224,19 @@ const DailyBalance: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Stats Cards ... (Keep existing cards but maybe highlight the Cash focus) */}
+                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <History size={20} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo Inicial</span>
+                    </div>
+                    <div>
+                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Base del día anterior</p>
+                    </div>
+                </div>
+
                 <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
