@@ -120,6 +120,7 @@ interface DataContextType extends AppState {
     addEvaluation: (evaluation: Omit<CandidateEvaluation, 'id' | 'date'>) => Promise<void>;
     updateConfig: (config: Partial<AppConfig>) => Promise<void>;
     resetData: () => Promise<void>;
+    resetInventory: () => Promise<void>;
     resetCustomerBalance: (id: string) => Promise<void>;
     resetSupplierBalance: (id: string) => Promise<void>;
     updateCustomerBalanceManually: (id: string, balance: number, addToCash?: boolean) => Promise<void>;
@@ -1483,6 +1484,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `loans/${id}`); }
     };
 
+    const resetInventory = async () => {
+        try {
+            const batch = writeBatch(db);
+            products.forEach(p => {
+                batch.delete(doc(db, 'products', p.id));
+            });
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, 'products'); }
+    };
+
     const resetData = async () => {
         if (window.confirm("¿Estás seguro de que deseas restablecer todos los datos del sistema? Esto eliminará todo de la base de datos.")) {
             // In a real app we'd delete collections, but for safety let's just warn it's not implemented for safety.
@@ -1618,6 +1629,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteSupplierDebtAbono,
             updateConfig,
             resetData,
+            resetInventory,
             verifyInventory,
             isInventoryRequired
         }}>

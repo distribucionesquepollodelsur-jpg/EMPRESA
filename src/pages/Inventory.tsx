@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const Inventory: React.FC = () => {
-    const { products, addProduct, updateProduct, deleteProduct, config, isInventoryRequired, verifyInventory, inventoryLogs } = useData();
+    const { products, addProduct, updateProduct, deleteProduct, resetInventory, config, isInventoryRequired, verifyInventory, inventoryLogs } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -149,13 +149,33 @@ const Inventory: React.FC = () => {
                         Reporte PDF
                     </button>
                     {isAdmin && (
-                        <button 
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg font-black text-xs uppercase tracking-widest hover:scale-[1.02]"
-                        >
-                            <Plus size={16} />
-                            Nuevo Producto
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={async () => {
+                                    if (window.confirm('¿ELIMINAR TODO EL INVENTARIO? Esta acción borrará todos los productos registrados permanentemente.')) {
+                                        if (window.confirm('¿ESTÁS 100% SEGURO? No podrás recuperar la lista de productos.')) {
+                                            try {
+                                                await resetInventory();
+                                                alert('Inventario eliminado exitosamente.');
+                                            } catch (e) {
+                                                alert('Error al eliminar inventario.');
+                                            }
+                                        }
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-all font-bold text-xs uppercase tracking-widest shadow-sm"
+                            >
+                                <Trash2 size={16} />
+                                Limpiar
+                            </button>
+                            <button 
+                                onClick={() => setIsModalOpen(true)}
+                                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg font-black text-xs uppercase tracking-widest hover:scale-[1.02]"
+                            >
+                                <Plus size={16} />
+                                Nuevo Producto
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
