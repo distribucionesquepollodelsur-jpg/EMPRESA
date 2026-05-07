@@ -176,120 +176,120 @@ const Purchases: React.FC = () => {
         }
     };
 
-    const generatePurchaseInvoice = (purchase: Purchase) => {
-        const doc = new jsPDF({ format: [80, 250] });
+    const generatePurchaseInvoice = (purchase: Purchase, mode: 'save' | 'print' = 'save') => {
+        const isPos = config.printSettings?.posMode;
+        // Optimization for POS
+        const doc = new jsPDF({ format: [80, isPos ? 160 + (purchase.items.length * 8) : 250] });
         const margin = 5;
         let y = 10;
-        
-        if (config.logo) {
-            try {
-                doc.addImage(config.logo, 'PNG', 30, y, 20, 20);
-                y += 25;
-            } catch (e) {
-                console.error("Error adding logo to PDF", e);
-            }
-        }
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
         
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         y += 5;
         if (config.nit) {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
             y += 4;
         }
-        doc.text(`Tel: ${config.phone1}${config.phone2 && config.phone2 !== 'Pendiente' ? ` - ${config.phone2}` : ''}`, 40, y, { align: 'center' });
-        y += 4;
-        doc.text(config.warehouseAddress || 'Dirección no asignada', 40, y, { align: 'center' });
-        y += 4;
-        doc.text(config.email, 40, y, { align: 'center' });
+        const addrLines = doc.splitTextToSize(config.warehouseAddress, 70);
+        doc.text(addrLines, 40, y, { align: 'center' });
+        y += (addrLines.length * 3.5) + 1;
+        doc.text(`Tel: ${config.phone1}`, 40, y, { align: 'center' });
         
-        y += 6;
-        doc.setLineWidth(0.1);
+        y += 4;
+        doc.setDrawColor(200);
         doc.line(margin, y, 80 - margin, y);
         
         y += 6;
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('FACTURA DE COMPRA', 40, y, { align: 'center' });
+        doc.text('COMPROBANTE DE COMPRA', 40, y, { align: 'center' });
         y += 4;
-        doc.text(`No. C-${(purchase.purchaseNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
+        doc.text(`N°- C-${(purchase.purchaseNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
         
-        y += 8;
-        doc.setFontSize(7);
+        y += 6;
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         const purchaseDate = new Date(purchase.date);
-        doc.text(`Fecha: ${format(purchaseDate, 'dd/MM/yyyy')}`, margin, y);
-        doc.text(`Hora: ${format(purchaseDate, 'HH:mm:ss')}`, 80 - margin, y, { align: 'right' });
+        doc.text(`Fecha: ${format(purchaseDate, 'dd/MM/yyyy HH:mm')}`, margin, y);
         
-        y += 6;
+        y += 4;
         doc.setFont('helvetica', 'bold');
-        doc.text('INFORMACIÓN DE COMPRA', margin, y);
-        y += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Comprador: ${purchase.buyerName || config.manager}`, margin, y);
-        if (purchase.buyerPhone) {
-            y += 4;
-            doc.text(`Tel Comp: ${purchase.buyerPhone}`, margin, y);
-        }
-        y += 4;
         doc.text(`Proveedor: ${purchase.supplierName}`, margin, y);
+        doc.setFont('helvetica', 'normal');
         if (purchase.supplierPhone) {
             y += 4;
-            doc.text(`Tel Prov: ${purchase.supplierPhone}`, margin, y);
+            doc.text(`Tel: ${purchase.supplierPhone}`, margin, y);
         }
+        y += 4;
+        doc.text(`Comprador: ${purchase.buyerName || config.manager}`, margin, y);
         
-        y += 6;
+        y += 5;
         doc.line(margin, y, 80 - margin, y);
         y += 5;
         
         // Table Header
         doc.setFont('helvetica', 'bold');
-        doc.text('Cant.', margin, y);
-        doc.text('Producto', margin + 10, y);
+        doc.text('Cant', margin, y);
+        doc.text('Descripción', margin + 12, y);
         doc.text('Total', 80 - margin, y, { align: 'right' });
-        y += 3;
+        y += 4;
         
         // Items
         doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
         purchase.items.forEach(item => {
             const p = products.find(prod => prod.id === item.productId);
-            y += 5;
-            doc.text(`${item.quantity}`, margin, y);
+            const lineTotal = item.quantity * item.cost;
             
             const name = p?.name || 'Producto';
-            const splitName = doc.splitTextToSize(name, 40);
-            doc.text(splitName, margin + 10, y);
+            const splitName = doc.splitTextToSize(name.toUpperCase(), 40);
             
-            doc.text(`${formatCurrency(item.quantity * item.cost)}`, 80 - margin, y, { align: 'right' });
+            doc.text(`${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(2)}`, margin, y);
+            doc.text(splitName[0], margin + 12, y);
+            doc.text(formatCurrency(lineTotal), 80 - margin, y, { align: 'right' });
             
-            // Show unit cost
+            if (splitName.length > 1) {
+                for (let i = 1; i < splitName.length; i++) {
+                    y += 3.5;
+                    doc.text(splitName[i], margin + 12, y);
+                }
+            }
+            
             y += 3.5;
-            doc.setFontSize(6);
-            doc.text(`${item.quantity} x ${formatCurrency(item.cost)}`, margin + 10, y);
-            doc.setFontSize(7);
-            
-            if (splitName.length > 1) y += (splitName.length - 1) * 3;
+            doc.setFontSize(6.5);
+            doc.text(`Costo Unit: ${formatCurrency(item.cost)}`, margin + 12, y);
+            doc.setFontSize(7.5);
+            y += 4.5;
         });
         
-        y += 8;
+        y += 2;
         doc.line(margin, y, 80 - margin, y);
         y += 6;
         
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL:', margin, y);
+        doc.text('TOTAL COMPRA:', margin, y);
         doc.text(formatCurrency(purchase.total), 80 - margin, y, { align: 'right' });
         
         y += 10;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INGRESO A BODEGA', 40, y, { align: 'center' });
+        y += 4;
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'italic');
-        doc.text('Comprobante de ingreso de mercancía', 40, y, { align: 'center' });
+        doc.text(`Sistema de Distribución - ${config.companyName}`, 40, y, { align: 'center' });
         
-        doc.save(`Compra_${purchase.purchaseNumber || Date.now()}.pdf`);
+        if (mode === 'save') {
+           doc.save(`Compra_${purchase.purchaseNumber || Date.now()}.pdf`);
+        } else {
+           const url = doc.output('bloburl');
+           window.open(url, '_blank');
+        }
     };
 
     const resetForm = () => {
@@ -326,31 +326,31 @@ const Purchases: React.FC = () => {
             </header>
 
             {showPrintBanner && lastPurchase && (
-                <div className="bg-orange-500 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-500/20 animate-in fade-in zoom-in duration-300">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <Printer size={20} />
+                <div className="bg-orange-600 text-white p-6 rounded-[32px] flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-orange-500/20 animate-in fade-in zoom-in duration-300 border border-orange-400 gap-6">
+                    <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 bg-white/20 rounded-3xl flex items-center justify-center animate-bounce">
+                            <Printer size={32} />
                         </div>
                         <div>
-                            <p className="text-xs font-black uppercase tracking-widest leading-none mb-1">Impresora POS Detectada</p>
-                            <p className="text-[10px] font-bold opacity-90">¿Deseas imprimir la factura de compra C-{(lastPurchase.purchaseNumber || 0).toString().padStart(6, '0')}?</p>
+                            <p className="text-xl font-black uppercase tracking-tight leading-none mb-1">Impresión POS Lista</p>
+                            <p className="text-[11px] font-bold opacity-90 uppercase tracking-widest">Factura de Compra C-{(lastPurchase.purchaseNumber || 0).toString().padStart(6, '0')} · {lastPurchase.supplierName}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <button 
                             onClick={() => {
-                                generatePurchaseInvoice(lastPurchase);
+                                generatePurchaseInvoice(lastPurchase, 'print');
                                 setShowPrintBanner(false);
                             }}
-                            className="px-6 py-2 bg-white text-orange-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-50 transition-all"
+                            className="px-8 py-3 bg-white text-orange-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-xl"
                         >
                             Imprimir Ahora
                         </button>
                         <button 
                             onClick={() => setShowPrintBanner(false)}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                            className="p-3 hover:bg-white/10 rounded-2xl transition-all"
                         >
-                            <X size={18} />
+                            <X size={24} />
                         </button>
                     </div>
                 </div>

@@ -89,7 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (user) {
             const today = new Date().toISOString().split('T')[0];
-            const baseExists = user.role === 'admin' || cashFlow.some(m => 
+            const superAdmins = ['alex.b19h@gmail.com', 'distribucionesquepollodelsur@gmail.com'];
+            const isSuperAdmin = superAdmins.includes(user.email?.toLowerCase() || '');
+            
+            // Si es superAdmin no preguntamos base. Si es admin normal, preguntamos si no hay base hoy.
+            const baseExists = isSuperAdmin || cashFlow.some(m => 
                 m.date && m.date.startsWith(today) && 
                 m.reason.includes('Base Inicial') && 
                 m.reason.includes(user.name)

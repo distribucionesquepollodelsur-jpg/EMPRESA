@@ -76,6 +76,72 @@ const Customers: React.FC = () => {
     const [balanceReason, setBalanceReason] = useState('');
 
     const generateStatement = (customer: Customer) => {
+        const isPos = config.printSettings?.posMode;
+        const unpaidSales = sales.filter(s => s.customerId === customer.id && (s.total - (s.paidAmount || 0)) > 1);
+        
+        if (isPos) {
+            const doc = new jsPDF({ format: [80, 150 + (unpaidSales.length * 15)] });
+            const margin = 5;
+            let y = 10;
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('ESTADO DE CUENTA', 40, y, { align: 'center' });
+            y += 5;
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
+            
+            y += 8;
+            doc.setFont('helvetica', 'bold');
+            doc.text(`CLIENTE: ${customer.name}`, margin, y);
+            y += 4;
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, margin, y);
+            
+            y += 6;
+            doc.line(margin, y, 80 - margin, y);
+            y += 6;
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text('REF', margin, y);
+            doc.text('FECHA', margin + 15, y);
+            doc.text('SALDO', 80 - margin, y, { align: 'right' });
+            y += 4;
+            
+            doc.setFont('helvetica', 'normal');
+            if (customer.initialDebt > 0) {
+                doc.text('INICIAL', margin, y);
+                doc.text(customer.initialDebtDate ? formatDate(customer.initialDebtDate) : '-', margin + 15, y);
+                doc.text(formatCurrency(customer.initialDebt), 80 - margin, y, { align: 'right' });
+                y += 4;
+            }
+            
+            unpaidSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(sale => {
+                doc.text(`V-${(sale.saleNumber || 0).toString().padStart(4, '0')}`, margin, y);
+                doc.text(formatDate(sale.date), margin + 15, y);
+                doc.text(formatCurrency(sale.total - (sale.paidAmount || 0)), 80 - margin, y, { align: 'right' });
+                y += 4;
+            });
+            
+            y += 4;
+            doc.line(margin, y, 80 - margin, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOTAL DEUDA:', margin, y);
+            doc.text(formatCurrency(getCustomerBalance(customer.id)), 80 - margin, y, { align: 'right' });
+            
+            y += 10;
+            doc.setFontSize(8);
+            doc.text('_______________________', 40, y, { align: 'center' });
+            y += 4;
+            doc.text('FIRMA RECIBIDO', 40, y, { align: 'center' });
+            
+            doc.save(`Estado_POS_${customer.name.replace(/\s+/g, '_')}.pdf`);
+            return;
+        }
+
         const doc = new jsPDF();
         const margin = 20;
         let y = 20;
@@ -122,9 +188,6 @@ const Customers: React.FC = () => {
         doc.text('DETALLE DE DOCUMENTOS PENDIENTES', margin, y);
         y += 5;
 
-        // Using getCustomerSales to get all relevant sales
-        const unpaidSales = sales.filter(s => s.customerId === customer.id && (s.total - (s.paidAmount || 0)) > 1);
-        
         const tableData = unpaidSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(sale => [
             formatDate(sale.date),
             `V-${(sale.saleNumber || 0).toString().padStart(6, '0')}`,

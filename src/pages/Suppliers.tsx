@@ -165,6 +165,72 @@ const Suppliers: React.FC = () => {
     };
 
     const generateSupplierStatement = (supplier: Supplier) => {
+        const isPos = config.printSettings?.posMode;
+        const unpaidPurchases = purchases.filter(p => p.supplierId === supplier.id && (p.total - (p.paidAmount || 0)) > 1);
+
+        if (isPos) {
+            const doc = new jsPDF({ format: [80, 150 + (unpaidPurchases.length * 15)] });
+            const margin = 5;
+            let y = 10;
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('ESTADO DE CUENTA PROV', 40, y, { align: 'center' });
+            y += 5;
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
+            
+            y += 8;
+            doc.setFont('helvetica', 'bold');
+            doc.text(`PROVEEDOR: ${supplier.name}`, margin, y);
+            y += 4;
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, margin, y);
+            
+            y += 6;
+            doc.line(margin, y, 80 - margin, y);
+            y += 6;
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text('REF', margin, y);
+            doc.text('FECHA', margin + 15, y);
+            doc.text('SALDO', 80 - margin, y, { align: 'right' });
+            y += 4;
+            
+            doc.setFont('helvetica', 'normal');
+            if (supplier.initialDebt > 0) {
+                doc.text('INICIAL', margin, y);
+                doc.text(supplier.initialDebtDate ? formatDate(supplier.initialDebtDate) : '-', margin + 15, y);
+                doc.text(formatCurrency(supplier.initialDebt), 80 - margin, y, { align: 'right' });
+                y += 4;
+            }
+            
+            unpaidPurchases.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(p => {
+                doc.text(`C-${(p.purchaseNumber || 0).toString().padStart(4, '0')}`, margin, y);
+                doc.text(formatDate(p.date), margin + 15, y);
+                doc.text(formatCurrency(p.total - (p.paidAmount || 0)), 80 - margin, y, { align: 'right' });
+                y += 4;
+            });
+            
+            y += 4;
+            doc.line(margin, y, 80 - margin, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOTAL DEUDA:', margin, y);
+            doc.text(formatCurrency(getSupplierBalance(supplier.id, supplier.name)), 80 - margin, y, { align: 'right' });
+            
+            y += 10;
+            doc.setFontSize(8);
+            doc.text('_______________________', 40, y, { align: 'center' });
+            y += 4;
+            doc.text('FIRMA AUTORIZADA', 40, y, { align: 'center' });
+            
+            doc.save(`Estado_POS_Prov_${supplier.name.replace(/\s+/g, '_')}.pdf`);
+            return;
+        }
+
         const doc = new jsPDF();
         const margin = 20;
         let y = 20;
@@ -207,8 +273,6 @@ const Suppliers: React.FC = () => {
         doc.text('CUENTAS POR PAGAR PENDIENTES', margin, y);
         y += 5;
 
-        const unpaidPurchases = purchases.filter(p => p.supplierId === supplier.id && (p.total - (p.paidAmount || 0)) > 1);
-        
         const tableData = unpaidPurchases.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(p => [
             formatDate(p.date),
             `C-${(p.purchaseNumber || 0).toString().padStart(6, '0')}`,

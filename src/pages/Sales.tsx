@@ -167,91 +167,101 @@ const Sales: React.FC = () => {
     } | null>(null);
 
     const generateInvoice = (items: SaleItem[], saleTotal: number, saleNumber?: number, cName?: string, cPhone?: string, sName?: string, mode: 'save' | 'print' = 'save', sDiscount: number = 0) => {
-        const doc = new jsPDF({ format: [80, 250] }); // Taller height for POS
-        const margin = 4;
-        let y = 8;
+        const isPos = config.printSettings?.posMode;
+        // 80mm works for both, usually. Let's use it but optimize content
+        const doc = new jsPDF({ format: [80, isPos ? 180 + (items.length * 8) : 250] }); 
+        const margin = 5;
+        let y = 10;
         
-        doc.setFontSize(8);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });
         
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        y += 4;
+        y += 5;
         if (config.nit) {
             doc.text(`NIT: ${config.nit}`, 40, y, { align: 'center' });
-            y += 3;
+            y += 4;
         }
-        doc.text(`${config.warehouseAddress}`, 40, y, { align: 'center' });
-        y += 3;
+        const addrLines = doc.splitTextToSize(config.warehouseAddress, 70);
+        doc.text(addrLines, 40, y, { align: 'center' });
+        y += (addrLines.length * 3.5) + 1;
         doc.text(`Tel: ${config.phone1}`, 40, y, { align: 'center' });
         
         y += 4;
-        doc.setLineWidth(0.1);
+        doc.setDrawColor(200);
         doc.line(margin, y, 80 - margin, y);
         
-        y += 5;
-        doc.setFontSize(8);
+        y += 6;
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text(`FACTURA V-${(saleNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
+        doc.text(`FACTURA DE VENTA`, 40, y, { align: 'center' });
+        y += 4;
+        doc.text(`N°- ${(saleNumber || 0).toString().padStart(6, '0')}`, 40, y, { align: 'center' });
         
-        y += 5;
-        doc.setFontSize(7);
+        y += 6;
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         const now = new Date();
-        doc.text(`F: ${format(now, 'dd/MM/yy HH:mm')}`, margin, y);
+        doc.text(`Fecha: ${format(now, 'dd/MM/yyyy HH:mm')}`, margin, y);
         
         y += 4;
-        doc.text(`Cliente: ${cName || 'General'}`, margin, y);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Cliente: ${cName || 'Venta de Mostrador'}`, margin, y);
+        doc.setFont('helvetica', 'normal');
         if (cPhone) {
-            y += 3;
+            y += 4;
             doc.text(`Tel: ${cPhone}`, margin, y);
         }
+        y += 4;
+        doc.text(`Vendedor: ${sName || 'Sistema'}`, margin, y);
         
-        y += 4;
+        y += 5;
         doc.line(margin, y, 80 - margin, y);
-        y += 4;
+        y += 5;
         
         // Table Header
         doc.setFont('helvetica', 'bold');
         doc.text('Cant', margin, y);
-        doc.text('Prod', margin + 8, y);
+        doc.text('Descripción', margin + 12, y);
         doc.text('Total', 80 - margin, y, { align: 'right' });
-        y += 3;
+        y += 4;
         
         // Items
         doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
         items.forEach(item => {
             const p = products.find(prod => prod.id === item.productId);
-            y += 4;
-            doc.text(`${item.quantity}`, margin, y);
+            const lineTotal = (item.quantity * item.price) - (item.discount || 0);
             
             const name = p?.name || 'Producto';
-            const splitName = doc.splitTextToSize(name, 55);
-            doc.text(splitName, margin + 8, y);
+            const splitName = doc.splitTextToSize(name.toUpperCase(), 40);
             
-            const lineTotal = (item.quantity * item.price) - (item.discount || 0);
-            doc.text(`${formatCurrency(lineTotal)}`, 80 - margin, y, { align: 'right' });
+            doc.text(`${item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(2)}`, margin, y);
+            doc.text(splitName[0], margin + 12, y);
+            doc.text(formatCurrency(lineTotal), 80 - margin, y, { align: 'right' });
             
-            // Show unit price
-            y += 3.5;
-            doc.setFontSize(6);
-            doc.text(`${item.quantity} x ${formatCurrency(item.price)}`, margin + 8, y);
-            doc.setFontSize(7);
-            
-            if (item.discount) {
-                y += 3;
-                doc.setFontSize(6);
-                doc.text(`(Desc: -${formatCurrency(item.discount)})`, margin + 8, y);
-                doc.setFontSize(7);
+            if (splitName.length > 1) {
+                for (let i = 1; i < splitName.length; i++) {
+                    y += 3.5;
+                    doc.text(splitName[i], margin + 12, y);
+                }
             }
             
-            if (splitName.length > 1) y += (splitName.length - 1) * 3;
+            y += 3.5;
+            doc.setFontSize(6.5);
+            doc.text(`Pr. Unit: ${formatCurrency(item.price)}`, margin + 12, y);
+            if (item.discount) {
+                doc.text(` Desc: -${formatCurrency(item.discount)}`, margin + 35, y);
+            }
+            doc.setFontSize(7.5);
+            y += 4.5;
         });
         
-        y += 5;
+        y += 2;
         doc.line(margin, y, 80 - margin, y);
-        y += 5;
+        y += 6;
         
         if (sDiscount > 0) {
             doc.text('SUBTOTAL:', margin, y);
@@ -261,18 +271,24 @@ const Sales: React.FC = () => {
             doc.text('DESCUENTOS:', margin, y);
             const sumDesc = items.reduce((s, i) => s + (i.discount || 0), 0) + sDiscount;
             doc.text(`-${formatCurrency(sumDesc)}`, 80 - margin, y, { align: 'right' });
-            y += 4;
+            y += 4.5;
         }
 
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL:', margin, y);
+        doc.text('TOTAL A PAGAR:', margin, y);
         doc.text(formatCurrency(saleTotal), 80 - margin, y, { align: 'right' });
         
-        y += 8;
+        y += 10;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('¡GRACIAS POR SU COMPRA!', 40, y, { align: 'center' });
+        y += 4;
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
-        doc.setFont('helvetica', 'italic');
-        doc.text('¡Gracias por su compra!', 40, y, { align: 'center' });
+        doc.text(`Sistema de Distribución - ${config.companyName}`, 40, y, { align: 'center' });
+        y += 4;
+        doc.text(`No se aceptan devoluciones sin factura`, 40, y, { align: 'center' });
         
         if (mode === 'save') {
             doc.save(`Venta_${saleNumber || Date.now()}.pdf`);
@@ -410,13 +426,13 @@ const Sales: React.FC = () => {
         <div className="space-y-6 relative">
             {showPosBanner && lastSaleData && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="bg-orange-500 text-white p-6 rounded-3xl shadow-2xl border border-orange-400 flex flex-col md:flex-row items-center gap-6">
-                        <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-2xl shrink-0">
-                            <Printer size={28} />
+                    <div className="bg-orange-600 text-white p-6 rounded-[32px] shadow-2xl border border-orange-400 flex flex-col md:flex-row items-center gap-6">
+                        <div className="flex items-center justify-center w-14 h-14 bg-white/20 rounded-3xl shrink-0 animate-bounce">
+                            <Printer size={32} />
                         </div>
                         <div className="flex-1 text-center md:text-left">
-                            <h4 className="text-lg font-black uppercase tracking-tight">Impresora POS Detectada</h4>
-                            <p className="text-xs font-bold opacity-90">¿Desea imprimir la factura V-{(lastSaleData.saleNumber || 0).toString().padStart(6, '0')} para {lastSaleData.customerName}?</p>
+                            <h4 className="text-xl font-black uppercase tracking-tight">Impresión POS Lista</h4>
+                            <p className="text-[11px] font-bold opacity-90 uppercase tracking-widest">Factura V-{(lastSaleData.saleNumber || 0).toString().padStart(6, '0')} · {lastSaleData.customerName}</p>
                         </div>
                         <div className="flex gap-2">
                             <button 
@@ -424,9 +440,9 @@ const Sales: React.FC = () => {
                                     generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'print', lastSaleData.totalDiscount);
                                     setShowPosBanner(false);
                                 }}
-                                className="px-6 py-2 bg-white text-orange-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                                className="px-8 py-3 bg-white text-orange-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-xl"
                             >
-                                Imprimir Factura
+                                Imprimir Ahora
                             </button>
                             <button 
                                 onClick={() => setShowPosBanner(false)}

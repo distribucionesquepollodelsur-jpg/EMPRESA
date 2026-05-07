@@ -20,6 +20,8 @@ const Despresaje: React.FC = () => {
     const [purchaseId, setPurchaseId] = useState('');
     const [wholeChickenId, setWholeChickenId] = useState('');
     const [bulkQuantity, setBulkQuantity] = useState(0);
+    const [picadaMode, setPicadaMode] = useState(false);
+    const [picadaQty, setPicadaQty] = useState(0);
     const [inputItems, setInputItems] = useState<{ productId: string, quantity: number }[]>([]);
     const [derivations, setDerivations] = useState<{ productId: string, quantity: number }[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -83,7 +85,24 @@ const Despresaje: React.FC = () => {
     const handleProcess = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const totalOutWeight = derivations.reduce((sum, d) => {
+        let finalDerivations = [...derivations];
+        let finalInputItems = [...inputItems];
+
+        // If picadaMode is on, ensure we have the derivation and input weight is calculated
+        if (picadaMode && picadaQty > 0) {
+            const picadaProduct = products.find(p => p.name.toLowerCase().includes('picada'));
+            if (picadaProduct) {
+                // Add the picada to derivations if not already there or update it
+                const existingIdx = finalDerivations.findIndex(d => d.productId === picadaProduct.id);
+                if (existingIdx >= 0) {
+                    finalDerivations[existingIdx].quantity = picadaQty;
+                } else {
+                    finalDerivations.push({ productId: picadaProduct.id, quantity: picadaQty });
+                }
+            }
+        }
+
+        const totalOutWeight = finalDerivations.reduce((sum, d) => {
             const product = products.find(p => p.id === d.productId);
             const weight = (product?.name.toLowerCase().includes('picada') || product?.unit === 'und') 
                 ? (d.quantity * 0.475) 
@@ -97,12 +116,12 @@ const Despresaje: React.FC = () => {
                     purchaseId,
                     inputProductId: wholeChickenId,
                     inputQuantity: bulkQuantity,
-                    outputItems: derivations,
+                    outputItems: finalDerivations,
                     totalOutputWeight: totalOutWeight
                 }
                 : {
-                    inputItems: inputItems,
-                    outputItems: derivations,
+                    inputItems: finalInputItems,
+                    outputItems: finalDerivations,
                     totalOutputWeight: totalOutWeight
                 };
 
@@ -226,6 +245,7 @@ const Despresaje: React.FC = () => {
                                         onChange={e => {
                                             setPurchaseId(e.target.value);
                                             setWholeChickenId('');
+                                            setPicadaMode(false);
                                         }}
                                         className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
                                     >
@@ -240,34 +260,66 @@ const Despresaje: React.FC = () => {
 
                                 {purchaseId && (
                                     <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                        <div>
+                                        <div className="flex items-center justify-between">
                                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Producto a Despresar</label>
-                                            <select 
-                                                required
-                                                value={wholeChickenId}
-                                                onChange={e => setWholeChickenId(e.target.value)}
-                                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                            <button 
+                                                type="button"
+                                                onClick={() => setPicadaMode(!picadaMode)}
+                                                className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-all ${picadaMode ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-slate-200 text-slate-400'}`}
                                             >
-                                                <option value="">Seleccionar Producto de la Factura...</option>
-                                                {purchaseItems.map(item => (
-                                                    <option key={item.productId} value={item.productId}>
-                                                        {item.product?.name} ({item.quantity} {item.product?.unit} comprados)
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                {picadaMode ? 'Modo Creación Picadas ACTIVADO' : 'Activar Modo Picadas'}
+                                            </button>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cantidad a Usar</label>
-                                            <input 
-                                                type="number"
-                                                step="0.01"
-                                                required
-                                                value={bulkQuantity || ''}
-                                                onChange={e => setBulkQuantity(parseFloat(e.target.value))}
-                                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
-                                                placeholder="0.00"
-                                            />
-                                        </div>
+                                        <select 
+                                            required
+                                            value={wholeChickenId}
+                                            onChange={e => setWholeChickenId(e.target.value)}
+                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                        >
+                                            <option value="">Seleccionar Producto de la Factura...</option>
+                                            {purchaseItems.map(item => (
+                                                <option key={item.productId} value={item.productId}>
+                                                    {item.product?.name} ({item.quantity} {item.product?.unit} comprados)
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {picadaMode ? (
+                                            <div className="p-4 bg-orange-50 rounded-2xl border border-orange-200 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-orange-600 uppercase">Cantidad de Picadas a Crear</span>
+                                                    <span className="text-[10px] font-black text-slate-400">0.475 Kg / Und</span>
+                                                </div>
+                                                <input 
+                                                    type="number"
+                                                    required
+                                                    value={picadaQty || ''}
+                                                    onChange={e => {
+                                                        const qty = parseFloat(e.target.value);
+                                                        setPicadaQty(qty);
+                                                        setBulkQuantity(qty * 0.475);
+                                                    }}
+                                                    className="w-full p-4 bg-white border border-orange-200 rounded-2xl font-black text-slate-900 outline-none focus:ring-2 focus:ring-orange-500 text-center text-xl"
+                                                    placeholder="Ej: 10"
+                                                />
+                                                <div className="flex justify-between items-center bg-orange-500/10 p-3 rounded-xl">
+                                                    <span className="text-[9px] font-black text-orange-700 uppercase">Peso Necesitado:</span>
+                                                    <span className="text-sm font-black text-orange-900">{(picadaQty * 0.475).toFixed(2)} Kg</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cantidad a Usar</label>
+                                                <input 
+                                                    type="number"
+                                                    step="0.01"
+                                                    required
+                                                    value={bulkQuantity || ''}
+                                                    onChange={e => setBulkQuantity(parseFloat(e.target.value))}
+                                                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-orange-500"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

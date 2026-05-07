@@ -37,7 +37,7 @@ import InventoryBlocker from './components/InventoryBlocker';
 
 const MainContent: React.FC = () => {
   const { isAuthenticated, user, hasEnteredBase, loading: authLoading } = useAuth();
-  const { loading: dataLoading, isInventoryRequired } = useData();
+  const { loading: dataLoading, isInventoryRequired, config } = useData();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const showInventoryBlocker = isInventoryRequired() && isAuthenticated && activeTab !== 'inventory';
@@ -67,6 +67,62 @@ const MainContent: React.FC = () => {
   }
 
   const renderContent = () => {
+    const userPerms = (config?.permissions || {})[user?.email || ''] || [];
+    const isSuperAdmin = ['alex.b19h@gmail.com', 'distribucionesquepollodelsur@gmail.com'].includes(user?.email || '');
+
+    const checkPermission = (tabId: string) => {
+      if (isSuperAdmin) return true;
+      if (user?.role !== 'admin') {
+         // Basic non-admin permissions (employees)
+         const openTabs = ['dashboard', 'sales', 'customers', 'despresaje', 'cash', 'inventory', 'credits'];
+         return openTabs.includes(tabId);
+      }
+      
+      const permIdMap: {[key: string]: string} = {
+          'inventory': 'inventory',
+          'sales': 'sales',
+          'purchases': 'purchases',
+          'customers': 'customers',
+          'suppliers': 'suppliers',
+          'cash': 'cashflow',
+          'expenses': 'cashflow',
+          'employees': 'employees',
+          'processing': 'processing',
+          'despresaje': 'processing',
+          'assets': 'assets',
+          'loans': 'cashflow',
+          'payroll': 'reports',
+          'reports': 'reports',
+          'daily-balance': 'reports',
+          'config': 'config'
+      };
+
+      const requiredPerm = permIdMap[tabId];
+      if (!requiredPerm) return true; 
+
+      return userPerms.includes(requiredPerm);
+    };
+
+    if (!checkPermission(activeTab)) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center">
+            <X size={40} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 uppercase">Acceso Denegado</h2>
+            <p className="text-slate-500 max-w-xs mx-auto">No tienes permisos para acceder a esta sección. Solicita acceso a un SuperAdministrador.</p>
+          </div>
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest text-xs"
+          >
+            Volver al Inicio
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
       case 'inventory': return <Inventory />;

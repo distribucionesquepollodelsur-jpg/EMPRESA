@@ -1,26 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { Wallet, ArrowRight, LogOut } from 'lucide-react';
+import { Wallet, ArrowRight, LogOut, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../lib/utils';
+import { startOfDay } from 'date-fns';
 
 const BaseEntry: React.FC = () => {
     const { user, logout, setHasEnteredBase } = useAuth();
-    const { addCashMovement } = useData();
+    const { addCashMovement, cashFlow } = useData();
     const [amount, setAmount] = useState<number>(0);
     const [loading, setLoading] = useState(false);
+    const [suggestedBase, setSuggestedBase] = useState(0);
+
+    const isAdmin = user?.role === 'admin' || [
+        'distribucionesquepollodelsur@gmail.com',
+        'alex.b19h@gmail.com'
+    ].includes(user?.email || '');
+
+    useEffect(() => {
+        const calculateSuggestedBase = () => {
+            const startOfToday = startOfDay(new Date());
+            const previousBalance = cashFlow
+                .filter(m => new Date(m.date) < startOfToday && (m.method === 'cash' || !m.method))
+                .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+            
+            setSuggestedBase(previousBalance);
+            setAmount(previousBalance);
+        };
+
+        if (cashFlow.length > 0) {
+            calculateSuggestedBase();
+        }
+    }, [cashFlow]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (amount <= 0) return;
+        // Allow 0 or negative only if specifically decided, but usually it's positive
         setLoading(true);
+
+        const reason = `Base Inicial - ${user?.name}${amount === suggestedBase ? ' (Cuadrado con Cierre Anterior)' : ' (Ajuste Manual)'}`;
 
         setTimeout(() => {
             addCashMovement({
                 type: 'entry',
                 amount: amount,
-                reason: `Base Inicial - ${user?.name}`
+                reason: reason
             });
             setHasEnteredBase(true);
             setLoading(false);
@@ -41,6 +66,13 @@ const BaseEntry: React.FC = () => {
                     <div className="space-y-1">
                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Base Inicial</h2>
                         <p className="text-slate-400 text-sm font-medium">Hola {user?.name}, ingresa el efectivo inicial en caja para comenzar tu turno.</p>
+                        {suggestedBase !== 0 && (
+                            <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                                <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">
+                                    Cierre Día Anterior: {formatCurrency(suggestedBase)}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -51,11 +83,21 @@ const BaseEntry: React.FC = () => {
                             type="number"
                             required
                             autoFocus
-                            value={amount || ''}
-                            onChange={(e) => setAmount(parseFloat(e.target.value))}
-                            className="w-full pl-12 pr-6 py-6 bg-slate-800 border border-slate-700 rounded-2xl text-white text-3xl font-black focus:outline-none focus:ring-2 focus:ring-green-500 transition-all placeholder:text-slate-700"
+                            value={amount}
+                            onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                            className="w-full pl-12 pr-6 py-6 bg-slate-800 border border-slate-700 rounded-2xl text-white text-3xl font-black focus:outline-none focus:ring-2 focus:ring-green-500 transition-all placeholder:text-slate-700 text-center"
                             placeholder="0"
                         />
+                        {amount !== suggestedBase && (
+                            <button 
+                                type="button"
+                                onClick={() => setAmount(suggestedBase)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-all"
+                                title="Volver al cierre anterior"
+                            >
+                                <RefreshCw size={16} />
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-4">
