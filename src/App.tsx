@@ -32,7 +32,7 @@ import Recruitment from './pages/Recruitment';
 import DailyBalance from './pages/DailyBalance';
 
 import { useData } from './context/DataContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import InventoryBlocker from './components/InventoryBlocker';
 
 const MainContent: React.FC = () => {

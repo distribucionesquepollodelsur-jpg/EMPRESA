@@ -92,9 +92,26 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const totalSalesAmount = sales.reduce((sum, s) => sum + s.total, 0);
-    const totalPurchasesAmount = purchases.reduce((sum, p) => sum + p.total, 0);
-    const balance = totalSalesAmount - totalPurchasesAmount;
+    const stats = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Calculate Today's Expected Cash (Base + Cash In - Cash Out)
+        const todayCashBalance = cashFlow
+            .filter(m => m.date && m.date.startsWith(today) && (m.method === 'cash' || !m.method))
+            .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+
+        return {
+            todayCashBalance,
+            totalSalesAmount: sales.reduce((sum, s) => sum + s.total, 0),
+            totalPurchasesAmount: purchases.reduce((sum, p) => sum + p.total, 0),
+            balance: sales.reduce((sum, s) => sum + s.total, 0) - purchases.reduce((sum, p) => sum + p.total, 0),
+            lowStock: products.filter(p => p.stock <= 5).length
+        };
+    }, [sales, purchases, products, cashFlow]);
+
+    const totalSalesAmount = stats.totalSalesAmount;
+    const totalPurchasesAmount = stats.totalPurchasesAmount;
+    const balance = stats.balance;
 
     // Filter quick actions based on role
     const quickActions = [
@@ -199,10 +216,10 @@ const Dashboard: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard title="Caja en Efectivo" value={formatCurrency(stats.todayCashBalance)} icon={DollarSign} color="text-orange-500" />
                 <StatsCard title="Ventas Totales" value={formatCurrency(totalSalesAmount)} icon={TrendingUp} color="text-green-600" />
                 <StatsCard title="Compras Totales" value={formatCurrency(totalPurchasesAmount)} icon={TrendingDown} color="text-red-500" />
-                <StatsCard title="Balance Neto" value={formatCurrency(balance)} icon={DollarSign} color="text-zinc-900" />
-                <StatsCard title="Debajo de Stock" value={products.filter(p => p.stock <= 5).length} icon={Package} color="text-red-600" />
+                <StatsCard title="Debajo de Stock" value={stats.lowStock} icon={Package} color="text-zinc-500" />
             </div>
 
             <div className="p-10 rounded-[40px] text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 transition-all bg-zinc-900 border border-white/5 relative overflow-hidden group">

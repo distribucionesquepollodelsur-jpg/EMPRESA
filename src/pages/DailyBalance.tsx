@@ -42,18 +42,26 @@ const DailyBalance: React.FC = () => {
         const todayExpenses = expenses.filter(filterByDate);
         const todayCashMovements = cashFlow.filter(filterByDate);
 
-        // Calculate Opening Balance (Everything before today - ONLY CASH)
-        const openingBalance = cashFlow
-            .filter(m => new Date(m.date) < start && (m.method === 'cash' || !m.method))
-            .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+        // Calculate Today's Manual Base (Entry of type 'entry' and category 'base')
+        const todayBase = todayCashMovements
+            .filter(m => m.category === 'base' && (m.method === 'cash' || !m.method))
+            .reduce((sum, m) => sum + m.amount, 0);
 
-        // Calculate Total Income (Cash + Transfers)
+        // Calculate Cash movements specifically (ONLY CASH) excluding the base movement
+        const cashEntries = todayCashMovements
+            .filter(m => m.type === 'entry' && m.category !== 'base' && (m.method === 'cash' || !m.method))
+            .reduce((sum, m) => sum + m.amount, 0);
+            
+        const cashExits = todayCashMovements
+            .filter(m => m.type === 'exit' && (m.method === 'cash' || !m.method))
+            .reduce((sum, m) => sum + m.amount, 0);
+
+        // Total in Cash = Base + Entries - Exits
+        const netCash = todayBase + cashEntries - cashExits;
+
+        // Calculate Total Income (Cash + Transfers) for all entries
         const totalIncome = todayCashMovements.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
         const totalOutcome = todayCashMovements.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
-
-        // Calculate Cash movements specifically (ONLY CASH) for Box Balance
-        const cashEntries = todayCashMovements.filter(m => m.type === 'entry' && (m.method === 'cash' || !m.method)).reduce((sum, m) => sum + m.amount, 0);
-        const cashExits = todayCashMovements.filter(m => m.type === 'exit' && (m.method === 'cash' || !m.method)).reduce((sum, m) => sum + m.amount, 0);
 
         // Sales Breakdown by Payment Method
         const salesStats = {
@@ -117,12 +125,12 @@ const DailyBalance: React.FC = () => {
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return {
-            openingBalance,
+            openingBalance: todayBase,
             totalIncome,
             totalOutcome,
             cashEntries,
             cashExits,
-            netCash: openingBalance + cashEntries - cashExits,
+            netCash,
             todayNetCash: cashEntries - cashExits,
             totalSalesVolume,
             totalPurchasesVolume,
@@ -148,13 +156,11 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
-            ['Saldo / Base del Día Anterior', formatCurrency(stats.openingBalance)],
-            ['Total Ingresos de Hoy (Efectivo + Bancos)', formatCurrency(stats.totalIncome)],
-            ['Total Egresos de Hoy (Todos)', formatCurrency(stats.totalOutcome)],
-            ['Efectivo Recibido en Caja Hoy', formatCurrency(stats.cashEntries)],
-            ['Efectivo Entregado en Caja Hoy', formatCurrency(stats.cashExits)],
-            ['SALDO FINAL EN CAJA (DEBE HABER)', formatCurrency(stats.netCash)],
-            ['Volumen de Ventas Facturadas Hoy', formatCurrency(stats.totalSalesVolume)]
+            ['Base Inicial Registrada Manualmente', formatCurrency(stats.openingBalance)],
+            ['Entradas de Efectivo Hoy (Ventas/Pagos)', formatCurrency(stats.cashEntries)],
+            ['Salidas de Efectivo Hoy (Gastos/Compras)', formatCurrency(stats.cashExits)],
+            ['SALDO TOTAL EN CAJA (DEBE HABER)', formatCurrency(stats.netCash)],
+            ['Volumen Total Facturado Hoy', formatCurrency(stats.totalSalesVolume)]
         ];
 
         autoTable(doc, {
@@ -235,11 +241,11 @@ const DailyBalance: React.FC = () => {
                         <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
                             <History size={20} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo Anterior</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Base Registrada</span>
                     </div>
                     <div>
                         <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Base del día anterior</p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Base manual de este día</p>
                     </div>
                 </div>
 
