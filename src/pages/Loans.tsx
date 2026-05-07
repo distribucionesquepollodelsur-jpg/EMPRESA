@@ -34,6 +34,13 @@ const Loans: React.FC = () => {
         e.preventDefault();
         if (amount <= 0 || !borrowerName) return;
 
+        const today = new Date().toISOString().split('T')[0];
+        let finalDate = new Date(date).toISOString();
+
+        if (date === today) {
+            finalDate = new Date().toISOString();
+        }
+
         if (activeTab === 'thirdParty') {
             await addLoan({
                 borrowerName,
@@ -43,7 +50,7 @@ const Loans: React.FC = () => {
                 term,
                 dueDate,
                 description,
-                date: new Date(date).toISOString()
+                date: finalDate
             });
         } else {
             await addBusinessLoan({
@@ -51,7 +58,7 @@ const Loans: React.FC = () => {
                 amount,
                 cashAmount, // Using the editable cashAmount instead of hardcoded amount
                 description,
-                date: new Date(date).toISOString()
+                date: finalDate
             });
         }
         

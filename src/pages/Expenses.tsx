@@ -33,11 +33,19 @@ const Expenses: React.FC = () => {
         e.preventDefault();
         if (amount <= 0 || !category) return;
 
+        const today = new Date().toISOString().split('T')[0];
+        let finalDate = new Date(date).toISOString();
+
+        // If the selected date is today, use the exact current time
+        if (date === today) {
+            finalDate = new Date().toISOString();
+        }
+
         await addExpense({
             amount,
             category,
             description,
-            date: new Date(date).toISOString()
+            date: finalDate
         });
         
         setIsModalOpen(false);

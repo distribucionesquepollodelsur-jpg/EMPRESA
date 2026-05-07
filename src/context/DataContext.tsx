@@ -732,11 +732,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `processings/${id}`); }
     };
 
-    const addCashMovement = async (movementData: Omit<CashMovement, 'id' | 'date'>) => {
+    const addCashMovement = async (movementData: Omit<CashMovement, 'id' | 'date'> & { date?: string }) => {
         const movement = {
             ...movementData,
             category: movementData.category || 'manual',
-            date: getEffectiveCashDate().toISOString()
+            date: movementData.date || getEffectiveCashDate().toISOString()
         };
 
         try {
@@ -1297,7 +1297,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 amount: expense.amount,
                 reason: `Gasto: ${expense.category} - ${expense.description}`,
                 category: 'expense',
-                method: 'cash'
+                method: 'cash',
+                date: expenseWithDate.date
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'expenses'); }
     };
