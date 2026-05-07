@@ -57,7 +57,8 @@ const DailyBalance: React.FC = () => {
             .reduce((sum, m) => sum + m.amount, 0);
 
         // Total in Cash = Base + Entries - Exits
-        const netCash = todayBase + cashEntries - cashExits;
+        const totalEntries = todayBase + cashEntries;
+        const netCash = totalEntries - cashExits;
 
         // Calculate Total Income (Cash + Transfers) for all entries
         const totalIncome = todayCashMovements.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
@@ -126,12 +127,10 @@ const DailyBalance: React.FC = () => {
 
         return {
             openingBalance: todayBase,
-            totalIncome,
-            totalOutcome,
-            cashEntries,
+            salesIncome: cashEntries,
+            totalEntries: totalEntries,
             cashExits,
             netCash,
-            todayNetCash: cashEntries - cashExits,
             totalSalesVolume,
             totalPurchasesVolume,
             totalExpensesVolume,
@@ -156,11 +155,12 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
-            ['Base Inicial Registrada Manualmente', formatCurrency(stats.openingBalance)],
-            ['Entradas de Efectivo Hoy (Ventas/Pagos)', formatCurrency(stats.cashEntries)],
-            ['Salidas de Efectivo Hoy (Gastos/Compras)', formatCurrency(stats.cashExits)],
-            ['SALDO TOTAL EN CAJA (DEBE HABER)', formatCurrency(stats.netCash)],
-            ['Volumen Total Facturado Hoy', formatCurrency(stats.totalSalesVolume)]
+            ['BASE INICIAL REGISTRADA', formatCurrency(stats.openingBalance)],
+            ['INGRESOS DE VENTAS (VENTAS, ABONOS, OTROS)', formatCurrency(stats.salesIncome)],
+            ['TOTAL DE INGRESOS', formatCurrency(stats.totalEntries)],
+            ['EFECTIVO SALIDO', formatCurrency(stats.cashExits)],
+            ['EFECTIVO FISICO', formatCurrency(stats.netCash)],
+            ['VENTAS TOTALES', formatCurrency(stats.totalSalesVolume)]
         ];
 
         autoTable(doc, {
@@ -235,69 +235,82 @@ const DailyBalance: React.FC = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div className="bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                            <History size={20} />
+                        <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                            <History size={16} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Base Registrada</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Base Inicial</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Base manual de este día</p>
+                        <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tight mt-1">Registrada</p>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                <div className="bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
-                            <TrendingUp size={20} />
+                        <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+                            <TrendingUp size={16} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Ingresos</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right text-balance leading-tight">Ingresos Ventas/...</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.totalIncome)}</h4>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Ventas + Abonos + Otros</p>
+                        <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.salesIncome)}</h4>
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tight mt-1">Efectivo Recibido</p>
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                <div className="bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center">
-                            <TrendingDown size={20} />
+                        <div className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center">
+                            <ArrowUpRight size={16} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Efectivo Salido</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right leading-tight">Total Ingresos</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.cashExits)}</h4>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Total Egresos hoy</p>
+                        <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.totalEntries)}</h4>
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tight mt-1">Base + Entradas</p>
                     </div>
                 </div>
 
-                <div className="bg-slate-900 p-6 rounded-[32px] shadow-xl shadow-slate-900/10 space-y-4 text-white">
+                <div className="bg-white p-5 rounded-[28px] border border-slate-200 shadow-sm space-y-3">
                     <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center">
-                            <Calculator size={20} />
+                        <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center">
+                            <TrendingDown size={16} />
                         </div>
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest text-right">Efectivo Físico</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right leading-tight">Efectivo Salido</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black">{formatCurrency(stats.netCash)}</h4>
-                        <p className="text-[10px] text-white/40 font-black uppercase tracking-tight mt-1 underline decoration-white/20">Debe Haber en Caja</p>
+                        <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.cashExits)}</h4>
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-tight mt-1">Pagos / Gastos</p>
                     </div>
                 </div>
 
-                <div className="bg-zinc-900 p-6 rounded-[32px] shadow-lg shadow-black/20 space-y-4 text-white">
+                <div className="bg-slate-900 p-5 rounded-[28px] shadow-xl shadow-slate-900/10 space-y-3 text-white">
                     <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 bg-white/20 text-white rounded-xl flex items-center justify-center">
-                            <PieChart size={20} />
+                        <div className="w-8 h-8 bg-white/10 text-white rounded-lg flex items-center justify-center">
+                            <Calculator size={16} />
                         </div>
-                        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest text-right">Ventas Totales</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest text-right leading-tight">Efectivo Físico</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black">{formatCurrency(stats.totalSalesVolume)}</h4>
-                        <p className="text-[10px] text-white/60 font-black uppercase tracking-tight mt-1">{stats.salesCount} Facturas</p>
+                        <h4 className="text-xl font-black">{formatCurrency(stats.netCash)}</h4>
+                        <p className="text-[9px] text-white/40 font-black uppercase tracking-tight mt-1 underline decoration-white/20">Caja Final</p>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-900 p-5 rounded-[28px] shadow-lg shadow-black/20 space-y-3 text-white">
+                    <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 bg-white/20 text-white rounded-lg flex items-center justify-center">
+                            <PieChart size={16} />
+                        </div>
+                        <span className="text-[9px] font-black text-white/60 uppercase tracking-widest text-right leading-tight">Ventas Totales</span>
+                    </div>
+                    <div>
+                        <h4 className="text-xl font-black">{formatCurrency(stats.totalSalesVolume)}</h4>
+                        <p className="text-[9px] text-white/60 font-black uppercase tracking-tight mt-1">{stats.salesCount} Tickets</p>
                     </div>
                 </div>
             </div>
