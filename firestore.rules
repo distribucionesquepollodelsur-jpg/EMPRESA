@@ -77,7 +77,15 @@ service cloud.firestore {
              data.date is string &&
              data.type in ['entry', 'exit'] &&
              data.amount is number && data.amount >= 0 &&
-             data.reason is string && data.reason.size() <= 500;
+             data.reason is string && data.reason.size() <= 500 &&
+             (!data.keys().contains('category') || data.category is string);
+    }
+
+    function isValidAdvance(data) {
+      return data.keys().hasAll(['employeeId', 'amount', 'date']) &&
+             data.employeeId is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string;
     }
 
     function isValidInventoryLog(data) {
@@ -179,7 +187,9 @@ service cloud.firestore {
 
     match /advances/{advanceId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isSignedIn() && isValidAdvance(incoming()) && isValidId(advanceId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /reprimands/{reprimandId} {

@@ -339,13 +339,20 @@ const Employees: React.FC = () => {
     };
 
     const processAdvance = async (id: string, amount: number) => {
-        const error = await addAdvance(id, amount);
-        if (error) {
-            setAdvanceError(error);
-        } else {
-            setAdvanceAmount(0);
-            setIsAdvanceModalOpen(false);
-            setAdvanceError('');
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            const error = await addAdvance(id, amount);
+            if (error) {
+                setAdvanceError(error);
+            } else {
+                alert('Adelanto registrado correctamente');
+                setAdvanceAmount(0);
+                setIsAdvanceModalOpen(false);
+                setAdvanceError('');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -1464,8 +1471,14 @@ const Employees: React.FC = () => {
                             )}
                             
                             <div className="flex flex-col gap-3 pt-6">
-                                <button className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 active:scale-95 transition-all">
-                                    Procesar Pago
+                                <button 
+                                    disabled={isSubmitting}
+                                    className={cn(
+                                        "w-full py-5 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-95 transition-all",
+                                        isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-orange-500 shadow-orange-500/20 hover:bg-orange-600"
+                                    )}
+                                >
+                                    {isSubmitting ? 'Procesando...' : 'Procesar Pago'}
                                 </button>
                                 <button type="button" onClick={() => setIsAdvanceModalOpen(false)} className="w-full py-4 text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 transition-colors">
                                     Cerrar
