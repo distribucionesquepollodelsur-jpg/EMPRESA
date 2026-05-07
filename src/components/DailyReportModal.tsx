@@ -71,6 +71,14 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         .filter(m => m.type === 'entry' && m.category === 'sale' && m.reason.includes('Abono a Venta #'))
         .reduce((sum, m) => sum + m.amount, 0);
 
+    const totalIncome = todayCashFlow
+        .filter(m => m.type === 'entry')
+        .reduce((sum, m) => sum + m.amount, 0);
+
+    const totalOutcome = todayCashFlow
+        .filter(m => m.type === 'exit')
+        .reduce((sum, m) => sum + m.amount, 0);
+
     const cashEntries = todayCashFlow
         .filter(m => m.type === 'entry' && (m.method === 'cash' || !m.method))
         .reduce((sum, m) => sum + m.amount, 0);
@@ -234,8 +242,9 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                         />
                         <StatCard 
                             icon={TrendingUp} 
-                            label="Entradas Caja" 
-                            value={formatCurrency(cashEntries)} 
+                            label="Ingresos Totales" 
+                            value={formatCurrency(totalIncome)} 
+                            subValue="Caja + Bancos"
                             color="bg-blue-50 text-blue-600"
                         />
                         <StatCard 
@@ -279,6 +288,11 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                     <div className="bg-slate-900 rounded-[32px] p-8 text-white">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                             <div className="space-y-6">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 underline decoration-white/10">TOTAL DINERO RECAUDADO HOY (Efectivo + Transf)</p>
+                                    <h4 className="text-xl font-black text-white">{formatCurrency(totalIncome)}</h4>
+                                </div>
+
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 underline decoration-white/10">EFECTIVO QUE DEBE HABER EN CAJA (CIERRE Hoy)</p>
                                     <h3 className={cn("text-4xl font-black tracking-tighter", netCash >= 0 ? "text-green-400" : "text-red-400")}>

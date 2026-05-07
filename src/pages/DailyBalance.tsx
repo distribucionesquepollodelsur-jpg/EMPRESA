@@ -42,7 +42,11 @@ const DailyBalance: React.FC = () => {
         const todayExpenses = expenses.filter(filterByDate);
         const todayCashMovements = cashFlow.filter(filterByDate);
 
-        // Calculate Cash movements specifically (ONLY CASH)
+        // Calculate Total Income (Cash + Transfers)
+        const totalIncome = todayCashMovements.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
+        const totalOutcome = todayCashMovements.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
+
+        // Calculate Cash movements specifically (ONLY CASH) for Box Balance
         const cashEntries = todayCashMovements.filter(m => m.type === 'entry' && (m.method === 'cash' || !m.method)).reduce((sum, m) => sum + m.amount, 0);
         const cashExits = todayCashMovements.filter(m => m.type === 'exit' && (m.method === 'cash' || !m.method)).reduce((sum, m) => sum + m.amount, 0);
 
@@ -108,6 +112,8 @@ const DailyBalance: React.FC = () => {
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return {
+            totalIncome,
+            totalOutcome,
             cashEntries,
             cashExits,
             netCash: cashEntries - cashExits,
@@ -135,10 +141,12 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
+            ['Total Ingresos (Bruto)', formatCurrency(stats.totalIncome)],
+            ['Total Egresos (Todos)', formatCurrency(stats.totalOutcome)],
             ['Efectivo Recibido (Caja)', formatCurrency(stats.cashEntries)],
             ['Efectivo Entregado (Caja)', formatCurrency(stats.cashExits)],
             ['EFECTIVO QUE DEBE HABER EN CAJA', formatCurrency(stats.netCash)],
-            ['Volumen Total de Ventas (Todos los métodos)', formatCurrency(stats.totalSalesVolume)]
+            ['Volumen de Ventas Facturadas Hoy', formatCurrency(stats.totalSalesVolume)]
         ];
 
         autoTable(doc, {
@@ -219,11 +227,11 @@ const DailyBalance: React.FC = () => {
                         <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
                             <TrendingUp size={20} />
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Efectivo Real</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Ingresos</span>
                     </div>
                     <div>
-                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.cashEntries)}</h4>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Total Ingresos hoy</p>
+                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.totalIncome)}</h4>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Ventas + Abonos + Otros</p>
                     </div>
                 </div>
 
