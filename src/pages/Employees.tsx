@@ -31,7 +31,7 @@ const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string
 );
 
 const Employees: React.FC = () => {
-    const { employees, attendance, advances, shifts, reprimands, dotations, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, addReprimand, resolveReprimand, addDotation, deleteDotation, updateShift, deleteEmployee } = useData();
+    const { employees, attendance, advances, shifts, reprimands, dotations, addEmployee, updateEmployee, markAttendance, deleteAttendance, addAdvance, deleteAdvance, addReprimand, resolveReprimand, addDotation, deleteDotation, updateShift, deleteEmployee } = useData();
     const { user } = useAuth();
     
     const getAIClient = () => {
@@ -627,6 +627,45 @@ const Employees: React.FC = () => {
                                                 >
                                                     <CheckCircle2 size={16} />
                                                 </button>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Registered Advances display */}
+                        {advances.filter(a => a.employeeId === emp.id).length > 0 && (
+                            <div className="px-8 pb-8 pt-2 space-y-3">
+                                <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-2">
+                                    <DollarSign size={10} /> Adelantos Recientes
+                                </p>
+                                <div className="space-y-2">
+                                    {advances
+                                        .filter(a => a.employeeId === emp.id)
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .slice(0, 5) // Show only last 5 to keep UI clean
+                                        .map(a => (
+                                            <div key={a.id} className="p-3 bg-orange-50/50 border border-orange-100 rounded-xl flex items-center justify-between group">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-orange-900">{formatCurrency(a.amount)}</span>
+                                                    <span className="text-[9px] text-orange-400 font-bold uppercase tracking-widest">
+                                                        {formatDate(a.date)}
+                                                    </span>
+                                                </div>
+                                                {isAdmin && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            if (window.confirm('¿Eliminar este adelanto? Esto también eliminará el movimiento de caja asociado si se encuentra.')) {
+                                                                deleteAdvance(a.id);
+                                                            }
+                                                        }}
+                                                        className="p-1 text-orange-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        title="Eliminar adelanto"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))
                                     }
