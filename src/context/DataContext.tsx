@@ -861,26 +861,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const deleteAdvance = async (id: string) => {
         const advance = advances.find(a => a.id === id);
-        if (!advance) return;
-
+        
         try {
             await deleteDoc(doc(db, 'advances', id));
             
-            // Try to find corresponding cash movement
-            const employee = employees.find(e => e.id === advance.employeeId);
-            const movement = cashFlow.find(m => 
-                m.type === 'exit' && 
-                m.category === 'advance' && 
-                m.amount === advance.amount &&
-                m.reason.includes(employee?.name || '') &&
-                Math.abs(new Date(m.date).getTime() - new Date(advance.date).getTime()) < 60000 // Within 1 minute
-            );
+            if (advance) {
+                // Try to find corresponding cash movement
+                const employee = employees.find(e => e.id === advance.employeeId);
+                const movement = cashFlow.find(m => 
+                    m.type === 'exit' && 
+                    m.category === 'advance' && 
+                    m.amount === advance.amount &&
+                    m.reason.includes(employee?.name || '') &&
+                    Math.abs(new Date(m.date).getTime() - new Date(advance.date).getTime()) < 120000 // 2 minutes window
+                );
 
-            if (movement) {
-                await deleteDoc(doc(db, 'cashFlow', movement.id));
+                if (movement) {
+                    try {
+                        await deleteDoc(doc(db, 'cashFlow', movement.id));
+                    } catch (err) {
+                        console.error("Could not delete associated cash movement", err);
+                    }
+                }
             }
+            return null; // Success
         } catch (e) {
             handleFirestoreError(e, OperationType.DELETE, `advances/${id}`);
+            return "Error al eliminar adelanto";
         }
     };
 

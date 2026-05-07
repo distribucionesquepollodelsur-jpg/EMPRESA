@@ -655,15 +655,21 @@ const Employees: React.FC = () => {
                                                 </div>
                                                 {isAdmin && (
                                                     <button 
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             if (window.confirm('¿Eliminar este adelanto? Esto también eliminará el movimiento de caja asociado si se encuentra.')) {
-                                                                deleteAdvance(a.id);
+                                                                const error = await deleteAdvance(a.id);
+                                                                if (error) {
+                                                                    alert(error);
+                                                                } else {
+                                                                    alert('Adelanto eliminado correctamente');
+                                                                }
                                                             }
                                                         }}
-                                                        className="p-1 text-orange-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                        className="p-1 px-2 text-red-500 hover:bg-red-50 rounded-lg transition-all flex items-center gap-1 border border-transparent hover:border-red-100"
                                                         title="Eliminar adelanto"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={14} />
+                                                        <span className="text-[9px] font-black uppercase">Eliminar</span>
                                                     </button>
                                                 )}
                                             </div>
