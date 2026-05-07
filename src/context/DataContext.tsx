@@ -379,7 +379,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         type: 'exit',
                         amount: pmt.amount,
                         reason: `Compra #${purchaseId.slice(0, 8)} (${pmt.method})${purchase.supplierName ? ` - ${purchase.supplierName}` : ''}`,
-                        category: 'purchase'
+                        category: 'purchase',
+                        method: pmt.method === 'Efectivo' ? 'cash' : pmt.method === 'Transferencia' ? 'transfer' : 'cash'
                     }));
                     updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
                 }
@@ -395,7 +396,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         type: 'exit',
                         amount: purchase.total,
                         reason: `Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
-                        category: 'purchase'
+                        category: 'purchase',
+                        method: purchase.paymentMethod === 'cash' ? 'cash' : purchase.paymentMethod === 'transfer' ? 'transfer' : 'cash'
                     }));
                 } else if (purchase.paidAmount > 0) {
                     const moveRef = doc(collection(db, 'cashFlow'));
@@ -404,7 +406,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         type: 'exit',
                         amount: purchase.paidAmount,
                         reason: `Abono Inicial Compra #${purchaseId.slice(0, 8)} (${purchase.supplierName})`,
-                        category: 'purchase'
+                        category: 'purchase',
+                        method: 'cash'
                     }));
                 }
             }
@@ -489,7 +492,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         type: 'entry',
                         amount: pmt.method === 'Balance' ? 0 : pmt.amount,
                         reason: `Venta #${saleId.slice(0, 8)} (${pmt.method})${sale.customerName ? ` - ${sale.customerName}` : ''}`,
-                        category: 'sale'
+                        category: 'sale',
+                        method: pmt.method === 'Efectivo' ? 'cash' : pmt.method === 'Transferencia' ? 'transfer' : 'cash'
                     }));
                     updatedPayments.push({ ...pmt, cashMovementId: moveRef.id });
                 }
@@ -506,7 +510,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         type: 'entry',
                         amount: isBalancePayment ? 0 : sale.paidAmount,
                         reason: `Venta #${saleId.slice(0, 8)}${sale.customerName ? ` (${sale.customerName})` : ''}${isBalancePayment ? ' [PAGO CON SALDO]' : ''}`,
-                        category: 'sale'
+                        category: 'sale',
+                        method: sale.paymentMethod === 'cash' ? 'cash' : sale.paymentMethod === 'transfer' ? 'transfer' : 'cash'
                     }));
                 }
             }
@@ -1042,7 +1047,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 type: 'exit',
                 amount: amount,
                 reason: `Abono a Compra #${purchaseId.slice(0, 8)} (${method}) - ${purchase.supplierName}`,
-                category: 'purchase'
+                category: 'purchase',
+                method: method === 'Efectivo' ? 'cash' : method === 'Transferencia' ? 'transfer' : 'cash'
             }));
 
             batch.update(doc(db, 'purchases', purchaseId), {
@@ -1099,7 +1105,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 type: 'entry',
                 amount: method === 'balance' ? 0 : amount,
                 reason: `Abono a Venta #${saleId.slice(0, 8)} (${method})${method === 'balance' ? ' [SALDO]' : ''}${sale.customerName ? ` - ${sale.customerName}` : ''}`,
-                category: 'sale'
+                category: 'sale',
+                method: method === 'Efectivo' ? 'cash' : method === 'Transferencia' ? 'transfer' : 'cash'
             }));
 
             batch.update(doc(db, 'sales', saleId), {
@@ -1155,7 +1162,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 type: 'entry',
                 amount: amount,
                 reason: `Recaudo Saldo Antiguo: ${customer.name} (${method})`,
-                category: 'sale'
+                category: 'sale',
+                method: method === 'Efectivo' ? 'cash' : method === 'Transferencia' ? 'transfer' : 'cash'
             }));
 
             batch.update(doc(db, 'customers', customerId), {
@@ -1288,7 +1296,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 type: 'exit',
                 amount: expense.amount,
                 reason: `Gasto: ${expense.category} - ${expense.description}`,
-                category: 'expense'
+                category: 'expense',
+                method: 'cash'
             });
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'expenses'); }
     };

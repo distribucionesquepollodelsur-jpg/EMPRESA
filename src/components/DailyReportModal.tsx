@@ -49,10 +49,6 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         return isWithinInterval(date, { start, end });
     });
 
-    const openingBalance = cashFlow
-        .filter(m => new Date(m.date) < start)
-        .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
-
     // Detailed Categories for Sales
     const salesCash = todaySales.filter(s => s.paymentMethod === 'cash');
     const salesCredit = todaySales.filter(s => s.paymentMethod === 'credit');
@@ -76,15 +72,14 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
         .reduce((sum, m) => sum + m.amount, 0);
 
     const cashEntries = todayCashFlow
-        .filter(m => m.type === 'entry')
+        .filter(m => m.type === 'entry' && (m.method === 'cash' || !m.method))
         .reduce((sum, m) => sum + m.amount, 0);
     
     const cashExits = todayCashFlow
-        .filter(m => m.type === 'exit')
+        .filter(m => m.type === 'exit' && (m.method === 'cash' || !m.method))
         .reduce((sum, m) => sum + m.amount, 0);
 
-    const todayNetCash = cashEntries - cashExits;
-    const netCash = openingBalance + todayNetCash;
+    const netCash = cashEntries - cashExits;
 
     // UI helper stats
     const salesCashToday = totalSalesCash;
@@ -149,7 +144,6 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
             startY: finalY + 20,
             head: [['Concepto', 'Ingresos (+)', 'Egresos (-)']],
             body: [
-                ['Saldo de Apertura (Caja Anterior)', formatCurrency(openingBalance), ''],
                 ['Ventas y Abonos de Hoy', formatCurrency(cashEntries), ''],
                 ['Compras y Gastos de Hoy', '', formatCurrency(cashExits)],
                 ['SALDO DE CIERRE (TOTAL EN CAJA)', netCash >= 0 ? formatCurrency(netCash) : '', netCash < 0 ? formatCurrency(Math.abs(netCash)) : ''],
@@ -286,16 +280,11 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                             <div className="space-y-6">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 underline decoration-white/10">Base Anterior (Saldo Inicial)</p>
-                                    <h4 className="text-xl font-black text-blue-400">{formatCurrency(openingBalance)}</h4>
-                                </div>
-
-                                <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 underline decoration-white/10">EFECTIVO QUE DEBE HABER EN CAJA (CIERRE Hoy)</p>
                                     <h3 className={cn("text-4xl font-black tracking-tighter", netCash >= 0 ? "text-green-400" : "text-red-400")}>
                                         {formatCurrency(netCash)}
                                     </h3>
-                                    <p className="text-[9px] text-slate-500 font-bold mt-1">Suma de base inicial + movimientos del día.</p>
+                                    <p className="text-[9px] text-slate-500 font-bold mt-1">Este es el dinero físico que debe estar en el cajón hoy.</p>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">

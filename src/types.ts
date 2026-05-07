@@ -68,6 +68,7 @@ export interface CashMovement {
     amount: number;
     reason: string;
     category?: 'sale' | 'purchase' | 'advance' | 'loan' | 'manual' | 'expense';
+    method?: 'cash' | 'transfer' | 'credit' | 'mixed' | 'balance';
 }
 
 export interface Customer {
