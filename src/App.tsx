@@ -59,8 +59,11 @@ const MainContent: React.FC = () => {
     return <Login />;
   }
 
-  if (!hasEnteredBase && user?.role !== 'admin') {
-    return <BaseEntry />;
+  if (!hasEnteredBase) {
+    const superAdmins = ['alex.b19h@gmail.com', 'distribucionesquepollodelsur@gmail.com'];
+    if (!superAdmins.includes(user?.email || '')) {
+      return <BaseEntry />;
+    }
   }
 
   const renderContent = () => {

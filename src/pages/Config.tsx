@@ -1,9 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { Settings, Upload, Trash2, Save, RotateCcw, Building2, MapPin, Hash } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Settings, Upload, Trash2, Save, RotateCcw, Building2, MapPin, Hash, ShieldCheck, Printer, UserPlus, X } from 'lucide-react';
 
 const Config: React.FC = () => {
-    const { config, updateConfig, resetData } = useData();
+    const { config, updateConfig, resetData, employees } = useData();
+    const { user } = useAuth();
+    const isSuperAdmin = user?.email === 'alex.b19h@gmail.com' || user?.email === 'distribucionesquepollodelsur@gmail.com';
+
     const [companyName, setCompanyName] = useState(config.companyName);
     const [nit, setNit] = useState(config.nit);
     const [phone1, setPhone1] = useState(config.phone1 || '');
@@ -12,6 +16,12 @@ const Config: React.FC = () => {
     const [warehouseAddress, setWarehouseAddress] = useState(config.warehouseAddress || '');
     const [email, setEmail] = useState(config.email || '');
     const [manager, setManager] = useState(config.manager || '');
+    const [posMode, setPosMode] = useState(config.printSettings?.posMode || false);
+    const [autoPrint, setAutoPrint] = useState(config.printSettings?.autoPrint || false);
+    
+    // Permissions local state
+    const [permissions, setPermissions] = useState(config.permissions || {});
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,10 +44,36 @@ const Config: React.FC = () => {
             address,
             warehouseAddress,
             email,
-            manager
+            manager,
+            printSettings: { posMode, autoPrint },
+            permissions
         });
         alert('Configuración guardada exitosamente');
     };
+
+    const togglePermission = (email: string, permission: string) => {
+        setPermissions(prev => {
+            const userPerms = prev[email] || [];
+            if (userPerms.includes(permission)) {
+                return { ...prev, [email]: userPerms.filter(p => p !== permission) };
+            } else {
+                return { ...prev, [email]: [...userPerms, permission] };
+            }
+        });
+    };
+
+    const availablePermissions = [
+        { id: 'inventory', label: 'Gestionar Inventario' },
+        { id: 'sales', label: 'Gestionar Ventas' },
+        { id: 'purchases', label: 'Gestionar Compras' },
+        { id: 'customers', label: 'Gestionar Clientes' },
+        { id: 'suppliers', label: 'Gestionar Proveedores' },
+        { id: 'cashflow', label: 'Gestionar Caja / Gastos' },
+        { id: 'employees', label: 'Gestionar Empleados' },
+        { id: 'processing', label: 'Gestionar Despresaje' },
+        { id: 'assets', label: 'Gestionar Activos' },
+        { id: 'reports', label: 'Ver Reportes / Balances' }
+    ];
 
     return (
         <div className="max-w-4xl space-y-8">
@@ -210,6 +246,90 @@ const Config: React.FC = () => {
                             </button>
                         </div>
                     </div>
+
+                    {isSuperAdmin && (
+                        <>
+                            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                    <Printer size={18} /> Configuración de Impresión
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black uppercase tracking-tight">Impresora Térmica POS</span>
+                                            <span className="text-[10px] text-slate-400 font-bold">Activa el formato de 80mm para facturas.</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => setPosMode(!posMode)}
+                                            className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${posMode ? 'bg-orange-500 justify-end' : 'bg-slate-300 justify-start'}`}
+                                        >
+                                            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black uppercase tracking-tight">Impresión Automática</span>
+                                            <span className="text-[10px] text-slate-400 font-bold">Lanza el cuadro de impresión al guardar.</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => setAutoPrint(!autoPrint)}
+                                            className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${autoPrint ? 'bg-orange-500 justify-end' : 'bg-slate-300 justify-start'}`}
+                                        >
+                                            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                                    <ShieldCheck size={18} /> Permisos de Administradores
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium">Controla qué pueden hacer otros administradores. Tu cuenta (Super Admin) siempre tiene acceso total.</p>
+                                
+                                <div className="space-y-4">
+                                    {employees.filter(e => e.role === 'admin' && e.email !== user?.email).map(admin => (
+                                        <div key={admin.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-[10px] font-black uppercase tracking-tighter overflow-hidden">
+                                                        {admin.photo ? <img src={admin.photo} className="w-full h-full object-cover" /> : admin.name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black text-slate-900 uppercase">{admin.name}</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold">{admin.email}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {availablePermissions.map(p => {
+                                                    const isGranted = (permissions[admin.email || ''] || []).includes(p.id);
+                                                    return (
+                                                        <button 
+                                                            key={p.id}
+                                                            onClick={() => togglePermission(admin.email || '', p.id)}
+                                                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                                isGranted 
+                                                                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                                            }`}
+                                                        >
+                                                            {p.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {employees.filter(e => e.role === 'admin' && e.email !== user?.email).length === 0 && (
+                                        <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-2xl text-slate-300 text-xs font-bold uppercase tracking-widest italic">
+                                            No hay otros administradores registrados.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

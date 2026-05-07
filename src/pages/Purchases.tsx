@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2 } from 'lucide-react';
+import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2, Printer, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { PurchaseItem, Purchase } from '../types';
@@ -34,6 +34,8 @@ const Purchases: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [excessToBalance, setExcessToBalance] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([]);
+    const [showPrintBanner, setShowPrintBanner] = useState(false);
+    const [lastPurchase, setLastPurchase] = useState<Purchase | null>(null);
 
     const { addSupplier } = useData();
 
@@ -135,7 +137,7 @@ const Purchases: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            await addPurchase({
+            const purchaseData: any = {
                 supplierId: supplierId || undefined,
                 supplierName: finalSupplierName,
                 supplierPhone: finalSupplierPhone,
@@ -146,22 +148,24 @@ const Purchases: React.FC = () => {
                 total,
                 paidAmount: finalPaid,
                 payments: payments
-            }, excessToBalance);
+            };
 
-            generatePurchaseInvoice({
+            await addPurchase(purchaseData, excessToBalance);
+
+            const completePurchase = {
+                ...purchaseData,
                 id: 'NUEVA',
                 purchaseNumber: nextPurchaseNumber,
-                supplierName: finalSupplierName,
-                supplierPhone: finalSupplierPhone,
-                buyerName,
-                buyerPhone,
-                paymentMethod,
-                items,
-                total,
-                paidAmount: finalPaid,
                 date: new Date().toISOString(),
                 paymentStatus: finalPaid >= total ? 'paid' : 'pending'
-            });
+            };
+
+            if (config.printSettings?.posMode) {
+                setLastPurchase(completePurchase);
+                setShowPrintBanner(true);
+            } else if (config.printSettings?.autoPrint) {
+                generatePurchaseInvoice(completePurchase);
+            }
 
             resetForm();
         } catch (error) {
@@ -320,6 +324,37 @@ const Purchases: React.FC = () => {
                     <Plus size={20} /> Registrar Compra
                 </button>
             </header>
+
+            {showPrintBanner && lastPurchase && (
+                <div className="bg-orange-500 text-white p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-500/20 animate-in fade-in zoom-in duration-300">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <Printer size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest leading-none mb-1">Impresora POS Detectada</p>
+                            <p className="text-[10px] font-bold opacity-90">¿Deseas imprimir la factura de compra C-{(lastPurchase.purchaseNumber || 0).toString().padStart(6, '0')}?</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => {
+                                generatePurchaseInvoice(lastPurchase);
+                                setShowPrintBanner(false);
+                            }}
+                            className="px-6 py-2 bg-white text-orange-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-50 transition-all"
+                        >
+                            Imprimir Ahora
+                        </button>
+                        <button 
+                            onClick={() => setShowPrintBanner(false)}
+                            className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">

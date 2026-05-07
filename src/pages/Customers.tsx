@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins, AlertCircle } from 'lucide-react';
+import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins, AlertCircle, Printer } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Customer, Sale } from '../types';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, format } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Customers: React.FC = () => {
     const { 
         customers, sales, addCustomer, updateCustomer, 
         updateCustomerBalance, resetCustomerBalance,
         updateCustomerBalanceManually,
-        deleteCustomer, addSalePayment, deleteSalePayment, updateSale 
+        deleteCustomer, addSalePayment, deleteSalePayment, updateSale, config
     } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
@@ -40,6 +42,25 @@ const Customers: React.FC = () => {
     const [initialDebt, setInitialDebt] = useState<number>(0);
     const [initialDebtReason, setInitialDebtReason] = useState('');
     const [initialDebtDueDate, setInitialDebtDueDate] = useState<string>('');
+    const [priceOverrides, setPriceOverrides] = useState<{[productId: string]: number}>({});
+
+    // Price override helpers
+    const { products } = useData();
+    const [tempProductId, setTempProductId] = useState('');
+    const [tempPrice, setTempPrice] = useState<number>(0);
+
+    const addOverride = () => {
+        if (!tempProductId || tempPrice <= 0) return;
+        setPriceOverrides(prev => ({ ...prev, [tempProductId]: tempPrice }));
+        setTempProductId('');
+        setTempPrice(0);
+    };
+
+    const removeOverride = (id: string) => {
+        const next = { ...priceOverrides };
+        delete next[id];
+        setPriceOverrides(next);
+    };
 
     // Payment state
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -53,6 +74,92 @@ const Customers: React.FC = () => {
     // Balance logic
     const [balanceAmount, setBalanceAmount] = useState<number>(0);
     const [balanceReason, setBalanceReason] = useState('');
+
+    const generateStatement = (customer: Customer) => {
+        const doc = new jsPDF();
+        const margin = 20;
+        let y = 20;
+
+        // Header
+        const configLogo = config.logo;
+        if (configLogo) {
+            try {
+                doc.addImage(configLogo, 'PNG', margin, y, 20, 20);
+                y += 25;
+            } catch (e) {}
+        }
+
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ESTADO DE CUENTA CLIENTE', 105, y - 5, { align: 'center' });
+        
+        y += 5;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(config.companyName.toUpperCase(), 105, y, { align: 'center' });
+        
+        y += 15;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INFORMACIÓN FISCAL:', margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Nombre: ${customer.name}`, margin, y);
+        y += 5;
+        doc.text(`Teléfono: ${customer.phone}`, margin, y);
+        if (customer.nit) {
+            y += 5;
+            doc.text(`NIT/CC: ${customer.nit}`, margin, y);
+        }
+        if (customer.address) {
+            y += 5;
+            doc.text(`Dirección: ${customer.address}`, margin, y);
+        }
+        
+        y += 15;
+        doc.setFont('helvetica', 'bold');
+        doc.text('DETALLE DE DOCUMENTOS PENDIENTES', margin, y);
+        y += 5;
+
+        // Using getCustomerSales to get all relevant sales
+        const unpaidSales = sales.filter(s => s.customerId === customer.id && (s.total - (s.paidAmount || 0)) > 1);
+        
+        const tableData = unpaidSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(sale => [
+            formatDate(sale.date),
+            `V-${(sale.saleNumber || 0).toString().padStart(6, '0')}`,
+            formatCurrency(sale.total),
+            formatCurrency(sale.paidAmount || 0),
+            formatCurrency(sale.total - (sale.paidAmount || 0))
+        ]);
+
+        if (customer.initialDebt > 0) {
+            tableData.unshift([
+                customer.initialDebtDate ? formatDate(customer.initialDebtDate) : 'Inicial',
+                'SALDO INICIAL',
+                formatCurrency(customer.initialDebt),
+                formatCurrency(0),
+                formatCurrency(customer.initialDebt)
+            ]);
+        }
+
+        (doc as any).autoTable({
+            startY: y,
+            head: [['Fecha', 'Referencia', 'Total Facturado', 'Abonado', 'Saldo Pendiente']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillStyle: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+            foot: [['', '', '', 'TOTAL CARTERA:', formatCurrency(getCustomerBalance(customer.id))]],
+            footStyles: { fillStyle: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' }
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY + 20;
+        doc.setFontSize(8);
+        doc.text('Firma del Cliente _______________________', margin, finalY);
+        doc.text('Fecha de Impresión: ' + format(new Date(), 'dd/MM/yyyy HH:mm'), 105, finalY + 10, { align: 'center' });
+
+        doc.save(`Estado_Cuenta_${customer.name.replace(/\s+/g, '_')}.pdf`);
+    };
 
     const handleBalanceSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -115,7 +222,8 @@ const Customers: React.FC = () => {
             initialDebt: isAdmin ? initialDebt : (editingCustomer ? editingCustomer.initialDebt : initialDebt),
             initialDebtDueDate: isAdmin ? initialDebtDueDate : (editingCustomer ? editingCustomer.initialDebtDueDate : initialDebtDueDate),
             initialDebtReason: isAdmin ? initialDebtReason : (editingCustomer ? editingCustomer.initialDebtReason : initialDebtReason),
-            initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString()
+            initialDebtDate: editingCustomer ? editingCustomer.initialDebtDate : new Date().toISOString(),
+            priceOverrides
         };
 
         try {
@@ -182,6 +290,7 @@ const Customers: React.FC = () => {
             setInitialDebt(customer.initialDebt || 0);
             setInitialDebtReason(customer.initialDebtReason || '');
             setInitialDebtDueDate(customer.initialDebtDueDate || '');
+            setPriceOverrides(customer.priceOverrides || {});
         } else {
             setEditingCustomer(null);
             setName('');
@@ -190,6 +299,7 @@ const Customers: React.FC = () => {
             setInitialDebt(0);
             setInitialDebtReason('');
             setInitialDebtDueDate('');
+            setPriceOverrides({});
         }
         setIsModalOpen(true);
     };
@@ -377,9 +487,18 @@ const Customers: React.FC = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-3xl font-black tracking-tighter uppercase">{selectedCustomer.name}</h3>
-                                        <p className="text-blue-100 font-bold flex items-center gap-2 text-sm uppercase tracking-widest">
-                                            <Phone size={14} /> {selectedCustomer.phone}
-                                        </p>
+                                        <div className="flex items-center gap-4">
+                                            <p className="text-blue-100 font-bold flex items-center gap-2 text-sm uppercase tracking-widest">
+                                                <Phone size={14} /> {selectedCustomer.phone}
+                                            </p>
+                                            <button 
+                                                onClick={() => generateStatement(selectedCustomer)}
+                                                className="flex items-center gap-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                                title="Descargar Estado de Cuenta Completo"
+                                            >
+                                                <Printer size={12} /> Imprimir Estado
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <button onClick={() => setIsDetailModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
@@ -855,6 +974,65 @@ const Customers: React.FC = () => {
                                     <p className="text-[8px] text-slate-400 font-bold uppercase">
                                         {editingCustomer ? 'Modifique este valor si desea corregir el saldo inicial registrado para este cliente.' : 'Se registrará como un saldo pendiente al crear el cliente.'}
                                     </p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <Coins size={18} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Precios Especiales por Producto</span>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={tempProductId}
+                                            onChange={e => setTempProductId(e.target.value)}
+                                            className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                                        >
+                                            <option value="">Seleccionar Producto...</option>
+                                            {products.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price)})</option>
+                                            ))}
+                                        </select>
+                                        <input 
+                                            type="number"
+                                            placeholder="Precio"
+                                            value={tempPrice || ''}
+                                            onChange={e => setTempPrice(parseFloat(e.target.value))}
+                                            className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={addOverride}
+                                            className="p-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {Object.entries(priceOverrides).map(([pid, price]) => {
+                                            const prod = products.find(p => p.id === pid);
+                                            return (
+                                                <div key={pid} className="flex items-center justify-between bg-white p-2 px-3 rounded-xl border border-slate-100 shadow-sm">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-black text-slate-900 uppercase">{prod?.name || 'Producto Desconocido'}</span>
+                                                        <span className="text-[8px] text-slate-400 font-bold">Standard: {formatCurrency(prod?.price || 0)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-xs font-black text-blue-600">{formatCurrency(price as number)}</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => removeOverride(pid)}
+                                                            className="text-red-400 hover:text-red-600"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
 

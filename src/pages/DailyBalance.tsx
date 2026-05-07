@@ -42,6 +42,11 @@ const DailyBalance: React.FC = () => {
         const todayExpenses = expenses.filter(filterByDate);
         const todayCashMovements = cashFlow.filter(filterByDate);
 
+        // Calculate Opening Balance (Everything before today - ONLY CASH)
+        const openingBalance = cashFlow
+            .filter(m => new Date(m.date) < start && (m.method === 'cash' || !m.method))
+            .reduce((sum, m) => m.type === 'entry' ? sum + m.amount : sum - m.amount, 0);
+
         // Calculate Total Income (Cash + Transfers)
         const totalIncome = todayCashMovements.filter(m => m.type === 'entry').reduce((sum, m) => sum + m.amount, 0);
         const totalOutcome = todayCashMovements.filter(m => m.type === 'exit').reduce((sum, m) => sum + m.amount, 0);
@@ -112,11 +117,13 @@ const DailyBalance: React.FC = () => {
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return {
+            openingBalance,
             totalIncome,
             totalOutcome,
             cashEntries,
             cashExits,
-            netCash: cashEntries - cashExits,
+            netCash: openingBalance + cashEntries - cashExits,
+            todayNetCash: cashEntries - cashExits,
             totalSalesVolume,
             totalPurchasesVolume,
             totalExpensesVolume,
@@ -141,11 +148,12 @@ const DailyBalance: React.FC = () => {
 
         // Summary row
         const summaryData = [
-            ['Total Ingresos (Bruto)', formatCurrency(stats.totalIncome)],
-            ['Total Egresos (Todos)', formatCurrency(stats.totalOutcome)],
-            ['Efectivo Recibido (Caja)', formatCurrency(stats.cashEntries)],
-            ['Efectivo Entregado (Caja)', formatCurrency(stats.cashExits)],
-            ['EFECTIVO QUE DEBE HABER EN CAJA', formatCurrency(stats.netCash)],
+            ['Saldo / Base del Día Anterior', formatCurrency(stats.openingBalance)],
+            ['Total Ingresos de Hoy (Efectivo + Bancos)', formatCurrency(stats.totalIncome)],
+            ['Total Egresos de Hoy (Todos)', formatCurrency(stats.totalOutcome)],
+            ['Efectivo Recibido en Caja Hoy', formatCurrency(stats.cashEntries)],
+            ['Efectivo Entregado en Caja Hoy', formatCurrency(stats.cashExits)],
+            ['SALDO FINAL EN CAJA (DEBE HABER)', formatCurrency(stats.netCash)],
             ['Volumen de Ventas Facturadas Hoy', formatCurrency(stats.totalSalesVolume)]
         ];
 
@@ -222,6 +230,19 @@ const DailyBalance: React.FC = () => {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <History size={20} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo Anterior</span>
+                    </div>
+                    <div>
+                        <h4 className="text-2xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-tight mt-1">Base del día anterior</p>
+                    </div>
+                </div>
+
                 <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">

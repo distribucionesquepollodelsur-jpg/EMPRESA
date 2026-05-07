@@ -1,21 +1,50 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, ShoppingCart, Search, FileText, CheckCircle2, Edit2, DollarSign, CreditCard, User, Coins } from 'lucide-react';
+import { 
+    Plus, 
+    Trash2, 
+    ShoppingCart, 
+    Search, 
+    FileText, 
+    CheckCircle2, 
+    Edit2, 
+    DollarSign, 
+    CreditCard, 
+    User, 
+    Coins,
+    Printer,
+    X
+} from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { format } from 'date-fns';
 import { Product, SaleItem, Sale } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const ProductRow: React.FC<{ product: Product; addToCart: (p: Product, q: number, pr: number) => void }> = ({ product, addToCart }) => {
-    const [tempPrice, setTempPrice] = useState<number>(product.price);
+const ProductRow: React.FC<{ 
+    product: Product; 
+    addToCart: (p: Product, q: number, pr: number) => void;
+    customerPrice?: number;
+}> = ({ product, addToCart, customerPrice }) => {
+    const initialPrice = customerPrice || product.price;
+    const [tempPrice, setTempPrice] = useState<number>(initialPrice);
     const [tempQty, setTempQty] = useState<number>(1);
+
+    // Sync tempPrice if customerPrice changes
+    React.useEffect(() => {
+        setTempPrice(customerPrice || product.price);
+    }, [customerPrice, product.price]);
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-500/30 hover:bg-orange-50/20 transition-all group gap-4">
             <div className="flex-1">
-                <h4 className="font-bold text-slate-900 capitalize">{product.name}</h4>
+                <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 capitalize">{product.name}</h4>
+                    {customerPrice && (
+                        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Precio Especial</span>
+                    )}
+                </div>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sugerido: {formatCurrency(product.price)} · Stock: {product.stock} {product.unit}</p>
             </div>
             
@@ -126,6 +155,7 @@ const Sales: React.FC = () => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+    const [showPosBanner, setShowPosBanner] = useState(false);
     const [lastSaleData, setLastSaleData] = useState<{
         items: SaleItem[];
         total: number;
@@ -321,10 +351,19 @@ const Sales: React.FC = () => {
             setExcessToBalance(false);
             setPaymentMethod('cash');
             setIsModalOpen(false);
-            setShowSuccessBanner(true);
+            if (config.printSettings?.posMode) {
+                setShowPosBanner(true);
+            } else if (config.printSettings?.autoPrint) {
+                generateInvoice(saleItems, saleTotal, sNum, cName, cPhone, sName, 'print', totalDiscount);
+            } else {
+                setShowSuccessBanner(true);
+            }
             
-            // Auto-hide banner after 10 seconds if not clicked
-            setTimeout(() => setShowSuccessBanner(false), 10000);
+            // Auto-hide banners after 15 seconds
+            setTimeout(() => {
+                setShowSuccessBanner(false);
+                setShowPosBanner(false);
+            }, 15000);
         } catch (error) {
             console.error("Error confirming sale:", error);
             alert("Error al procesar la venta. Verifique su conexión.");
@@ -369,6 +408,37 @@ const Sales: React.FC = () => {
 
     return (
         <div className="space-y-6 relative">
+            {showPosBanner && lastSaleData && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-orange-500 text-white p-6 rounded-3xl shadow-2xl border border-orange-400 flex flex-col md:flex-row items-center gap-6">
+                        <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-2xl shrink-0">
+                            <Printer size={28} />
+                        </div>
+                        <div className="flex-1 text-center md:text-left">
+                            <h4 className="text-lg font-black uppercase tracking-tight">Impresora POS Detectada</h4>
+                            <p className="text-xs font-bold opacity-90">¿Desea imprimir la factura V-{(lastSaleData.saleNumber || 0).toString().padStart(6, '0')} para {lastSaleData.customerName}?</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => {
+                                    generateInvoice(lastSaleData.items, lastSaleData.total, lastSaleData.saleNumber, lastSaleData.customerName, lastSaleData.customerPhone, lastSaleData.sellerName, 'print', lastSaleData.totalDiscount);
+                                    setShowPosBanner(false);
+                                }}
+                                className="px-6 py-2 bg-white text-orange-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                            >
+                                Imprimir Factura
+                            </button>
+                            <button 
+                                onClick={() => setShowPosBanner(false)}
+                                className="p-2 text-white/60 hover:text-white transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showSuccessBanner && lastSaleData && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl border border-slate-700 flex flex-col md:flex-row items-center gap-6">
@@ -534,9 +604,17 @@ const Sales: React.FC = () => {
                                 </div>
                                 
                                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                                    {filteredProducts.map(p => (
-                                        <ProductRow key={p.id} product={p} addToCart={addToCart} />
-                                    ))}
+                                    {filteredProducts.map(p => {
+                                        const customerPrice = selectedCustomerData?.priceOverrides?.[p.id];
+                                        return (
+                                            <ProductRow 
+                                                key={p.id} 
+                                                product={p} 
+                                                addToCart={addToCart} 
+                                                customerPrice={customerPrice}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             </div>
 

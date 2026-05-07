@@ -83,6 +83,7 @@ export interface Customer {
     initialDebtReason?: string;
     initialDebtPayments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
     balance?: number;
+    priceOverrides?: { [productId: string]: number };
 }
 
 export interface Employee {
@@ -190,6 +191,21 @@ export interface AppConfig {
     purchaseCounter: number;
     lastSequenceDate: string;
     lastInventoryCheckDate?: string;
+    permissions?: {
+        [email: string]: {
+            canEditProducts: boolean;
+            canDeleteSales: boolean;
+            canSeeStats: boolean;
+            canManageExpenses: boolean;
+            canManageEmployees: boolean;
+            canResetInventory: boolean;
+            canEditPrices: boolean;
+        }
+    };
+    printSettings?: {
+        paperWidth: number; // in mm, e.g., 80 or 58
+        margin: number;
+    };
 }
 
 export interface InventoryAdjustment {

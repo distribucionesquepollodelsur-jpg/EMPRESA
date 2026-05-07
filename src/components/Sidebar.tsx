@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 
 interface SidebarProps {
     activeTab: string;
@@ -30,6 +31,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     const { logout, user } = useAuth();
+    const { config } = useData();
     const [isOpen, setIsOpen] = React.useState(false);
     const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
 
@@ -82,10 +84,40 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     ];
 
     const filteredMenuItems = menuItems.filter(item => {
+        const superAdmins = ['alex.b19h@gmail.com', 'distribucionesquepollodelsur@gmail.com'];
+        if (superAdmins.includes(user?.email || '')) return true;
+
+        if (user?.role === 'admin') {
+            const userPerms = (config?.permissions || {})[user.email || ''] || [];
+            
+            const permIdMap: {[key: string]: string} = {
+                'inventory': 'inventory',
+                'sales': 'sales',
+                'purchases': 'purchases',
+                'customers': 'customers',
+                'suppliers': 'suppliers',
+                'cash': 'cashflow',
+                'expenses': 'cashflow',
+                'employees': 'employees',
+                'processing': 'processing',
+                'despresaje': 'processing',
+                'assets': 'assets',
+                'loans': 'cashflow',
+                'payroll': 'reports',
+                'reports': 'reports',
+                'daily-balance': 'reports',
+                'config': 'config_hidden' // Only superadmins should see config usually, or if assigned
+            };
+
+            const requiredPerm = permIdMap[item.id];
+            if (!requiredPerm) return true; 
+
+            return userPerms.includes(requiredPerm);
+        }
+
         if (!item.adminOnly) return true;
-        if (user?.role === 'admin') return true;
         
-        // Special case for Martha Quintero who can manage employees/attendance
+        // Special legacy case
         if (item.id === 'employees' && user?.name.toLowerCase().includes('martha quintero')) {
             return true;
         }

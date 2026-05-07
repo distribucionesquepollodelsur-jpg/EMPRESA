@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Plus, Phone, Edit2, Trash2, Search, User, Wallet, History, ChevronRight, X, CreditCard, Calendar } from 'lucide-react';
+import { Truck, Plus, Phone, Edit2, Trash2, Search, User, Wallet, History, ChevronRight, X, CreditCard, Calendar, Printer } from 'lucide-react';
 import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
+import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Suppliers: React.FC = () => {
-    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase, resetSupplierBalance, updateSupplierBalanceManually } = useData();
+    const { suppliers, purchases, addSupplier, updateSupplier, deleteSupplier, addPurchasePayment, deletePurchasePayment, updatePurchase, resetSupplierBalance, updateSupplierBalanceManually, config } = useData();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || [
         'distribucionesquepollodelsur@gmail.com',
@@ -161,6 +164,87 @@ const Suppliers: React.FC = () => {
         return initial + regularBalance - saldoInicialPayments;
     };
 
+    const generateSupplierStatement = (supplier: Supplier) => {
+        const doc = new jsPDF();
+        const margin = 20;
+        let y = 20;
+
+        // Header
+        const configLogo = config.logo;
+        if (configLogo) {
+            try {
+                doc.addImage(configLogo, 'PNG', margin, y, 20, 20);
+                y += 25;
+            } catch (e) {}
+        }
+
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ESTADO DE CUENTA PROVEEDOR', 105, y - 5, { align: 'center' });
+        
+        y += 5;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(config.companyName.toUpperCase(), 105, y, { align: 'center' });
+        
+        y += 15;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DATOS DEL PROVEEDOR:', margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Proveedor: ${supplier.name}`, margin, y);
+        y += 5;
+        doc.text(`Teléfono: ${supplier.phone}`, margin, y);
+        if (supplier.nit) {
+            y += 5;
+            doc.text(`NIT/CC: ${supplier.nit}`, margin, y);
+        }
+        
+        y += 15;
+        doc.setFont('helvetica', 'bold');
+        doc.text('CUENTAS POR PAGAR PENDIENTES', margin, y);
+        y += 5;
+
+        const unpaidPurchases = purchases.filter(p => p.supplierId === supplier.id && (p.total - (p.paidAmount || 0)) > 1);
+        
+        const tableData = unpaidPurchases.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(p => [
+            formatDate(p.date),
+            `C-${(p.purchaseNumber || 0).toString().padStart(6, '0')}`,
+            formatCurrency(p.total),
+            formatCurrency(p.paidAmount || 0),
+            formatCurrency(p.total - (p.paidAmount || 0))
+        ]);
+
+        if (supplier.initialDebt > 0) {
+            tableData.unshift([
+                supplier.initialDebtDate ? formatDate(supplier.initialDebtDate) : 'Inicial',
+                'SALDO INICIAL',
+                formatCurrency(supplier.initialDebt),
+                formatCurrency(0),
+                formatCurrency(supplier.initialDebt)
+            ]);
+        }
+
+        (doc as any).autoTable({
+            startY: y, 
+            headStyles: { fillStyle: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+            head: [['Fecha', 'Referencia', 'Total Facturado', 'Abonado', 'Saldo por Pagar']],
+            body: tableData,
+            theme: 'grid',
+            foot: [['', '', '', 'TOTAL DEUDA:', formatCurrency(getSupplierBalance(supplier.id, supplier.name))]],
+            footStyles: { fillStyle: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold' }
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY + 20;
+        doc.setFontSize(8);
+        doc.text('Firma Autorizada _______________________', margin, finalY);
+        doc.text('Fecha de Impresión: ' + format(new Date(), 'dd/MM/yyyy HH:mm'), 105, finalY + 10, { align: 'center' });
+
+        doc.save(`Estado_Cuenta_Proveedor_${supplier.name.replace(/\s+/g, '_')}.pdf`);
+    };
+
     const filteredSuppliers = suppliers.filter(s => 
         s.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -215,16 +299,28 @@ const Suppliers: React.FC = () => {
                                 <div className="p-3 bg-slate-50 text-slate-400 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors">
                                     <Truck size={24} />
                                 </div>
-                                {isAdmin && (
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={(e) => handleEdit(s, e)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-slate-100">
-                                            <Edit2 size={14} />
-                                        </button>
-                                        <button onClick={(e) => handleDelete(s.id, e)} className="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white rounded-lg border border-slate-100">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            generateSupplierStatement(s);
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-slate-100"
+                                        title="Imprimir Estado"
+                                    >
+                                        <Printer size={14} />
+                                    </button>
+                                    {isAdmin && (
+                                        <>
+                                            <button onClick={(e) => handleEdit(s, e)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-white rounded-lg border border-slate-100">
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button onClick={(e) => handleDelete(s.id, e)} className="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white rounded-lg border border-slate-100">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                             
                             <div className="space-y-1">
@@ -273,9 +369,18 @@ const Suppliers: React.FC = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-3xl font-black tracking-tighter uppercase">{selectedSupplier.name}</h3>
-                                        <p className="text-slate-400 font-bold flex items-center gap-2">
-                                            <Phone size={14} /> {selectedSupplier.phone}
-                                        </p>
+                                        <div className="flex items-center gap-4">
+                                            <p className="text-slate-400 font-bold flex items-center gap-2">
+                                                <Phone size={14} /> {selectedSupplier.phone}
+                                            </p>
+                                            <button 
+                                                onClick={() => generateSupplierStatement(selectedSupplier)}
+                                                className="flex items-center gap-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                                title="Descargar Estado de Cuenta Completo"
+                                            >
+                                                <Printer size={12} /> Imprimir Estado
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedSupplier(null)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
