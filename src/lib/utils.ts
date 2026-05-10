@@ -13,12 +13,29 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: Date | string | number): string {
-  return new Intl.DateTimeFormat('es-ES', {
+export function formatDate(date: Date | string | number, includeTime = true): string {
+  if (!date) return '-';
+  
+  let finalDate: Date;
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    finalDate = new Date(`${date}T00:00:00`);
+  } else {
+    finalDate = new Date(date);
+  }
+
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(date));
+    day: 'numeric'
+  };
+
+  if (includeTime && typeof date === 'string' && date.length > 10) {
+    options.hour = '2-digit';
+    options.minute = '2-digit';
+  } else if (includeTime && date instanceof Date) {
+    options.hour = '2-digit';
+    options.minute = '2-digit';
+  }
+
+  return new Intl.DateTimeFormat('es-ES', options).format(finalDate);
 }
