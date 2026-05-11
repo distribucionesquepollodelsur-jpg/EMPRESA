@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 import { Package, Plus, Search, Edit2, Trash2, ArrowUpRight, ArrowDownRight, FileText, History, CheckCircle, Clock } from 'lucide-react';
 import { formatCurrency, cn, formatDate } from '../lib/utils';
 import { Product, Unit } from '../types';
@@ -30,9 +31,10 @@ const Inventory: React.FC = () => {
     const [initialStock, setInitialStock] = useState(0);
     const [adjustmentReason, setAdjustmentReason] = useState('');
 
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProducts = useFuzzySearch(products, searchTerm, {
+        keys: ['name', 'category'],
+        threshold: 0.3
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 import { Plus, ShoppingCart, Search, FileText, CheckCircle2, User, Phone, Wallet, Trash2, Printer, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -31,7 +32,13 @@ const Purchases: React.FC = () => {
     const [cashAmount, setCashAmount] = useState<number>(0);
     const [transferAmount, setTransferAmount] = useState<number>(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const filteredPurchases = useFuzzySearch(purchases, purchaseSearchTerm, {
+        keys: ['supplierName', 'id', 'purchaseNumber'],
+        threshold: 0.3
+    });
     const [excessToBalance, setExcessToBalance] = useState(false);
     const [items, setItems] = useState<PurchaseItem[]>([]);
     const [showPrintBanner, setShowPrintBanner] = useState(false);
@@ -306,16 +313,26 @@ const Purchases: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProducts = useFuzzySearch(products, searchTerm, {
+        keys: ['name', 'category'],
+        threshold: 0.3
+    });
 
     return (
         <div className="space-y-6">
-            <header className="flex justify-between items-center">
-                <div>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold text-slate-900">Compras (Gastos)</h1>
-                    <p className="text-slate-500 text-sm">Registro de mercancía y proveedores</p>
+                    <div className="relative max-w-sm mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar compra (Proveedor, #)..."
+                            value={purchaseSearchTerm}
+                            onChange={e => setPurchaseSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all"
+                        />
+                    </div>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
@@ -370,7 +387,7 @@ const Purchases: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {[...purchases].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
+                            {[...filteredPurchases].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
                                 <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-8 py-5">
                                         <div className="flex flex-col">
@@ -416,7 +433,7 @@ const Purchases: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {purchases.length === 0 && (
+                            {filteredPurchases.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="py-20 text-center text-slate-300 italic">No hay compras registradas</td>
                                 </tr>

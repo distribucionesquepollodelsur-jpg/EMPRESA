@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench, FileText, Upload } from 'lucide-react';
+import { Truck, Users, Plus, Calendar, DollarSign, UserCheck, ShieldAlert, BadgeInfo, Trash2, Clock, Coffee, Utensils, AlertCircle, CheckCircle2, LogOut, Eye, EyeOff, Wrench, FileText, Upload, Search } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Employee, Shift, Dotation } from '../types';
 import { format, isAfter, setHours, setMinutes, parseISO } from 'date-fns';
 import { GoogleGenAI } from '@google/genai';
 
 import { useData } from '../context/DataContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 
 const TimeButton: React.FC<{ label: string, icon: React.ReactNode, time?: string, onClick: () => void, disabled?: boolean }> = ({ label, icon, time, onClick, disabled }) => (
     <button 
@@ -86,6 +87,12 @@ const Employees: React.FC = () => {
     const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [advanceError, setAdvanceError] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredEmployees = useFuzzySearch(employees, searchTerm, {
+        keys: ['name', 'email', 'position', 'phone', 'address'],
+        threshold: 0.3
+    });
 
     // Reprimand inputs
     const [reprimandReason, setReprimandReason] = useState('');
@@ -448,8 +455,20 @@ const Employees: React.FC = () => {
             </header>
 
             {activeView === 'roster' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {employees.map(emp => (
+                <div className="space-y-6">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar empleado por nombre, cargo, email..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 outline-none transition-all font-medium shadow-sm"
+                        />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {filteredEmployees.map(emp => (
                     <div key={emp.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                         <div className="p-8 border-b border-slate-50 flex justify-between items-start">
                             <div className="flex gap-4">
@@ -688,13 +707,14 @@ const Employees: React.FC = () => {
                     </div>
                 ))}
 
-                {employees.length === 0 && (
+                {filteredEmployees.length === 0 && (
                     <div className="lg:col-span-2 py-32 flex flex-col items-center justify-center text-slate-300 gap-4 border-2 border-dashed border-slate-100 rounded-[40px]">
                         <Users size={64} strokeWidth={1} />
                         <p className="font-bold uppercase tracking-widest italic">No hay empleados registrados</p>
                     </div>
                 )}
-            </div>
+                    </div>
+                </div>
             ) : activeView === 'attendance' ? (
                 <div className="space-y-6">
                     <div className="bg-orange-50 border border-orange-100 p-6 rounded-3xl flex gap-4">

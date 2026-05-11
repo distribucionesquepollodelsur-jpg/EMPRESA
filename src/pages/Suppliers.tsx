@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 import { Truck, Plus, Phone, Edit2, Trash2, Search, User, Wallet, History, ChevronRight, X, CreditCard, Calendar, Printer } from 'lucide-react';
 import { Supplier, Purchase } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -309,9 +310,10 @@ const Suppliers: React.FC = () => {
         doc.save(`Estado_Cuenta_Proveedor_${supplier.name.replace(/\s+/g, '_')}.pdf`);
     };
 
-    const filteredSuppliers = suppliers.filter(s => 
-        s.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSuppliers = useFuzzySearch(suppliers, searchTerm, {
+        keys: ['name', 'phone', 'nit'],
+        threshold: 0.3
+    });
 
     const getSupplierPurchases = (s: Supplier) => {
         return purchases

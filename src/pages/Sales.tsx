@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 import { 
     Plus, 
     Trash2, 
@@ -96,6 +97,12 @@ const Sales: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [salesSearchTerm, setSalesSearchTerm] = useState('');
+
+    const filteredSales = useFuzzySearch(sales, salesSearchTerm, {
+        keys: ['customerName', 'id', 'saleNumber'],
+        threshold: 0.3
+    });
     
     // Cart management
     const [cart, setCart] = useState<SaleItem[]>([]);
@@ -418,9 +425,10 @@ const Sales: React.FC = () => {
         setSelectedSale(null);
     };
 
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredProducts = useFuzzySearch(products, searchTerm, {
+        keys: ['name', 'category'],
+        threshold: 0.3
+    });
 
     return (
         <div className="space-y-6 relative">
@@ -491,10 +499,19 @@ const Sales: React.FC = () => {
                     </div>
                 </div>
             )}
-            <header className="flex justify-between items-center text-slate-900">
-                <div>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 text-slate-900">
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold text-slate-900">Ventas</h1>
-                    <p className="text-slate-500 text-sm">Gestiona ventas y facturación en tiempo real</p>
+                    <div className="relative max-w-sm mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar venta (Cliente, #)..."
+                            value={salesSearchTerm}
+                            onChange={e => setSalesSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                        />
+                    </div>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
@@ -518,7 +535,7 @@ const Sales: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {[...sales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(sale => {
+                            {[...filteredSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(sale => {
                                 const balance = sale.total - sale.paidAmount;
                                 const isPaid = balance <= 0;
 
@@ -583,7 +600,7 @@ const Sales: React.FC = () => {
                                     </tr>
                                 );
                             })}
-                            {sales.length === 0 && (
+                            {filteredSales.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="py-20 text-center text-slate-300 italic">No hay ventas registradas</td>
                                 </tr>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useFuzzySearch } from '../hooks/useFuzzySearch';
 import { Plus, User, Phone, MapPin, Search, Trash2, Wallet, CreditCard, History, ChevronRight, X, Calendar, Edit2, Coins, AlertCircle, Printer } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { Customer, Sale } from '../types';
@@ -378,10 +379,10 @@ const Customers: React.FC = () => {
         setInitialDebtDueDate('');
     };
 
-    const filteredCustomers = customers.filter(c => 
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone.includes(searchTerm)
-    );
+    const filteredCustomers = useFuzzySearch(customers, searchTerm, {
+        keys: ['name', 'phone', 'nit', 'address'],
+        threshold: 0.3
+    });
 
     return (
         <div className="space-y-8">
