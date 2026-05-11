@@ -28,6 +28,7 @@ const Customers: React.FC = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isEditTotalModalOpen, setIsEditTotalModalOpen] = useState(false);
     const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+    const [detailTab, setDetailTab] = useState<'facturas' | 'movimientos'>('facturas');
     
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -254,6 +255,67 @@ const Customers: React.FC = () => {
         const saldoInicialPaid = saldoInicialSales.reduce((sum, s) => sum + (s.paidAmount || 0), 0);
 
         return initial + regularDebt - saldoInicialPaid;
+    };
+
+    const getCustomerHistory = (customer: Customer) => {
+        const transactions: any[] = [];
+        
+        // 1. Initial Debt
+        if (customer.initialDebt && customer.initialDebt > 0) {
+            transactions.push({
+                date: customer.initialDebtDate || customer.initialDebtDueDate || new Date(2024, 0, 1).toISOString(),
+                type: 'Saldo Inicial',
+                amount: customer.initialDebt,
+                reference: 'SI-000',
+                isIncrease: true
+            });
+        }
+
+        // 2. Sales and their payments
+        const customerSales = sales.filter(s => s.customerId === customer.id);
+        customerSales.forEach(sale => {
+            // Include regular sales
+            if (!sale.items.some(item => item.productId === 'saldo-inicial')) {
+                transactions.push({
+                    date: sale.date,
+                    type: 'Venta',
+                    amount: sale.total,
+                    reference: `V-${(sale.saleNumber || 0).toString().padStart(6, '0')}`,
+                    isIncrease: true,
+                    originalSale: sale
+                });
+            }
+
+            // Payments from all sales (including pseudo-sales for initial debt)
+            if (sale.payments) {
+                sale.payments.forEach(payment => {
+                    transactions.push({
+                        date: payment.date,
+                        type: 'Abono',
+                        amount: payment.amount,
+                        reference: sale.items.some(item => item.productId === 'saldo-inicial') ? 'Abono SI' : `Abono V-${(sale.saleNumber || 0).toString().padStart(6, '0')}`,
+                        isIncrease: false,
+                        method: payment.method
+                    });
+                });
+            }
+        });
+
+        // Sort by date (ascending for running balance calculation)
+        transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Calculate running balance (Total Debt)
+        let runningDebt = 0;
+        const result = transactions.map(t => {
+            if (t.isIncrease) {
+                runningDebt += t.amount;
+            } else {
+                runningDebt -= t.amount;
+            }
+            return { ...t, runningDebt };
+        });
+
+        return result.reverse(); // Latest first for display
     };
 
     const getCustomerSales = (customerId: string) => {
@@ -624,117 +686,187 @@ const Customers: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-
                         <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                            <div>
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                    <History size={16} /> Historial de Créditos
-                                </h4>
-                                
-                                <div className="space-y-6">
-                                    {getCustomerSales(selectedCustomer.id).map(sale => {
-                                        const balance = sale.total - (sale.paidAmount || 0);
-                                        return (
-                                            <div key={sale.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:border-slate-300 transition-all">
-                                                <div className="p-5 bg-slate-50/80 flex items-center justify-between border-b border-slate-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
-                                                            <Calendar size={18} />
+                            <div className="flex border-b border-slate-100 mb-6">
+                                <button 
+                                    onClick={() => setDetailTab('facturas')}
+                                    className={cn(
+                                        "px-6 py-3 font-black text-xs uppercase tracking-widest border-b-2 transition-all",
+                                        detailTab === 'facturas' ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    Facturas Pendientes
+                                </button>
+                                <button 
+                                    onClick={() => setDetailTab('movimientos')}
+                                    className={cn(
+                                        "px-6 py-3 font-black text-xs uppercase tracking-widest border-b-2 transition-all",
+                                        detailTab === 'movimientos' ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+                                    )}
+                                >
+                                    Historial Completo
+                                </button>
+                            </div>
+
+                            {detailTab === 'facturas' ? (
+                                <div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                        <History size={16} /> Facturas con Saldo
+                                    </h4>
+                                    
+                                    <div className="space-y-6">
+                                        {getCustomerSales(selectedCustomer.id).filter(s => (s.total - (s.paidAmount || 0)) > 0).map(sale => {
+                                            const balance = sale.total - (sale.paidAmount || 0);
+                                            return (
+                                                <div key={sale.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:border-slate-300 transition-all">
+                                                    <div className="p-5 bg-slate-50/80 flex items-center justify-between border-b border-slate-100">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
+                                                                <Calendar size={18} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-slate-900 font-black uppercase tracking-tight">{formatDate(sale.date)}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Venta: V-{(sale.saleNumber || 0).toString().padStart(6, '0')}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-900 font-black uppercase tracking-tight">{formatDate(sale.date)}</p>
-                                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Venta: V-{(sale.saleNumber || 0).toString().padStart(6, '0')}</p>
+                                                        <div className="text-right flex flex-col items-end gap-1">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Facturado</p>
+                                                            <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                                                                <p className="font-black text-slate-900">{formatCurrency(sale.total)}</p>
+                                                                {isAdmin && (
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            setSelectedSale(sale);
+                                                                            setNewTotal(sale.total);
+                                                                            setIsEditTotalModalOpen(true);
+                                                                        }}
+                                                                        className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all"
+                                                                        title="Corregir Total"
+                                                                    >
+                                                                        <Edit2 size={14} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right flex flex-col items-end gap-1">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Facturado</p>
-                                                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
-                                                            <p className="font-black text-slate-900">{formatCurrency(sale.total)}</p>
-                                                            {isAdmin && (
+
+                                                    <div className="p-5 space-y-4">
+                                                        <div className="space-y-2">
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-dashed border-slate-100 pb-1">Abonos Realizados</p>
+                                                            {sale.payments && sale.payments.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                    {sale.payments.map((payment, idx) => (
+                                                                        <div key={idx} className="flex justify-between items-center text-xs group/payment">
+                                                                            <div className="flex items-center gap-2 text-slate-500 font-medium">
+                                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                                                                <span>{formatDate(payment.date)}</span>
+                                                                                <span className="text-[8px] uppercase font-black opacity-50 px-1 bg-slate-100 rounded">{payment.method}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-3">
+                                                                                <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
+                                                                                {isAdmin && (
+                                                                                    <button 
+                                                                                        onClick={async () => {
+                                                                                            if (window.confirm('¿Eliminar este abono?')) {
+                                                                                                await deleteSalePayment(sale.id, idx);
+                                                                                            }
+                                                                                        }}
+                                                                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/payment:opacity-100"
+                                                                                    >
+                                                                                        <Trash2 size={12} />
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[10px] text-slate-300 italic">Sin abonos previos.</p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="pt-4 mt-2 border-t border-slate-50 flex items-center justify-between">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Restante</span>
+                                                                <span className={cn(
+                                                                    "text-lg font-black tracking-tighter",
+                                                                    balance > 0 ? "text-red-500" : "text-green-600"
+                                                                )}>
+                                                                    {formatCurrency(balance)}
+                                                                </span>
+                                                            </div>
+                                                            {balance > 0 && (
                                                                 <button 
                                                                     onClick={() => {
                                                                         setSelectedSale(sale);
-                                                                        setNewTotal(sale.total);
-                                                                        setIsEditTotalModalOpen(true);
+                                                                        setIsPaymentModalOpen(true);
                                                                     }}
-                                                                    className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-all"
-                                                                    title="Corregir Total"
+                                                                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-950/10 active:scale-95"
                                                                 >
-                                                                    <Edit2 size={14} />
+                                                                    <CreditCard size={14} /> Abonar
                                                                 </button>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
-
-                                                <div className="p-5 space-y-4">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-dashed border-slate-100 pb-1">Abonos Realizados</p>
-                                                        {sale.payments && sale.payments.length > 0 ? (
-                                                            <div className="space-y-2">
-                                                                {sale.payments.map((payment, idx) => (
-                                                                    <div key={idx} className="flex justify-between items-center text-xs group/payment">
-                                                                        <div className="flex items-center gap-2 text-slate-500 font-medium">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                                                                            <span>{formatDate(payment.date)}</span>
-                                                                            <span className="text-[8px] uppercase font-black opacity-50 px-1 bg-slate-100 rounded">{payment.method}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-3">
-                                                                            <span className="font-black text-green-600">+{formatCurrency(payment.amount)}</span>
-                                                                            {isAdmin && (
-                                                                                <button 
-                                                                                    onClick={async () => {
-                                                                                        if (window.confirm('¿Eliminar este abono?')) {
-                                                                                            await deleteSalePayment(sale.id, idx);
-                                                                                        }
-                                                                                    }}
-                                                                                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/payment:opacity-100"
-                                                                                >
-                                                                                    <Trash2 size={12} />
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-[10px] text-slate-300 italic">Sin abonos previos.</p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="pt-4 mt-2 border-t border-slate-50 flex items-center justify-between">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo Restante</span>
-                                                            <span className={cn(
-                                                                "text-lg font-black tracking-tighter",
-                                                                balance > 0 ? "text-red-500" : "text-green-600"
-                                                            )}>
-                                                                {formatCurrency(balance)}
-                                                            </span>
-                                                        </div>
-                                                        {balance > 0 && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    setSelectedSale(sale);
-                                                                    setIsPaymentModalOpen(true);
-                                                                }}
-                                                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-950/10 active:scale-95"
-                                                            >
-                                                                <CreditCard size={14} /> Abonar
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                            );
+                                        })}
+                                        {getCustomerSales(selectedCustomer.id).filter(s => (s.total - (s.paidAmount || 0)) > 0).length === 0 && (
+                                            <div className="py-20 text-center text-slate-300 italic border-2 border-dotted border-slate-100 rounded-3xl">
+                                                No hay facturas pendientes de pago.
                                             </div>
-                                        );
-                                    })}
-                                    {getCustomerSales(selectedCustomer.id).length === 0 && (
-                                        <div className="py-20 text-center text-slate-300 italic border-2 border-dotted border-slate-100 rounded-3xl">
-                                            Sin historial de ventas a crédito.
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                        <History size={16} /> Movimientos de Cuenta
+                                    </h4>
+
+                                    <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <th className="px-6 py-4">Fecha</th>
+                                                    <th className="px-6 py-4">Tipo</th>
+                                                    <th className="px-6 py-4 text-right">Monto</th>
+                                                    <th className="px-6 py-4 text-right">Saldo Deuda</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {getCustomerHistory(selectedCustomer).map((t, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-4 text-xs font-bold text-slate-600">
+                                                            {formatDate(t.date)}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className={cn(
+                                                                    "text-xs font-black uppercase tracking-tight",
+                                                                    t.type === 'Venta' || t.type === 'Saldo Inicial' ? "text-red-600" : "text-green-600"
+                                                                )}>
+                                                                    {t.type}
+                                                                </span>
+                                                                <span className="text-[9px] text-slate-400 font-bold uppercase">{t.reference}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className={cn(
+                                                            "px-6 py-4 text-sm font-black text-right tracking-tighter",
+                                                            t.isIncrease ? "text-red-500" : "text-green-600"
+                                                        )}>
+                                                            {t.isIncrease ? '+' : '-'}{formatCurrency(t.amount)}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm font-black text-right text-slate-900 tracking-tighter">
+                                                            {formatCurrency(t.runningDebt)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -349,7 +349,14 @@ const Employees: React.FC = () => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         try {
-            const error = await addAdvance(id, amount);
+            let error = await addAdvance(id, amount);
+            
+            if (error && error.includes('Excede el tope')) {
+                if (window.confirm(`${error}\n\n¿Deseas omitir este tope y registrar el adelanto de todos modos?`)) {
+                    error = await addAdvance(id, amount, true);
+                }
+            }
+
             if (error) {
                 setAdvanceError(error);
             } else {
@@ -564,7 +571,7 @@ const Employees: React.FC = () => {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adelantos Hoy</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adelantos Quincena</p>
                                 <div className="flex items-center gap-2">
                                     <DollarSign className="text-orange-500" size={16} />
                                     <span className="text-lg font-black text-slate-900">{formatCurrency(getEmployeeAdvances(emp.id))}</span>

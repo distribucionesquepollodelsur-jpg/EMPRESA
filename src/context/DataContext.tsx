@@ -80,7 +80,7 @@ interface DataContextType extends AppState {
     deleteEmployee: (id: string) => Promise<void>;
     markAttendance: (employeeId: string, status: Attendance['status']) => Promise<void>;
     deleteAttendance: (id: string) => Promise<void>;
-    addAdvance: (employeeId: string, amount: number) => Promise<string | null>;
+    addAdvance: (employeeId: string, amount: number, overrideLimit?: boolean) => Promise<string | null>;
     addReprimand: (reprimand: Omit<Reprimand, 'id' | 'date' | 'status'>) => Promise<void>;
     resolveReprimand: (id: string) => Promise<void>;
     addDotation: (dotation: Omit<Dotation, 'id' | 'date'>) => Promise<void>;
@@ -802,7 +802,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `attendance/${id}`); }
     };
 
-    const addAdvance = async (employeeId: string, amount: number) => {
+    const addAdvance = async (employeeId: string, amount: number, overrideLimit = false) => {
         const employee = employees.find(e => e.id === employeeId);
         if (!employee) return "Empleado no encontrado";
 
@@ -835,7 +835,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             })
             .reduce((sum, a) => sum + a.amount, 0);
 
-        if (currentPeriodAdvances + amount > maxAdvance) {
+        if (!overrideLimit && currentPeriodAdvances + amount > maxAdvance) {
             return `Excede el tope del 30% (${formatCurrency(maxAdvance)}) para este periodo quincenal. Adelantos actuales: ${formatCurrency(currentPeriodAdvances)}`;
         }
 

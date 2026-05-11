@@ -18,7 +18,8 @@ export function formatDate(date: Date | string | number, includeTime = true): st
   
   let finalDate: Date;
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    finalDate = new Date(`${date}T00:00:00`);
+    // For YYYY-MM-DD, create date at noon to avoid timezone shift to previous day
+    finalDate = new Date(`${date}T12:00:00`);
   } else {
     finalDate = new Date(date);
   }
@@ -29,13 +30,12 @@ export function formatDate(date: Date | string | number, includeTime = true): st
     day: 'numeric'
   };
 
-  if (includeTime && typeof date === 'string' && date.length > 10) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
-  } else if (includeTime && date instanceof Date) {
+  const isDateOnly = (typeof date === 'string' && date.length <= 10) || !includeTime;
+
+  if (!isDateOnly) {
     options.hour = '2-digit';
     options.minute = '2-digit';
   }
 
-  return new Intl.DateTimeFormat('es-ES', options).format(finalDate);
+  return new Intl.DateTimeFormat('es-CO', options).format(finalDate);
 }

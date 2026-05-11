@@ -241,7 +241,7 @@ const DailyBalance: React.FC = () => {
                         <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
                             <History size={16} />
                         </div>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Base Inicial</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Base Inicial Registrada</span>
                     </div>
                     <div>
                         <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.openingBalance)}</h4>
@@ -254,7 +254,7 @@ const DailyBalance: React.FC = () => {
                         <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
                             <TrendingUp size={16} />
                         </div>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right text-balance leading-tight">Ingresos Ventas/...</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right text-balance leading-tight">Ingresos de Ventas (Ventas, Abonos, Otros)</span>
                     </div>
                     <div>
                         <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.salesIncome)}</h4>
@@ -267,7 +267,7 @@ const DailyBalance: React.FC = () => {
                         <div className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center">
                             <ArrowUpRight size={16} />
                         </div>
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right leading-tight">Total Ingresos</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-right leading-tight">Total de Ingresos</span>
                     </div>
                     <div>
                         <h4 className="text-xl font-black text-slate-900">{formatCurrency(stats.totalEntries)}</h4>
