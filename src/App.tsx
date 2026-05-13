@@ -31,6 +31,7 @@ import Config from './pages/Config';
 import Recruitment from './pages/Recruitment';
 import DailyBalance from './pages/DailyBalance';
 import FinancialStatements from './pages/FinancialStatements';
+import VehicleInstallments from './pages/VehicleInstallments';
 
 import { useData } from './context/DataContext';
 import { Loader2, X } from 'lucide-react';
@@ -91,6 +92,7 @@ const MainContent: React.FC = () => {
           'processing': 'processing',
           'despresaje': 'processing',
           'assets': 'assets',
+          'vehicle-installments': 'cashflow',
           'loans': 'cashflow',
           'payroll': 'reports',
           'reports': 'reports',
@@ -142,6 +144,7 @@ const MainContent: React.FC = () => {
       case 'credits': return <Credits />;
       case 'expenses': return <Expenses />;
       case 'loans': return <Loans />;
+      case 'vehicle-installments': return <VehicleInstallments />;
       case 'reports': return <Reports />;
       case 'daily-balance': return <DailyBalance />;
       case 'financial-statements': return <FinancialStatements />;

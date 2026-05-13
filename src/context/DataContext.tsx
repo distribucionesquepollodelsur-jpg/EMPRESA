@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan, BusinessLoan, JobOffer, CandidateEvaluation } from '../types';
+import { AppState, Product, Purchase, Sale, CashMovement, Employee, Attendance, Advance, AppConfig, Supplier, Shift, Reprimand, Customer, Processing, Dotation, Asset, InventoryAdjustment, Loan, BusinessLoan, JobOffer, CandidateEvaluation, VehicleInstallment } from '../types';
 import { isWithinInterval, setHours, setMinutes, startOfDay, addDays, isAfter, format } from 'date-fns';
 import { auth, db } from '../lib/firebase';
 import { formatCurrency } from '../lib/utils';
@@ -113,6 +113,10 @@ interface DataContextType extends AppState {
     addBusinessLoanAbono: (loanId: string, amount: number, method: string) => Promise<void>;
     deleteBusinessLoanAbono: (loanId: string, abonoIndex: number) => Promise<void>;
     deleteBusinessLoan: (id: string) => Promise<void>;
+    addVehicleInstallment: (installment: Omit<VehicleInstallment, 'id' | 'paidAmount' | 'payments' | 'status'>) => Promise<void>;
+    addVehicleInstallmentPayment: (installmentId: string, amount: number, method: string) => Promise<void>;
+    deleteVehicleInstallmentPayment: (installmentId: string, paymentIndex: number) => Promise<void>;
+    deleteVehicleInstallment: (id: string) => Promise<void>;
     updateShift: (employeeId: string, type: 'clockIn' | 'clockOut' | 'breakfastStart' | 'breakfastEnd' | 'lunchStart' | 'lunchEnd', justification?: string) => Promise<void>;
     addJobOffer: (offer: Omit<JobOffer, 'id' | 'date'>) => Promise<void>;
     updateJobOffer: (id: string, offer: Partial<JobOffer>) => Promise<void>;
@@ -174,6 +178,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [businessLoans, setBusinessLoans] = useState<BusinessLoan[]>([]);
     const [jobOffers, setJobOffers] = useState<JobOffer[]>([]);
     const [evaluations, setEvaluations] = useState<CandidateEvaluation[]>([]);
+    const [vehicleInstallments, setVehicleInstallments] = useState<VehicleInstallment[]>([]);
     const [config, setConfig] = useState<AppConfig>(initialConfig);
     const [loading, setLoading] = useState(true);
 
@@ -275,6 +280,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubscribes.push(onSnapshot(collection(db, 'evaluations'), (s) => {
                     setEvaluations(s.docs.map(d => ({ id: d.id, ...d.data() } as CandidateEvaluation)));
                 }, (e) => handleFirestoreError(e, OperationType.GET, 'evaluations')));
+
+                unsubscribes.push(onSnapshot(collection(db, 'vehicleInstallments'), (s) => {
+                    setVehicleInstallments(s.docs.map(d => ({ id: d.id, ...d.data() } as VehicleInstallment)));
+                }, (e) => handleFirestoreError(e, OperationType.GET, 'vehicleInstallments')));
             } else {
                 // Clear state when no user
                 setEmployees([]);
@@ -1467,6 +1476,97 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (e) { handleFirestoreError(e, OperationType.DELETE, `businessLoans/${id}`); }
     };
 
+    const addVehicleInstallment = async (installment: Omit<VehicleInstallment, 'id' | 'paidAmount' | 'payments' | 'status'>) => {
+        try {
+            await addDoc(collection(db, 'vehicleInstallments'), {
+                ...installment,
+                paidAmount: 0,
+                payments: [],
+                status: 'pending'
+            });
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, 'vehicleInstallments'); }
+    };
+
+    const addVehicleInstallmentPayment = async (installmentId: string, amount: number, method: string) => {
+        const installment = vehicleInstallments.find(v => v.id === installmentId);
+        if (!installment) return;
+
+        const newPayment = {
+            date: new Date().toISOString(),
+            amount,
+            method
+        };
+
+        try {
+            const batch = writeBatch(db);
+            const installmentRef = doc(db, 'vehicleInstallments', installmentId);
+            
+            const newPaidAmount = (installment.paidAmount || 0) + amount;
+            batch.update(installmentRef, {
+                paidAmount: newPaidAmount,
+                payments: [...(installment.payments || []), newPayment],
+                status: newPaidAmount >= installment.totalAmount ? 'completed' : 'pending'
+            });
+
+            // Registrar en caja como un ingreso si es efectivo
+            if (method === 'Efectivo') {
+                const cashRef = doc(collection(db, 'cashFlow'));
+                batch.set(cashRef, {
+                    date: new Date().toISOString(),
+                    type: 'entry',
+                    amount,
+                    reason: `Abono Vehículo: ${installment.personName} - ${installment.vehicleDescription}`,
+                    category: 'manual',
+                    method: 'cash'
+                });
+            }
+
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `vehicleInstallments/${installmentId}/payments`); }
+    };
+
+    const deleteVehicleInstallmentPayment = async (installmentId: string, paymentIndex: number) => {
+        const installment = vehicleInstallments.find(v => v.id === installmentId);
+        if (!installment || !installment.payments[paymentIndex]) return;
+
+        const payment = installment.payments[paymentIndex];
+        const newPayments = [...installment.payments];
+        newPayments.splice(paymentIndex, 1);
+
+        try {
+            const batch = writeBatch(db);
+            const installmentRef = doc(db, 'vehicleInstallments', installmentId);
+            
+            const newPaidAmount = installment.paidAmount - payment.amount;
+            batch.update(installmentRef, {
+                paidAmount: newPaidAmount,
+                payments: newPayments,
+                status: newPaidAmount >= installment.totalAmount ? 'completed' : 'pending'
+            });
+
+            // Si fue en efectivo, reversar en caja con un movimiento de salida
+            if (payment.method === 'Efectivo') {
+                const cashRef = doc(collection(db, 'cashFlow'));
+                batch.set(cashRef, {
+                    date: new Date().toISOString(),
+                    type: 'exit',
+                    amount: payment.amount,
+                    reason: `ANULACIÓN Abono Vehículo: ${installment.personName}`,
+                    category: 'manual',
+                    method: 'cash'
+                });
+            }
+
+            await batch.commit();
+        } catch (e) { handleFirestoreError(e, OperationType.WRITE, `vehicleInstallments/${installmentId}/payments`); }
+    };
+
+    const deleteVehicleInstallment = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'vehicleInstallments', id));
+        } catch (e) { handleFirestoreError(e, OperationType.DELETE, `vehicleInstallments/${id}`); }
+    };
+
     const updateLoan = async (id: string, updates: any) => {
         try {
             await updateDoc(doc(db, 'loans', id), clean(updates));
@@ -1662,6 +1762,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateSupplierBalanceManually,
             deleteCustomer,
             updateShift,
+            vehicleInstallments,
+            addVehicleInstallment,
+            addVehicleInstallmentPayment,
+            deleteVehicleInstallmentPayment,
+            deleteVehicleInstallment,
             addPurchasePayment,
             addSalePayment,
             deletePurchasePayment,

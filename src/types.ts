@@ -290,6 +290,17 @@ export interface Processing {
     totalOutputWeight: number;
 }
 
+export interface VehicleInstallment {
+    id: string;
+    personName: string;
+    vehicleDescription: string;
+    totalAmount: number;
+    paidAmount: number;
+    date: string;
+    payments: { date: string, amount: number, method: string, cashMovementId?: string }[];
+    status: 'pending' | 'completed';
+}
+
 export interface AppState {
     products: Product[];
     purchases: Purchase[];
@@ -310,5 +321,6 @@ export interface AppState {
     businessLoans: BusinessLoan[];
     jobOffers: JobOffer[];
     evaluations: CandidateEvaluation[];
+    vehicleInstallments: VehicleInstallment[];
     config: AppConfig;
 }
