@@ -380,6 +380,22 @@
         }
       },
       "required": ["employeeId", "employeeName", "type", "status", "createdAt"]
+    },
+    "VehicleInstallment": {
+      "title": "VehicleInstallment",
+      "description": "Records of people paying vehicles in installments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "personName": { "type": "string" },
+        "vehicleDescription": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "payments": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "completed"] }
+      },
+      "required": ["personName", "vehicleDescription", "totalAmount", "date", "status"]
     }
   },
   "firestore": {
@@ -404,6 +420,7 @@
     "expenses": { "schema": "Expense", "description": "Business expenses" },
     "jobOffers": { "schema": "JobOffer", "description": "Recruitment job offers" },
     "evaluations": { "schema": "CandidateEvaluation", "description": "AI candidate evaluations" },
+    "vehicleInstallments": { "schema": "VehicleInstallment", "description": "Records of vehicle installment payments" },
     "config": { "schema": "AppConfig", "description": "App configuration" }
   }
 }

@@ -128,6 +128,18 @@ service cloud.firestore {
              data.matchScore is number && data.matchScore >= 0 && data.matchScore <= 100;
     }
 
+    function isValidVehicleInstallment(data) {
+      return data.keys().hasAll(['personName', 'vehicleDescription', 'totalAmount', 'paidAmount', 'payments', 'date', 'status']) &&
+             data.keys().size() == 7 &&
+             data.personName is string && data.personName.size() <= 200 &&
+             data.vehicleDescription is string && data.vehicleDescription.size() <= 500 &&
+             data.totalAmount is number &&
+             data.paidAmount is number &&
+             data.payments is list &&
+             data.date is string &&
+             data.status in ['pending', 'completed'];
+    }
+
     // --- Rules ---
 
     match /products/{productId} {
@@ -234,7 +246,7 @@ service cloud.firestore {
     }
 
     match /contracts/{contractId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update: if isSignedIn() && isValidId(contractId);
       allow delete: if isSignedIn();
     }
@@ -249,20 +261,20 @@ service cloud.firestore {
     }
 
     match /expenses/{expenseId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update: if isSignedIn() && isValidId(expenseId);
       allow delete: if isSignedIn();
     }
 
     match /loans/{loanId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidLoan(incoming()) && isValidId(loanId);
       allow update: if isSignedIn() && (isAdmin() || isValidLoan(incoming()));
       allow delete: if isAdmin();
     }
 
     match /businessLoans/{loanId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidBusinessLoan(incoming()) && isValidId(loanId);
       allow update: if isSignedIn() && (isAdmin() || isValidBusinessLoan(incoming()));
       allow delete: if isAdmin();
@@ -278,6 +290,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && isValidEvaluation(incoming()) && isValidId(evalId);
       allow update, delete: if isAdmin();
+    }
+
+    match /vehicleInstallments/{installmentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidVehicleInstallment(incoming()) && isValidId(installmentId);
+      allow update: if isSignedIn() && (isAdmin() || isValidVehicleInstallment(incoming()));
+      allow delete: if isAdmin();
     }
   }
 }
