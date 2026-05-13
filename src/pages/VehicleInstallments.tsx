@@ -46,12 +46,12 @@ const VehicleInstallments: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (totalAmount <= 0 || !personName || !vehicleDescription) return;
+        if (!personName || !vehicleDescription) return;
 
         await addVehicleInstallment({
             personName,
             vehicleDescription,
-            totalAmount,
+            totalAmount: totalAmount || 0,
             date: new Date(date).toISOString()
         });
         
@@ -113,13 +113,13 @@ const VehicleInstallments: React.FC = () => {
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
                         <DollarSign size={80} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total por Cobrar</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pendiente por Cobrar</p>
                     <h3 className="text-3xl font-black tracking-tighter text-slate-900">
                         {formatCurrency(totalOwed)}
                     </h3>
                     <div className="mt-4 flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldo en Calle</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saldos Definidos</span>
                     </div>
                 </div>
                 <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
@@ -158,14 +158,15 @@ const VehicleInstallments: React.FC = () => {
                                 <th className="px-10 py-6">Persona / Vehículo</th>
                                 <th className="px-10 py-6">Fecha Inicio</th>
                                 <th className="px-10 py-6 text-center">Progreso</th>
-                                <th className="px-10 py-6 text-right">Saldo Pendiente</th>
+                                <th className="px-10 py-6 text-right">Saldo / Acumulado</th>
                                 <th className="px-10 py-6 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 italic">
                             {filteredInstallments.map(installment => {
-                                const balance = installment.totalAmount - (installment.paidAmount || 0);
-                                const progress = (installment.paidAmount / installment.totalAmount) * 100;
+                                const hasTotal = (installment.totalAmount || 0) > 0;
+                                const balance = hasTotal ? installment.totalAmount - (installment.paidAmount || 0) : 0;
+                                const progress = hasTotal ? (installment.paidAmount / installment.totalAmount) * 100 : 0;
                                 return (
                                     <tr key={installment.id} className="hover:bg-slate-50/50 transition-colors group">
                                         <td className="px-10 py-6">
@@ -188,37 +189,44 @@ const VehicleInstallments: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="px-10 py-6">
-                                            <div className="flex flex-col gap-2 w-32 mx-auto">
-                                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                                    <span>{Math.round(progress)}%</span>
-                                                    <span>{formatCurrency(installment.paidAmount)}</span>
+                                            {hasTotal ? (
+                                                <div className="flex flex-col gap-2 w-32 mx-auto">
+                                                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                        <span>{Math.round(progress)}%</span>
+                                                        <span>{formatCurrency(installment.paidAmount)}</span>
+                                                    </div>
+                                                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-blue-600 rounded-full transition-all duration-1000"
+                                                            style={{ width: `${progress}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-blue-600 rounded-full transition-all duration-1000"
-                                                        style={{ width: `${progress}%` }}
-                                                    />
+                                            ) : (
+                                                <div className="text-center">
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Sin meta fija</span>
                                                 </div>
-                                            </div>
+                                            )}
                                         </td>
                                         <td className="px-10 py-6 text-right">
                                             <div className="flex flex-col items-end">
                                                 <span className={cn(
                                                     "font-black text-xl tracking-tighter not-italic",
-                                                    balance > 0 ? "text-slate-900" : "text-emerald-600"
+                                                    hasTotal ? (balance > 0 ? "text-slate-900" : "text-emerald-600") : "text-blue-600"
                                                 )}>
-                                                    {balance > 0 ? formatCurrency(balance) : 'SALDADO'}
+                                                    {hasTotal 
+                                                        ? (balance > 0 ? formatCurrency(balance) : 'SALDADO')
+                                                        : formatCurrency(installment.paidAmount)
+                                                    }
                                                 </span>
-                                                {balance > 0 && (
-                                                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mt-1 italic">
-                                                        Total: {formatCurrency(installment.totalAmount)}
-                                                    </span>
-                                                )}
+                                                <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mt-1 italic">
+                                                    {hasTotal ? `Total: ${formatCurrency(installment.totalAmount)}` : 'Total Recaudado'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-10 py-6 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                {balance > 0 && (
+                                                {(!hasTotal || balance > 0) && (
                                                     <button 
                                                         onClick={() => {
                                                             setSelectedInstallment(installment);
@@ -310,16 +318,15 @@ const VehicleInstallments: React.FC = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto Total de Venta</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto Total de Venta (Opcional)</label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">$</span>
                                     <input 
                                         type="number" 
-                                        required
                                         value={totalAmount || ''}
-                                        onChange={e => setTotalAmount(parseFloat(e.target.value))}
+                                        onChange={e => setTotalAmount(parseFloat(e.target.value) || 0)}
                                         className="w-full pl-8 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-600/10 outline-none text-xl font-black text-slate-900"
-                                        placeholder="0"
+                                        placeholder="Deja en 0 si no hay monto total definido"
                                     />
                                 </div>
                             </div>
@@ -348,7 +355,6 @@ const VehicleInstallments: React.FC = () => {
                 </div>
             )}
 
-            {/* Modal para Registrar Abono */}
             {isAbonoModalOpen && selectedInstallment && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
                     <div className="bg-white rounded-[40px] w-full max-w-sm shadow-2xl p-10 space-y-8 animate-in zoom-in duration-200">
@@ -358,8 +364,15 @@ const VehicleInstallments: React.FC = () => {
                         </header>
 
                         <div className="p-6 bg-blue-600 rounded-3xl text-white flex flex-col items-center">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-2">Saldo Pendiente</span>
-                            <span className="font-black text-3xl tracking-tighter">{formatCurrency(selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0))}</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-2">
+                                {selectedInstallment.totalAmount > 0 ? 'Saldo Pendiente' : 'Total Acumulado'}
+                            </span>
+                            <span className="font-black text-3xl tracking-tighter">
+                                {selectedInstallment.totalAmount > 0 
+                                    ? formatCurrency(selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0))
+                                    : formatCurrency(selectedInstallment.paidAmount || 0)
+                                }
+                            </span>
                         </div>
 
                         <form onSubmit={handleAbonoSubmit} className="space-y-8">
@@ -369,7 +382,7 @@ const VehicleInstallments: React.FC = () => {
                                     type="number" 
                                     required
                                     autoFocus
-                                    max={selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0)}
+                                    max={selectedInstallment.totalAmount > 0 ? selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0) : undefined}
                                     value={abonoAmount || ''}
                                     onChange={e => setAbonoAmount(parseFloat(e.target.value))}
                                     className="w-full px-6 py-6 bg-slate-50 border border-slate-100 rounded-3xl focus:ring-4 focus:ring-blue-600/10 outline-none text-3xl font-black text-slate-900 text-center tracking-tighter"
@@ -424,12 +437,21 @@ const VehicleInstallments: React.FC = () => {
                             
                             <div className="grid grid-cols-2 gap-4 relative z-10">
                                 <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
-                                    <p className="text-[10px] font-black opacity-50 uppercase tracking-widest mb-1">Total Vehículo</p>
-                                    <p className="text-xl font-black not-italic tracking-tighter">{formatCurrency(selectedInstallment.totalAmount)}</p>
+                                    <p className="text-[10px] font-black opacity-50 uppercase tracking-widest mb-1">Monto Total</p>
+                                    <p className="text-xl font-black not-italic tracking-tighter">
+                                        {selectedInstallment.totalAmount > 0 ? formatCurrency(selectedInstallment.totalAmount) : 'No definido'}
+                                    </p>
                                 </div>
                                 <div className="bg-white/5 border border-white/10 rounded-3xl p-6 border-blue-500/30">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Saldo Remanente</p>
-                                    <p className="text-3xl font-black text-blue-400 not-italic tracking-tighter">{formatCurrency(selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0))}</p>
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
+                                        {selectedInstallment.totalAmount > 0 ? 'Saldo Restante' : 'Total Acumulado'}
+                                    </p>
+                                    <p className="text-3xl font-black text-blue-400 not-italic tracking-tighter">
+                                        {selectedInstallment.totalAmount > 0 
+                                            ? formatCurrency(selectedInstallment.totalAmount - (selectedInstallment.paidAmount || 0))
+                                            : formatCurrency(selectedInstallment.paidAmount || 0)
+                                        }
+                                    </p>
                                 </div>
                             </div>
                         </div>
