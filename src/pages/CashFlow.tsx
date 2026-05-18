@@ -5,6 +5,7 @@ import { Wallet, Plus, ArrowUpRight, ArrowDownRight, History, Trash2, Search, Fi
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 const CashFlow: React.FC = () => {
     const { cashFlow, sales, purchases, advances, addCashMovement, updateCashMovement, deleteCashMovement, addBusinessLoan, config } = useData();
@@ -86,13 +87,18 @@ const CashFlow: React.FC = () => {
         }
 
         doc.setFontSize(18);
-        doc.text('Reporte de Caja Diaria', config.logo ? 50 : 14, y - 5);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Reporte de Caja Diaria', config.logo ? 50 : 14, y);
+        y += 10;
         doc.setFontSize(10);
-        doc.text(`Empresa: ${config.companyName}`, config.logo ? 50 : 14, y + 2);
-        doc.text(`NIT: ${config.nit}`, config.logo ? 50 : 14, y + 8);
-        doc.text(`Generado: ${formatDate(new Date())}`, config.logo ? 50 : 14, y + 14);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Empresa: ${config.companyName}`, config.logo ? 50 : 14, y);
+        y += 6;
+        doc.text(`NIT: ${config.nit || 'S.N'}`, config.logo ? 50 : 14, y);
+        y += 6;
+        doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, config.logo ? 50 : 14, y);
 
-        y += 25;
+        y += 15;
         autoTable(doc, {
             head: [['Detalle', 'Ingreso', 'Egreso']],
             body: [

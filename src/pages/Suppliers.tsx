@@ -244,23 +244,27 @@ const Suppliers: React.FC = () => {
 
         const doc = new jsPDF();
         const margin = 20;
-        let y = 20;
+        let y = 15;
 
-        // Header
-        const configLogo = config.logo;
-        if (configLogo) {
+        // Logo integration
+        if (config.logo) {
             try {
-                doc.addImage(configLogo, 'PNG', margin, y, 20, 20);
-                y += 25;
-            } catch (e) {}
+                doc.addImage(config.logo, 'PNG', margin, y, 30, 30);
+                y += 35;
+            } catch (e) {
+                console.error("Error adding logo", e);
+                y += 5;
+            }
+        } else {
+            y += 10;
         }
 
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text('ESTADO DE CUENTA PROVEEDOR', 105, y - 5, { align: 'center' });
+        doc.text('ESTADO DE CUENTA PROVEEDOR', 105, y, { align: 'center' });
         
-        y += 5;
-        doc.setFontSize(10);
+        y += 10;
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
         doc.text(config.companyName.toUpperCase(), 105, y, { align: 'center' });
         
@@ -268,18 +272,18 @@ const Suppliers: React.FC = () => {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('DATOS DEL PROVEEDOR:', margin, y);
-        y += 6;
+        y += 8;
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.text(`Proveedor: ${supplier.name}`, margin, y);
-        y += 5;
+        y += 6;
         doc.text(`Teléfono: ${supplier.phone}`, margin, y);
         if (supplier.nit) {
-            y += 5;
+            y += 6;
             doc.text(`NIT/CC: ${supplier.nit}`, margin, y);
         }
         
-        y += 15;
+        y += 12;
         doc.setFont('helvetica', 'bold');
         doc.text('CUENTAS POR PAGAR PENDIENTES', margin, y);
         y += 5;

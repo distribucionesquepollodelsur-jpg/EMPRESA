@@ -120,14 +120,20 @@ const Reports: React.FC = () => {
         }
 
         doc.setFontSize(18);
-        doc.text(config.companyName || 'Reporte Financiero', config.logo ? 50 : 14, y - 5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(config.companyName || 'Reporte Financiero', config.logo ? 50 : 14, y);
+        y += 10;
         doc.setFontSize(10);
-        doc.text(`NIT: ${config.nit}`, config.logo ? 50 : 14, y + 2);
-        doc.text(`Fecha de emisión: ${new Date().toLocaleString()}`, config.logo ? 50 : 14, y + 8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`NIT: ${config.nit || 'S.N'}`, config.logo ? 50 : 14, y);
+        y += 6;
+        doc.text(`Fecha de emisión: ${new Date().toLocaleString()}`, config.logo ? 50 : 14, y);
 
-        y += 20;
+        y += 15;
         doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
         doc.text('Resumen de Ventas y Cartera', 14, y);
+        y += 8;
         
         autoTable(doc, {
             head: [['Concepto', 'Total']],
@@ -140,7 +146,7 @@ const Reports: React.FC = () => {
                 ['Total Egresos', formatCurrency(stats.egresos)],
                 ['Balance (Ingresos Reales - Egresos)', formatCurrency(stats.balance)]
             ],
-            startY: y + 5,
+            startY: y,
             theme: 'striped',
             headStyles: { fillColor: [15, 23, 42] }
         });
@@ -175,11 +181,16 @@ const Reports: React.FC = () => {
         }
 
         doc.setFontSize(18);
-        doc.text(`PRE-NÓMINA: ${currentPeriod.label}`, config.logo ? 50 : 14, y - 5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`PRE-NÓMINA: ${currentPeriod.label}`, config.logo ? 50 : 14, y);
+        y += 10;
         doc.setFontSize(10);
-        doc.text(config.companyName, config.logo ? 50 : 14, y + 2);
-        doc.text(`Corte: ${format(currentPeriod.start, 'dd/MM/yyyy')} al ${format(currentPeriod.end, 'dd/MM/yyyy')}`, config.logo ? 50 : 14, y + 8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(config.companyName, config.logo ? 50 : 14, y);
+        y += 6;
+        doc.text(`Corte: ${format(currentPeriod.start, 'dd/MM/yyyy')} al ${format(currentPeriod.end, 'dd/MM/yyyy')}`, config.logo ? 50 : 14, y);
 
+        y += 15;
         autoTable(doc, {
             head: [['Colaborador', 'Sueldo Q.', 'Adelantos', 'Amo. (Días)', 'Asistencia', 'Neto a Pagar']],
             body: payrollData.map(p => [
@@ -190,7 +201,7 @@ const Reports: React.FC = () => {
                 `${p.periodAttendance} días`,
                 formatCurrency(p.totalToPay)
             ]),
-            startY: y + 20,
+            startY: y,
             theme: 'grid',
             headStyles: { fillColor: [15, 23, 42] }
         });
