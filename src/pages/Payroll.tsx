@@ -182,9 +182,18 @@ const Payroll: React.FC = () => {
         const emp = employees.find(e => e.id === payroll.employeeId);
         const doc = new jsPDF();
         
-        // Header
+        // Header Background
         doc.setFillColor(249, 115, 22); // Orange 500
         doc.rect(0, 0, 210, 40, 'F');
+
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 10, 5, 30, 30);
+            } catch (e) {
+                console.error("Error adding logo to Payroll PDF", e);
+            }
+        }
+
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(22);
         doc.text('COMPROBANTE DE NÓMINA', 105, 20, { align: 'center' });

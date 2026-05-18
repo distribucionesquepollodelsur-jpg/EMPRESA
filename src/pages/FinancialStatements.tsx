@@ -176,13 +176,27 @@ const FinancialStatements: React.FC = () => {
         const title = `Estado Financiero: ${reportCategories.find(r => r.id === activeReport)?.label}`;
         const periodText = period === 'month' ? format(selectedDate, 'MMMM yyyy') : format(selectedDate, 'yyyy');
 
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 30, 30);
+            } catch (e) {
+                console.error("Error adding logo to PDF", e);
+            }
+        }
+
+        const startX = config.logo ? 50 : 14;
+        let currentY = 20;
+
         doc.setFontSize(18);
-        doc.text(config.companyName || 'Empresa', 14, 20);
+        doc.text(config.companyName || 'Empresa', startX, currentY);
+        currentY += 8;
         doc.setFontSize(12);
-        doc.text(title, 14, 28);
-        doc.text(`Período: ${periodText}`, 14, 35);
+        doc.text(title, startX, currentY);
+        currentY += 7;
+        doc.text(`Período: ${periodText}`, startX, currentY);
+        currentY += 7;
         doc.setFontSize(10);
-        doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 42);
+        doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, startX, currentY);
 
         let tableData: any[] = [];
         let head: string[][] = [['Cuenta PUC', 'Descripción', 'Valor']];
@@ -235,7 +249,7 @@ const FinancialStatements: React.FC = () => {
         autoTable(doc, {
             head,
             body: tableData,
-            startY: 50,
+            startY: Math.max(currentY + 10, 45),
             theme: 'grid',
             headStyles: { fillColor: [15, 23, 42] },
             styles: { fontSize: 9, fontStyle: 'bold' },

@@ -145,13 +145,24 @@ const DailyBalance: React.FC = () => {
 
     const downloadPDF = () => {
         const doc = new jsPDF();
+        let y = 30;
+
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 25, 25);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo", e);
+            }
+        }
+
         const title = `Balance Diario Integral - ${formatDate(selectedDate)}`;
         
         doc.setFontSize(20);
-        doc.text(title, 14, 22);
+        doc.text(title, config.logo ? 45 : 14, y - 8);
         doc.setFontSize(10);
-        doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 30);
-        doc.text(`Caja Operativa: 12:00:00 AM a 11:59:59 PM`, 14, 35);
+        doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, config.logo ? 45 : 14, y - 1);
+        doc.text(`Caja Operativa: 12:00:00 AM a 11:59:59 PM`, config.logo ? 45 : 14, y + 4);
 
         // Summary row
         const summaryData = [
@@ -166,7 +177,7 @@ const DailyBalance: React.FC = () => {
         autoTable(doc, {
             head: [['Resumen de Caja', 'Monto']],
             body: summaryData,
-            startY: 40,
+            startY: y + 10,
             theme: 'grid',
             headStyles: { fillColor: [15, 23, 42] },
             styles: { fontStyle: 'bold' }

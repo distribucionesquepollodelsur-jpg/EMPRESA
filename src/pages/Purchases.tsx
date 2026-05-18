@@ -190,6 +190,15 @@ const Purchases: React.FC = () => {
         const margin = 5;
         let y = 10;
         
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 30, y, 20, 20);
+                y += 22;
+            } catch (e) {
+                console.error("Error adding logo to purchase PDF", e);
+            }
+        }
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text(config.companyName.toUpperCase(), 40, y, { align: 'center' });

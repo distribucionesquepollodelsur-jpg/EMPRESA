@@ -114,21 +114,31 @@ const DailyReportModal: React.FC<DailyReportModalProps> = ({ isOpen, onClose }) 
     const generatePDF = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.width;
+        let y = 22;
+
+        if (config.logo) {
+            try {
+                doc.addImage(config.logo, 'PNG', 14, 10, 25, 25);
+                y = 45;
+            } catch (e) {
+                console.error("Error adding logo to Daily Report", e);
+            }
+        }
         
         // Header
         doc.setFontSize(20);
         doc.setTextColor(15, 23, 42); // slate-900
-        doc.text('Cierre de Caja Diario', 14, 22);
+        doc.text('Cierre de Caja Diario', config.logo ? 45 : 14, y - 5);
         
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139); // slate-500
-        doc.text(config.companyName.toUpperCase(), 14, 30);
-        doc.text(`Fecha: ${format(today, 'dd/MM/yyyy')}`, 14, 35);
-        doc.text(`Sesión: 12:00:00 AM a 11:59:59 PM`, 14, 40);
+        doc.text(config.companyName.toUpperCase(), config.logo ? 45 : 14, y + 2);
+        doc.text(`Fecha: ${format(today, 'dd/MM/yyyy')}`, config.logo ? 45 : 14, y + 7);
+        doc.text(`Sesión: 12:00:00 AM a 11:59:59 PM`, config.logo ? 45 : 14, y + 12);
         
         // Totals Summary
         autoTable(doc, {
-            startY: 45,
+            startY: y + 20,
             head: [['Categoría', 'Venta Bruta (Total)', 'Transacciones']],
             body: [
                 ['Efectivo (Contado)', formatCurrency(totalSalesCash), salesCash.length],
