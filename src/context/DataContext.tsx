@@ -639,20 +639,69 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Rest input from inventory using atomic increment
             if (processing.inputItems && processing.inputItems.length > 0) {
                 for (const input of processing.inputItems) {
+                    const q = Number(input.quantity) || 0;
+                    if (q <= 0) continue;
+
                     batch.update(doc(db, 'products', input.productId), {
-                        stock: increment(-(input.quantity || 0))
+                        stock: increment(-q)
+                    });
+
+                    // Add Log
+                    const logRef = doc(collection(db, 'inventoryLogs'));
+                    const prod = products.find(p => p.id === input.productId);
+                    batch.set(logRef, {
+                        id: logRef.id,
+                        productId: input.productId,
+                        productName: prod?.name || 'Insumo Despresaje',
+                        date: new Date().toISOString(),
+                        oldStock: prod?.stock || 0,
+                        newStock: (prod?.stock || 0) - q,
+                        reason: `Despresaje (Insumo) - Ref: ${procRef.id.slice(0, 8)}`,
+                        userName: auth.currentUser?.email || 'Sistema'
                     });
                 }
             } else if (processing.inputProductId && processing.inputQuantity) {
+                const q = Number(processing.inputQuantity) || 0;
                 batch.update(doc(db, 'products', processing.inputProductId), {
-                    stock: increment(-(processing.inputQuantity || 0))
+                    stock: increment(-q)
+                });
+
+                // Add Log
+                const logRef = doc(collection(db, 'inventoryLogs'));
+                const prod = products.find(p => p.id === processing.inputProductId);
+                batch.set(logRef, {
+                    id: logRef.id,
+                    productId: processing.inputProductId,
+                    productName: prod?.name || 'Insumo Despresaje',
+                    date: new Date().toISOString(),
+                    oldStock: prod?.stock || 0,
+                    newStock: (prod?.stock || 0) - q,
+                    reason: `Despresaje (Insumo) - Ref: ${procRef.id.slice(0, 8)}`,
+                    userName: auth.currentUser?.email || 'Sistema'
                 });
             }
 
             // Add derivations to inventory using atomic increment
             for (const d of processing.outputItems) {
+                const q = Number(d.quantity) || 0;
+                if (q <= 0) continue;
+
                 batch.update(doc(db, 'products', d.productId), {
-                    stock: increment(d.quantity || 0)
+                    stock: increment(q)
+                });
+
+                // Add Log
+                const logRef = doc(collection(db, 'inventoryLogs'));
+                const prod = products.find(p => p.id === d.productId);
+                batch.set(logRef, {
+                    id: logRef.id,
+                    productId: d.productId,
+                    productName: prod?.name || 'Producto Despresado',
+                    date: new Date().toISOString(),
+                    oldStock: prod?.stock || 0,
+                    newStock: (prod?.stock || 0) + q,
+                    reason: `Despresaje (Producción) - Ref: ${procRef.id.slice(0, 8)}`,
+                    userName: auth.currentUser?.email || 'Sistema'
                 });
             }
 
@@ -665,22 +714,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!existing) return;
 
         try {
+            const batch = writeBatch(db);
+
             // 1. Revert previous stock changes
             if (existing.inputItems && existing.inputItems.length > 0) {
                 for (const input of existing.inputItems) {
-                    await updateDoc(doc(db, 'products', input.productId), {
-                        stock: increment(input.quantity || 0)
+                    const q = Number(input.quantity) || 0;
+                    batch.update(doc(db, 'products', input.productId), {
+                        stock: increment(q)
                     });
                 }
             } else if (existing.inputProductId && existing.inputQuantity) {
-                await updateDoc(doc(db, 'products', existing.inputProductId), {
-                    stock: increment(existing.inputQuantity || 0)
+                const q = Number(existing.inputQuantity) || 0;
+                batch.update(doc(db, 'products', existing.inputProductId), {
+                    stock: increment(q)
                 });
             }
 
             for (const d of existing.outputItems) {
-                await updateDoc(doc(db, 'products', d.productId), {
-                    stock: increment(-(d.quantity || 0))
+                const q = Number(d.quantity) || 0;
+                batch.update(doc(db, 'products', d.productId), {
+                    stock: increment(-q)
                 });
             }
 
@@ -690,23 +744,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Apply new stock changes
             if (merging.inputItems && merging.inputItems.length > 0) {
                 for (const input of merging.inputItems) {
-                    await updateDoc(doc(db, 'products', input.productId), {
-                        stock: increment(-(input.quantity || 0))
+                    const q = Number(input.quantity) || 0;
+                    batch.update(doc(db, 'products', input.productId), {
+                        stock: increment(-q)
                     });
                 }
             } else if (merging.inputProductId && merging.inputQuantity) {
-                await updateDoc(doc(db, 'products', merging.inputProductId), {
-                    stock: increment(-(merging.inputQuantity || 0))
+                const q = Number(merging.inputQuantity) || 0;
+                batch.update(doc(db, 'products', merging.inputProductId), {
+                    stock: increment(-q)
                 });
             }
 
             for (const d of merging.outputItems) {
-                await updateDoc(doc(db, 'products', d.productId), {
-                    stock: increment(d.quantity || 0)
+                const q = Number(d.quantity) || 0;
+                batch.update(doc(db, 'products', d.productId), {
+                    stock: increment(q)
                 });
             }
 
-            await updateDoc(doc(db, 'processings', id), clean(updates));
+            batch.update(doc(db, 'processings', id), clean(updates));
+            
+            // Add a single log for update
+            const logRef = doc(collection(db, 'inventoryLogs'));
+            batch.set(logRef, {
+                id: logRef.id,
+                productId: 'multi',
+                productName: 'Varios (Despresaje)',
+                date: new Date().toISOString(),
+                oldStock: 0,
+                newStock: 0,
+                reason: `Edición de Despresaje - Ref: ${id.slice(0, 8)}`,
+                userName: auth.currentUser?.email || 'Sistema'
+            });
+
+            await batch.commit();
         } catch (e) { handleFirestoreError(e, OperationType.WRITE, `processings/${id}`); }
     };
 
@@ -720,19 +792,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Revert stock changes using atomic increment
             if (existing.inputItems && existing.inputItems.length > 0) {
                 for (const input of existing.inputItems) {
+                    const q = Number(input.quantity) || 0;
                     batch.update(doc(db, 'products', input.productId), {
-                        stock: increment(input.quantity || 0)
+                        stock: increment(q)
+                    });
+
+                    // Add Log
+                    const logRef = doc(collection(db, 'inventoryLogs'));
+                    const prod = products.find(p => p.id === input.productId);
+                    batch.set(logRef, {
+                        id: logRef.id,
+                        productId: input.productId,
+                        productName: prod?.name || 'Insumo Despresaje',
+                        date: new Date().toISOString(),
+                        oldStock: prod?.stock || 0,
+                        newStock: (prod?.stock || 0) + q,
+                        reason: `Eliminación de Despresaje (Reversión Insumo) - Ref: ${id.slice(0, 8)}`,
+                        userName: auth.currentUser?.email || 'Sistema'
                     });
                 }
             } else if (existing.inputProductId && existing.inputQuantity) {
+                const q = Number(existing.inputQuantity) || 0;
                 batch.update(doc(db, 'products', existing.inputProductId), {
-                    stock: increment(existing.inputQuantity || 0)
+                    stock: increment(q)
+                });
+
+                // Add Log
+                const logRef = doc(collection(db, 'inventoryLogs'));
+                const prod = products.find(p => p.id === existing.inputProductId);
+                batch.set(logRef, {
+                    id: logRef.id,
+                    productId: existing.inputProductId,
+                    productName: prod?.name || 'Insumo Despresaje',
+                    date: new Date().toISOString(),
+                    oldStock: prod?.stock || 0,
+                    newStock: (prod?.stock || 0) + q,
+                    reason: `Eliminación de Despresaje (Reversión Insumo) - Ref: ${id.slice(0, 8)}`,
+                    userName: auth.currentUser?.email || 'Sistema'
                 });
             }
 
             for (const d of existing.outputItems) {
+                const q = Number(d.quantity) || 0;
                 batch.update(doc(db, 'products', d.productId), {
-                    stock: increment(-(d.quantity || 0))
+                    stock: increment(-q)
+                });
+
+                // Add Log
+                const logRef = doc(collection(db, 'inventoryLogs'));
+                const prod = products.find(p => p.id === d.productId);
+                batch.set(logRef, {
+                    id: logRef.id,
+                    productId: d.productId,
+                    productName: prod?.name || 'Producto Despresado',
+                    date: new Date().toISOString(),
+                    oldStock: prod?.stock || 0,
+                    newStock: (prod?.stock || 0) - q,
+                    reason: `Eliminación de Despresaje (Reversión Producción) - Ref: ${id.slice(0, 8)}`,
+                    userName: auth.currentUser?.email || 'Sistema'
                 });
             }
 
