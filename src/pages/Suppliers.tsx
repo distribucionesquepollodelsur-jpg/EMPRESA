@@ -205,21 +205,24 @@ const Suppliers: React.FC = () => {
             
             doc.setFont('helvetica', 'bold');
             doc.text('REF', margin, y);
-            doc.text('FECHA', margin + 15, y);
+            doc.text('FECHA', margin + 18, y);
             doc.text('SALDO', 80 - margin, y, { align: 'right' });
             y += 4;
             
             doc.setFont('helvetica', 'normal');
             if (supplier.initialDebt > 0) {
-                doc.text('INICIAL', margin, y);
-                doc.text(supplier.initialDebtDate ? formatDate(supplier.initialDebtDate) : '-', margin + 15, y);
+                const initDate = supplier.initialDebtDate ? format(new Date(supplier.initialDebtDate), 'dd/MM/yy') : '-';
+                doc.text('INIC.', margin, y);
+                doc.text(initDate, margin + 18, y);
                 doc.text(formatCurrency(supplier.initialDebt), 80 - margin, y, { align: 'right' });
                 y += 4;
             }
             
             unpaidPurchases.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(p => {
-                doc.text(`C-${(p.purchaseNumber || 0).toString().padStart(4, '0')}`, margin, y);
-                doc.text(formatDate(p.date), margin + 15, y);
+                const purchRef = `C-${(p.purchaseNumber || 0).toString().slice(-4)}`;
+                const purchDate = format(new Date(p.date), 'dd/MM/yy');
+                doc.text(purchRef, margin, y);
+                doc.text(purchDate, margin + 18, y);
                 doc.text(formatCurrency(p.total - (p.paidAmount || 0)), 80 - margin, y, { align: 'right' });
                 y += 4;
             });
@@ -289,7 +292,7 @@ const Suppliers: React.FC = () => {
         y += 5;
 
         const tableData = unpaidPurchases.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(p => [
-            formatDate(p.date),
+            format(new Date(p.date), 'dd/MM/yyyy HH:mm'),
             `C-${(p.purchaseNumber || 0).toString().padStart(6, '0')}`,
             formatCurrency(p.total),
             formatCurrency(p.paidAmount || 0),
@@ -298,7 +301,7 @@ const Suppliers: React.FC = () => {
 
         if (supplier.initialDebt > 0) {
             tableData.unshift([
-                supplier.initialDebtDate ? formatDate(supplier.initialDebtDate) : 'Inicial',
+                supplier.initialDebtDate ? format(new Date(supplier.initialDebtDate), 'dd/MM/yyyy') : 'Inicial',
                 'SALDO INICIAL',
                 formatCurrency(supplier.initialDebt),
                 formatCurrency(0),

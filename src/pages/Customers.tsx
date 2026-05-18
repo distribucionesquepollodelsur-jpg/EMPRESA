@@ -116,21 +116,24 @@ const Customers: React.FC = () => {
             
             doc.setFont('helvetica', 'bold');
             doc.text('REF', margin, y);
-            doc.text('FECHA', margin + 15, y);
+            doc.text('FECHA', margin + 18, y);
             doc.text('SALDO', 80 - margin, y, { align: 'right' });
             y += 4;
             
             doc.setFont('helvetica', 'normal');
             if (customer.initialDebt > 0) {
-                doc.text('INICIAL', margin, y);
-                doc.text(customer.initialDebtDate ? formatDate(customer.initialDebtDate) : '-', margin + 15, y);
+                const initDate = customer.initialDebtDate ? format(new Date(customer.initialDebtDate), 'dd/MM/yy') : '-';
+                doc.text('INIC.', margin, y);
+                doc.text(initDate, margin + 18, y);
                 doc.text(formatCurrency(customer.initialDebt), 80 - margin, y, { align: 'right' });
                 y += 4;
             }
             
             unpaidSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(sale => {
-                doc.text(`V-${(sale.saleNumber || 0).toString().padStart(4, '0')}`, margin, y);
-                doc.text(formatDate(sale.date), margin + 15, y);
+                const saleRef = `V-${(sale.saleNumber || 0).toString().slice(-4)}`;
+                const saleDate = format(new Date(sale.date), 'dd/MM/yy');
+                doc.text(saleRef, margin, y);
+                doc.text(saleDate, margin + 18, y);
                 doc.text(formatCurrency(sale.total - (sale.paidAmount || 0)), 80 - margin, y, { align: 'right' });
                 y += 4;
             });
@@ -204,7 +207,7 @@ const Customers: React.FC = () => {
         y += 5;
 
         const tableData = unpaidSales.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(sale => [
-            formatDate(sale.date),
+            format(new Date(sale.date), 'dd/MM/yyyy HH:mm'),
             `V-${(sale.saleNumber || 0).toString().padStart(6, '0')}`,
             formatCurrency(sale.total),
             formatCurrency(sale.paidAmount || 0),
@@ -213,7 +216,7 @@ const Customers: React.FC = () => {
 
         if (customer.initialDebt > 0) {
             tableData.unshift([
-                customer.initialDebtDate ? formatDate(customer.initialDebtDate) : 'Inicial',
+                customer.initialDebtDate ? format(new Date(customer.initialDebtDate), 'dd/MM/yyyy') : 'Inicial',
                 'SALDO INICIAL',
                 formatCurrency(customer.initialDebt),
                 formatCurrency(0),
