@@ -33,6 +33,7 @@ export interface Purchase {
     paymentStatus?: 'paid' | 'pending' | 'partial';
     payments?: { date: string, amount: number, method: string, cashMovementId?: string }[];
     notes?: string;
+    discount?: number;
 }
 
 export interface SaleItem {

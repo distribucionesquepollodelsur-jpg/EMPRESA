@@ -25,6 +25,7 @@ const Purchases: React.FC = () => {
     const [isNewSupplier, setIsNewSupplier] = useState(false);
     const [supplierName, setSupplierName] = useState('');
     const [supplierPhone, setSupplierPhone] = useState('');
+    const [discount, setDiscount] = useState<number>(0);
     const [buyerName, setBuyerName] = useState(user?.role === 'admin' ? config.manager : (user?.name || config.manager));
     const [buyerPhone, setBuyerPhone] = useState(config.phone1);
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'credit' | 'mixed'>('cash');
@@ -64,7 +65,8 @@ const Purchases: React.FC = () => {
         setItems(prev => prev.filter(i => i.productId !== productId));
     };
 
-    const total = items.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
+    const subtotal = items.reduce((sum, i) => sum + (i.cost * i.quantity), 0);
+    const total = Math.max(0, subtotal - (discount || 0));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -153,6 +155,7 @@ const Purchases: React.FC = () => {
                 paymentMethod,
                 items,
                 total,
+                discount: discount || 0,
                 paidAmount: finalPaid,
                 payments: payments
             };
@@ -286,6 +289,20 @@ const Purchases: React.FC = () => {
         doc.line(margin, y, 80 - margin, y);
         y += 6;
         
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        
+        const subtotalValue = purchase.items.reduce((sum, i) => sum + (i.quantity * i.cost), 0);
+        
+        if (purchase.discount && purchase.discount > 0) {
+            doc.text('SUBTOTAL:', margin, y);
+            doc.text(formatCurrency(subtotalValue), 80 - margin, y, { align: 'right' });
+            y += 4;
+            doc.text('DESCUENTO:', margin, y);
+            doc.text(`-${formatCurrency(purchase.discount)}`, 80 - margin, y, { align: 'right' });
+            y += 6;
+        }
+
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL COMPRA:', margin, y);
@@ -313,6 +330,7 @@ const Purchases: React.FC = () => {
         setIsNewSupplier(false);
         setSupplierName('');
         setSupplierPhone('');
+        setDiscount(0);
         setPaidAmount(0);
         setCashAmount(0);
         setTransferAmount(0);
@@ -406,7 +424,14 @@ const Purchases: React.FC = () => {
                                     </td>
                                     <td className="px-8 py-5 text-sm text-slate-600 font-medium">{formatDate(p.date)}</td>
                                     <td className="px-8 py-5 text-sm text-slate-600">{p.items.length}</td>
-                                    <td className="px-8 py-5 font-bold text-red-600">{formatCurrency(p.total)}</td>
+                                    <td className="px-8 py-5">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-red-600">{formatCurrency(p.total)}</span>
+                                            {p.discount && p.discount > 0 && (
+                                                <span className="text-[9px] text-blue-500 font-bold uppercase tracking-tighter">Desc: -{formatCurrency(p.discount)}</span>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="px-8 py-5">
                                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider">
                                             {p.paymentMethod}
@@ -716,6 +741,20 @@ const Purchases: React.FC = () => {
                                     )}
 
                                     <div className="pt-6 border-t border-slate-200">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
+                                            <span className="text-sm font-bold text-slate-600">{formatCurrency(subtotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center mb-4 gap-4">
+                                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Descuento</span>
+                                            <input 
+                                                type="number" 
+                                                value={discount || ''}
+                                                onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                placeholder="0"
+                                                className="w-24 text-right bg-blue-50 border border-blue-100 rounded px-2 py-1 text-sm font-bold text-blue-600 outline-none"
+                                            />
+                                        </div>
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Compra</span>
                                             <span className="text-2xl font-black text-slate-900">{formatCurrency(total)}</span>
