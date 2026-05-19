@@ -192,6 +192,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
         });
 
+        // Employees are public-ish (for login)
+        const unsubEmployees = onSnapshot(collection(db, 'employees'), (s) => {
+            setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+        }, (e) => handleFirestoreError(e, OperationType.GET, 'employees'));
+
         // Protected listeners
         let unsubscribes: (() => void)[] = [];
 
@@ -204,10 +209,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubscribes.push(onSnapshot(collection(db, 'inventoryLogs'), (s) => {
                     setInventoryLogs(s.docs.map(d => ({ id: d.id, ...d.data() } as InventoryAdjustment)));
                 }, (e) => handleFirestoreError(e, OperationType.GET, 'inventoryLogs')));
-
-                unsubscribes.push(onSnapshot(collection(db, 'employees'), (s) => {
-                    setEmployees(s.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-                }, (e) => handleFirestoreError(e, OperationType.GET, 'employees')));
 
                 unsubscribes.push(onSnapshot(collection(db, 'products'), (s) => {
                     setProducts(s.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
@@ -296,6 +297,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         return () => {
             unsubConfig();
+            unsubEmployees();
             authUnsub();
             unsubscribes.forEach(unsub => unsub());
         };

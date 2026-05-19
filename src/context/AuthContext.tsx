@@ -105,8 +105,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user, cashFlow]);
 
     const loginWithGoogle = async () => {
-        // Deshabilitado por solicitud del usuario
-        alert("El acceso con Google ha sido deshabilitado.");
+        try {
+            setLoading(true);
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const email = result.user.email?.toLowerCase();
+            
+            if (!email) throw new Error('No se pudo obtener el correo de Google');
+
+            const hardcodedAdmins = ['distribucionesquepollodelsur@gmail.com', 'alex.b19h@gmail.com'];
+            const isAdmin = hardcodedAdmins.includes(email);
+            const emp = (employees || []).find(e => e.email?.toLowerCase() === email);
+
+            if (isAdmin || emp) {
+                const userData: AuthUser = isAdmin ? {
+                    email,
+                    name: result.user.displayName || 'Admin',
+                    role: 'admin',
+                    photo: result.user.photoURL
+                } : {
+                    email,
+                    name: emp!.name,
+                    role: emp!.role || 'employee',
+                    employeeId: emp!.id,
+                    photo: emp!.photo || result.user.photoURL
+                };
+
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+                setUser(userData);
+                return true;
+            } else {
+                await signOut(auth);
+                throw new Error('Usuario no autorizado en el sistema');
+            }
+        } catch (error: any) {
+            console.error('Google login error:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     };
 
     const login = async (email: string, pass: string) => {
